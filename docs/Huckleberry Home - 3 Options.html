@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Huckleberry Home — 3 Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sand: oklch(0.945 0.014 74);
+    --cream: oklch(0.972 0.011 80);
+    --paper: oklch(0.991 0.006 82);
+    --ink: oklch(0.31 0.018 52);
+    --ink-soft: oklch(0.46 0.016 54);
+    --muted: oklch(0.61 0.012 58);
+    --faint: oklch(0.74 0.012 64);
+    --line: oklch(0.87 0.014 70);
+    --line-soft: oklch(0.91 0.011 74);
+    --clay: oklch(0.62 0.088 46);
+    --clay-soft: oklch(0.90 0.038 54);
+    --clay-tint: oklch(0.955 0.018 60);
+    --sage: oklch(0.64 0.05 150);
+    --sage-soft: oklch(0.93 0.03 150);
+
+    /* dark warm (option B) */
+    --espresso: oklch(0.255 0.018 48);
+    --espresso-2: oklch(0.305 0.02 48);
+    --espresso-3: oklch(0.355 0.02 48);
+    --espresso-line: oklch(0.40 0.02 48);
+    --on-dark: oklch(0.935 0.012 80);
+    --on-dark-soft: oklch(0.76 0.014 70);
+    --clay-bright: oklch(0.72 0.10 50);
+  }
+
+  * { box-sizing: border-box; }
+
+  /* ---------- phone frame ---------- */
+  .phone {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: "Hanken Grotesk", system-ui, sans-serif;
+    color: var(--ink);
+    overflow: hidden;
+    position: relative;
+  }
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 22px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    flex: 0 0 auto;
+  }
+  .statusbar .dots { display: flex; gap: 4px; align-items: center; }
+  .statusbar .dots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+  .screen { flex: 1 1 auto; overflow: hidden; display: flex; flex-direction: column; }
+
+  .eyebrow {
+    font-family: "Space Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .serif { font-family: "Newsreader", Georgia, serif; }
+
+  /* generic placeholder (wireframe imagery) */
+  .ph {
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--line-soft) 0 6px,
+      transparent 6px 12px
+    );
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ph-label {
+    font-family: "Space Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--paper);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* token icon (simple geometric placeholder) */
+  .tok {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Space Mono", monospace;
+    font-weight: 700;
+    font-size: 13px;
+    flex: 0 0 auto;
+  }
+
+  /* =====================================================
+     OPTION A — HEARTH (card stack, light, calm)
+     ===================================================== */
+  .a { background: var(--sand); }
+  .a .pad { padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .a .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .a .greet { font-size: 13px; color: var(--ink-soft); }
+  .a .baby { font-family: "Newsreader", serif; font-size: 22px; font-weight: 500; line-height: 1.1; }
+  .a .baby small { font-size: 12px; color: var(--muted); font-family: "Hanken Grotesk", sans-serif; font-weight: 500; }
+  .a .avatar { width: 42px; height: 42px; border-radius: 50%; }
+
+  .a .hero {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 1px 0 oklch(0.99 0 0 / 0.6) inset;
+  }
+  .a .hero .state { display: flex; align-items: center; gap: 8px; }
+  .a .hero .state .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sage); }
+  .a .hero .big { font-family: "Newsreader", serif; font-size: 38px; font-weight: 500; line-height: 1; margin: 12px 0 6px; }
+  .a .hero .sub { font-size: 13px; color: var(--ink-soft); }
+  .a .hero .bar { height: 8px; border-radius: 6px; background: var(--clay-tint); margin-top: 16px; overflow: hidden; }
+  .a .hero .bar i { display: block; height: 100%; width: 62%; background: var(--clay); border-radius: 6px; }
+
+  .a .sweet {
+    background: var(--clay-tint);
+    border: 1px solid var(--clay-soft);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .a .sweet .ring { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--clay); border-right-color: var(--clay-soft); flex: 0 0 auto; }
+  .a .sweet .win { font-family: "Newsreader", serif; font-size: 17px; font-weight: 500; }
+
+  .a .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .a .act { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .a .act .tok { background: var(--paper); border: 1px solid var(--line); color: var(--clay); }
+  .a .act span { font-size: 11px; color: var(--ink-soft); }
+  .a .act.primary .tok { background: var(--clay); color: var(--paper); border-color: var(--clay); }
+
+  .a .feed-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px; }
+  .a .feed-head h3 { font-family: "Newsreader", serif; font-weight: 500; font-size: 16px; margin: 0; }
+  .a .feed-head a { font-size: 12px; color: var(--clay); }
+  .a .log { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .a .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .a .row + .row { border-top: 1px solid var(--line-soft); }
+  .a .row .tok { width: 30px; height: 30px; border-radius: 9px; font-size: 11px; background: var(--cream); border: 1px solid var(--line); color: var(--ink-soft); }
+  .a .row .what { font-size: 13px; font-weight: 500; }
+  .a .row .when { font-size: 11px; color: var(--muted); }
+  .a .row .meta { margin-left: auto; font-size: 12px; color: var(--ink-soft); font-family: "Space Mono", monospace; }
+
+  /* =====================================================
+     OPTION B — ORBIT (day ring, dark warm, focus)
+     ===================================================== */
+  .b { background: var(--espresso); color: var(--on-dark); }
+  .b .pad { padding: 4px 22px 22px; display: flex; flex-direction: column; gap: 18px; height: 100%; }
+  .b .statusbar { color: var(--on-dark); }
+  .b .top { display: flex; justify-content: space-between; align-items: center; }
+  .b .top .name { font-family: "Newsreader", serif; font-size: 18px; font-weight: 500; }
+  .b .top .name small { display: block; font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--on-dark-soft); text-transform: uppercase; margin-top: 2px; }
+  .b .menu { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--espresso-line); display: flex; align-items: center; justify-content: center; gap: 3px; }
+  .b .menu i { width: 3px; height: 3px; border-radius: 50%; background: var(--on-dark-soft); }
+
+  .b .ringwrap { position: relative; align-self: center; width: 232px; height: 232px; margin-top: 4px; }
+  .b .ringwrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .b .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .b .center .eyebrow { color: var(--clay-bright); margin-bottom: 8px; }
+  .b .center .big { font-family: "Newsreader", serif; font-size: 40px; font-weight: 500; line-height: 0.95; }
+  .b .center .since { font-size: 12px; color: var(--on-dark-soft); margin-top: 6px; }
+
+  .b .legend { display: flex; justify-content: center; gap: 18px; }
+  .b .legend div { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--on-dark-soft); }
+  .b .legend .sw { width: 10px; height: 10px; border-radius: 3px; }
+
+  .b .next {
+    border: 1px solid var(--espresso-line);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .b .next .lbl { font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-dark-soft); }
+  .b .next .val { font-family: "Newsreader", serif; font-size: 18px; font-weight: 500; margin-top: 3px; }
+  .b .next .go { width: 40px; height: 40px; border-radius: 50%; background: var(--clay-bright); color: var(--espresso); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
+
+  .b .acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: auto; }
+  .b .acts button {
+    all: unset;
+    background: var(--espresso-2);
+    border: 1px solid var(--espresso-line);
+    border-radius: 14px;
+    padding: 14px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer;
+  }
+  .b .acts .tok { background: var(--espresso-3); color: var(--clay-bright); }
+  .b .acts span { font-size: 11px; color: var(--on-dark-soft); }
+
+  /* =====================================================
+     OPTION C — LEDGER (timeline-first, dense, structured)
+     ===================================================== */
+  .c { background: var(--cream); }
+  .c .head { padding: 6px 18px 12px; border-bottom: 1px solid var(--line); }
+  .c .head .row1 { display: flex; justify-content: space-between; align-items: center; }
+  .c .head .name { font-family: "Newsreader", serif; font-size: 19px; font-weight: 500; }
+  .c .head .name b { font-weight: 500; }
+  .c .head .name em { font-style: normal; font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-left: 6px; }
+  .c .head .av { width: 34px; height: 34px; border-radius: 50%; }
+  .c .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 12px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .c .stat { background: var(--paper); padding: 10px 12px; }
+  .c .stat .k { font-family: "Space Mono", monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .c .stat .v { font-family: "Newsreader", serif; font-size: 21px; font-weight: 500; line-height: 1.1; margin-top: 3px; }
+  .c .stat .v small { font-size: 11px; color: var(--muted); font-family: "Hanken Grotesk", sans-serif; }
+
+  .c .body { flex: 1 1 auto; overflow: hidden; padding: 14px 18px 0; }
+  .c .daylabel { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .c .daylabel .eyebrow { color: var(--clay); }
+  .c .daylabel .hr { flex: 1; height: 1px; background: var(--line); }
+
+  .c .tl { position: relative; padding-left: 22px; }
+  .c .tl::before { content: ""; position: absolute; left: 6px; top: 4px; bottom: 4px; width: 1px; background: var(--line); }
+  .c .ti { position: relative; padding: 0 0 16px; }
+  .c .ti::before { content: ""; position: absolute; left: -19px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--paper); border: 2px solid var(--clay); }
+  .c .ti.sleep::before { border-color: var(--sage); }
+  .c .ti .t { font-family: "Space Mono", monospace; font-size: 10px; color: var(--muted); }
+  .c .ti .l { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .c .ti .d { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  .c .ti .d .ph { display: inline-block; height: 22px; width: 90px; vertical-align: middle; border-radius: 6px; }
+
+  .c .addbar {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+    padding: 12px 14px;
+    display: flex; gap: 8px;
+  }
+  .c .addbar .field { flex: 1; border: 1px solid var(--line); border-radius: 10px; background: var(--cream); padding: 10px 12px; font-size: 12px; color: var(--muted); display: flex; align-items: center; }
+  .c .addbar .send { width: 42px; border-radius: 10px; background: var(--clay); color: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
+
+  /* canvas intro note */
+  .legend-note { font-family: "Space Mono", monospace; font-size: 11px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel">
+  const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+  const { OptionA, OptionB, OptionC } = window;
+
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection
+          id="home"
+          title="Huckleberry · Home screen"
+          subtitle="Three directions for the main dashboard — differing in layout, tone & color. Wireframe fidelity, warm/earthy, sans + serif.">
+          <DCArtboard id="a" label="A · Hearth — calm card stack" width={340} height={812}>
+            <OptionA />
+          </DCArtboard>
+          <DCArtboard id="b" label="B · Orbit — day-ring focus (dark)" width={340} height={812}>
+            <OptionB />
+          </DCArtboard>
+          <DCArtboard id="c" label="C · Ledger — timeline-first" width={340} height={812}>
+            <OptionC />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
