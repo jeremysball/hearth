@@ -13,6 +13,8 @@ func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db))
 	mux.HandleFunc("PUT /api/entries/{id}", requireAuth(db, handleUpsertEntry(db, hub)))
 	mux.HandleFunc("DELETE /api/entries/{id}", requireAuth(db, handleDeleteEntry(db, hub)))
+	mux.HandleFunc("PUT /api/growth/{id}", requireAuth(db, handleUpsertGrowth(db, hub)))
+	mux.HandleFunc("DELETE /api/growth/{id}", requireAuth(db, handleDeleteGrowth(db, hub)))
 	mux.Handle("/", http.FileServer(http.Dir(".")))
 	return mux
 }
