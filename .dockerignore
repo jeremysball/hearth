@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.thumbnail
+.superpowers
+certs/
+docs/
+screenshots/
+*.db
+server/hearth-server
+server/server
+hearth.jsx
+tweaks-panel.jsx
+conform.lua
+*.md
