@@ -21,6 +21,7 @@ func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux.HandleFunc("DELETE /api/growth/{id}", requireAuth(db, handleDeleteGrowth(db, hub)))
 	mux.HandleFunc("PATCH /api/baby", requireAuth(db, handlePatchBaby(db, hub)))
 	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub)))
+	mux.HandleFunc("GET /api/caregivers", requireAuth(db, handleListCaregivers(db)))
 	mux.Handle("/", http.FileServer(http.Dir(".")))
 	return mux
 }
