@@ -5,9 +5,10 @@ import (
 	"net/http"
 )
 
-func newRouter(db *sql.DB) http.Handler {
+func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/family", handleCreateFamily(db))
+	mux.HandleFunc("/api/events", requireAuth(db, handleEvents(hub)))
 	mux.Handle("/", http.FileServer(http.Dir(".")))
 	return mux
 }

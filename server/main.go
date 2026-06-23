@@ -13,7 +13,8 @@ func main() {
 	}
 	defer db.Close()
 
-	mux := newRouter(db)
+	hub := newHub()
+	mux := newRouter(db, hub)
 	addr := cfg.Host + ":" + cfg.Port
 
 	log.Printf("Hearth server listening on %s (db: %s, static: %s)", addr, cfg.DBPath, cfg.StaticDir)
