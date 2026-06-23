@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-v5';
+const VERSION = 'hearth-v6';
 const SHELL = [
   './',
   './index.html',
