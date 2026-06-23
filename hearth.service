@@ -1,0 +1,14 @@
+[Unit]
+Description=Hearth baby tracker server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/hearth
+ExecStart=/workspace/hearth/server/hearth-server
+EnvironmentFile=/workspace/hearth/.env
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
