@@ -1,0 +1,34 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: hearth
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  app:
+    build: .
+    # Share tailscale's network namespace so app's port 8443 is actually
+    # reachable at https://hearth.<tailnet>.ts.net:8443 — a plain bridge
+    # network alone doesn't expose a sibling container over the tailnet.
+    network_mode: "service:tailscale"
+    depends_on:
+      - tailscale
+    env_file:
+      - .env
+    volumes:
+      - hearth-data:/app/data
+      - ./certs:/app/certs:ro
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:
+  hearth-data:
