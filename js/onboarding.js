@@ -84,7 +84,6 @@ export async function onboardFinish() {
   st.baby.theme = document.body.dataset.theme || 'girl';
   st.baby.caregiver = $('#onb-cg').value.trim();
   st.baby.photo = _onbPhoto;
-  st.settings.caregivers[0] = { name: st.baby.caregiver, role: 'Parent' };
   st.setup = true;
   seed();
   save();

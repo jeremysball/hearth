@@ -13,7 +13,6 @@ const DEFAULT = () => ({
     ],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
-    caregivers: [{ name: '', role: 'Parent' }],
     cards: { sweetspot: true, bottle: true, medicine: true },
     darkMode: 'auto'
   },

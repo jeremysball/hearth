@@ -6,7 +6,7 @@ import { home, summary, enterTodayEditMode, exitTodayEditMode } from './home.js'
 import { trends } from './trends.js';
 import { sleep } from './sleep.js';
 import { growth } from './growth.js';
-import { profile, cgRow } from './profile.js';
+import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow } from './sheets.js';
@@ -105,7 +105,7 @@ document.addEventListener('click', (ev) => {
     'nav:trends': () => router.go('trends'),
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
-    'nav:profile': () => router.go('profile'),
+    'nav:profile': () => { router.go('profile'); loadCaregivers().then(() => { if (current === 'profile') router.refresh(); }); },
     'log:open': () => openLog(d.type),
     'log:more': () => openTypeChooser(),
     'log:save': () => saveLog(d.type, d.id),
@@ -137,10 +137,8 @@ document.addEventListener('click', (ev) => {
     'baby:photo': () => openBabyPhoto(),
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
-    'cg:add': () => cgAdd(),
-    'cg:remove': () => cgRemove(d.cgi),
-    'cg:confirm': () => cgConfirm(d.cgi),
-    'cg:discard': () => cgDiscard(d.cgi),
+    'cg:invite': () => inviteCaregiver(),
+    'cg:invite-copy': () => { navigator.clipboard.writeText(d.url).then(() => toast('Link copied')); },
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'app:reset': () => resetConfirm()
@@ -177,10 +175,6 @@ document.addEventListener('pointermove', (e) => {
 document.addEventListener('change', (ev) => {
   const b = ev.target.closest('[data-bind]');
   if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme') applyTheme(); }
-  const row = ev.target.closest('.cg-row');
-  if (row && row.dataset.pending === 'true') return; // wait for explicit confirm
-  if (ev.target.classList.contains('cg-name')) saveCg();
-  if (ev.target.classList.contains('cg-role')) saveCg();
 });
 
 function toggle(el, path) {
@@ -194,37 +188,20 @@ function addMed() {
   const id = 'm' + Date.now().toString(36);
   list.insertAdjacentHTML('beforeend', medRow({ id, name: '', dose: '1', unit: '', everyH: 24 }));
 }
-function saveCg() {
-  const rows = $$('#cg-list .cg-row');
-  state().settings.caregivers = rows.map((r) => ({
-    name: $('.cg-name', r).value.trim(),
-    role: $('.cg-role', r).value
-  }));
-  save();
-}
-function cgAdd() {
-  const list = $('#cg-list');
-  const existingPending = $('.cg-row[data-pending="true"]', list);
-  if (existingPending) { $('.cg-name', existingPending).focus(); return; }
-  const i = $$('.cg-row', list).length;
-  $('.add-row', list).insertAdjacentHTML('beforebegin', cgRow({ name: '', role: 'Parent' }, i, true));
-  $(`.cg-row[data-cgi="${i}"] .cg-name`, list).focus();
-}
-function cgConfirm(i) {
-  const row = $(`#cg-list .cg-row[data-cgi="${i}"]`); if (!row) return;
-  const nameInput = $('.cg-name', row);
-  if (!nameInput.value.trim()) {
-    nameInput.focus(); nameInput.classList.add('shake'); setTimeout(() => nameInput.classList.remove('shake'), 500);
-    toast('Enter a name'); return;
+async function inviteCaregiver() {
+  try {
+    const res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
+    if (!res.ok) throw new Error('invite failed: ' + res.status);
+    const { token } = await res.json();
+    const url = location.origin + '/join/' + token;
+    sheet.open(`
+      <p class="empty-note">Share this link with the person you want to invite. It works once and expires in 48 hours.</p>
+      <div class="invite-link">${esc(url)}</div>
+      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><i class="ph ph-copy"></i> Copy link</button>`,
+      { title: 'Invite a caregiver' });
+  } catch (e) {
+    toast('Could not create an invite — check your connection');
   }
-  saveCg();
-  router.refresh();
-}
-function cgDiscard(i) {
-  const row = $(`#cg-list .cg-row[data-cgi="${i}"]`); if (row) row.remove();
-}
-function cgRemove(i) {
-  state().settings.caregivers.splice(Number(i), 1); save(); router.refresh();
 }
 function profilePhoto() {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
