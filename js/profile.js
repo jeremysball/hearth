@@ -61,7 +61,7 @@ export function profile() {
     </div>
 
     <button class="btn-ghost danger" data-action="app:reset"><i class="ph ph-arrow-counter-clockwise"></i> Reset app & start over</button>
-    <div class="foot-note">Hearth · prototype · data stored on this device · hearth-v8</div>`;
+    <div class="foot-note">Hearth · prototype · data stored on this device · ${document.querySelector('meta[name="version"]')?.content || ''}</div>`;
 }
 
 let cachedCaregivers = [];

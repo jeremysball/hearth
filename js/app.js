@@ -141,10 +141,26 @@ document.addEventListener('click', (ev) => {
     'cg:invite-copy': () => { navigator.clipboard.writeText(d.url).then(() => toast('Link copied')); },
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
-    'app:reset': () => resetConfirm()
+    'app:reset': () => resetConfirm(),
+    'stepper:up': () => stepValue(d.target, 1),
+    'stepper:down': () => stepValue(d.target, -1)
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
 });
+
+function stepValue(id, dir) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const step = parseFloat(el.dataset.step || 1);
+  const min = el.dataset.min != null ? parseFloat(el.dataset.min) : -Infinity;
+  const max = el.dataset.max != null ? parseFloat(el.dataset.max) : Infinity;
+  let val = parseFloat(el.value) || 0;
+  val = Math.round((val + dir * step) * 1e6) / 1e6;
+  if (val < min) val = min;
+  if (val > max) val = max;
+  el.value = val;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
 // ---------- long-press to enter Today edit mode ----------
 let suppressClickUntil = 0;
