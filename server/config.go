@@ -59,15 +59,7 @@ func getenv(key, fallback string) string {
 func loadEnvFile(path string) {
 	f, err := os.Open(path)
 	if err != nil {
-		// Try parent directory if file not found in current directory
-		if path == ".env" {
-			f, err = os.Open("../.env")
-			if err != nil {
-				return
-			}
-		} else {
-			return
-		}
+		return
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
