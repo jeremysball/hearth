@@ -256,6 +256,7 @@ body {
 .fld .opt { color: var(--muted); font-weight: 600; }
 input, select, textarea { box-sizing: border-box; border: 1.5px solid var(--hair); background: var(--bg); border-radius: 13px; padding: 11px 13px; font-size: 14px; font-weight: 600; color: var(--ink); outline: none; transition: border-color .15s; width: 100%; min-width: 0; max-width: 100%; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input[type="time"], input[type="date"] { -webkit-appearance: none; appearance: none; }
 textarea { resize: none; }
 input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }

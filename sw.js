@@ -1,6 +1,6 @@
 // Hearth PWA service worker
 // bump profile.js footer too
-const VERSION = 'hearth-v6';
+const VERSION = 'hearth-v7';
 const SHELL = [
   './',
   './index.html',
