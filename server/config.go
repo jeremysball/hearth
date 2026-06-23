@@ -17,30 +17,11 @@ type Config struct {
 
 func loadConfig() Config {
 	loadEnvFile(".env")
-	certFile := os.Getenv("CERT_FILE")
-	keyFile := os.Getenv("KEY_FILE")
-
-	// If cert files are relative paths, try parent directory
-	if certFile != "" {
-		if _, err := os.Stat(certFile); err != nil {
-			if _, err := os.Stat("../" + certFile); err == nil {
-				certFile = "../" + certFile
-			}
-		}
-	}
-	if keyFile != "" {
-		if _, err := os.Stat(keyFile); err != nil {
-			if _, err := os.Stat("../" + keyFile); err == nil {
-				keyFile = "../" + keyFile
-			}
-		}
-	}
-
 	return Config{
 		Host:      getenv("HOST", "0.0.0.0"),
 		Port:      getenv("PORT", "8443"),
-		CertFile:  certFile,
-		KeyFile:   keyFile,
+		CertFile:  os.Getenv("CERT_FILE"),
+		KeyFile:   os.Getenv("KEY_FILE"),
 		DBPath:    getenv("DB_PATH", "hearth.db"),
 		StaticDir: getenv("STATIC_DIR", "."),
 	}
