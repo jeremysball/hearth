@@ -12,6 +12,9 @@ func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))
 	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db))
+	mux.HandleFunc("GET /join/{token}", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
 	mux.HandleFunc("PUT /api/entries/{id}", requireAuth(db, handleUpsertEntry(db, hub)))
 	mux.HandleFunc("DELETE /api/entries/{id}", requireAuth(db, handleDeleteEntry(db, hub)))
 	mux.HandleFunc("PUT /api/growth/{id}", requireAuth(db, handleUpsertGrowth(db, hub)))
