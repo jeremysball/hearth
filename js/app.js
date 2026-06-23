@@ -8,6 +8,7 @@ import { sleep } from './sleep.js';
 import { growth } from './growth.js';
 import { profile, cgRow } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
+import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 
@@ -140,6 +141,7 @@ document.addEventListener('click', (ev) => {
     'cg:remove': () => cgRemove(d.cgi),
     'cg:confirm': () => cgConfirm(d.cgi),
     'cg:discard': () => cgDiscard(d.cgi),
+    'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'app:reset': () => resetConfirm()
   };
@@ -264,6 +266,11 @@ setInterval(tick, 60000);
 // ---------- init ----------
 function init() {
   applyTheme();
+  const joinMatch = location.pathname.match(/^\/join\/([^/]+)$/);
+  if (joinMatch && !state().setup) {
+    $('#app').innerHTML = joinView(joinMatch[1]);
+    return;
+  }
   if (!state().setup) {
     $('#app').innerHTML = onboarding();
   } else {
