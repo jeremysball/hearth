@@ -91,3 +91,73 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(createFamilyResponse{FamilyID: familyID, BabyID: babyID, CaregiverID: caregiverID})
 	}
 }
+
+type patchBabyRequest struct {
+	Name      string `json:"name"`
+	Birthdate string `json:"birthdate"`
+	Theme     string `json:"theme"`
+	Photo     string `json:"photo"`
+}
+
+func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := sessionFrom(r)
+		var req patchBabyRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		now := nowISO()
+		res, err := db.Exec(`UPDATE babies SET name = ?, birthdate = ?, theme = ?, photo = ?, updated_at = ? WHERE family_id = ?`,
+			req.Name, req.Birthdate, req.Theme, req.Photo, now, session.FamilyID)
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "baby not found", http.StatusNotFound)
+			return
+		}
+		hub.Broadcast(session.FamilyID)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+type patchSettingsRequest struct {
+	BottleIntervalH float64         `json:"bottleIntervalH"`
+	Meds            json.RawMessage `json:"meds"`
+	Units           json.RawMessage `json:"units"`
+	Reminders       json.RawMessage `json:"reminders"`
+	Cards           json.RawMessage `json:"cards"`
+}
+
+func rawOrNull(r json.RawMessage) string {
+	if len(r) == 0 {
+		return "null"
+	}
+	return string(r)
+}
+
+func handlePatchSettings(db *sql.DB, hub *Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := sessionFrom(r)
+		var req patchSettingsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		now := nowISO()
+		res, err := db.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, updated_at = ? WHERE family_id = ?`,
+			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), now, session.FamilyID)
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "settings not found", http.StatusNotFound)
+			return
+		}
+		hub.Broadcast(session.FamilyID)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
