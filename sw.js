@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-v4';
+const VERSION = 'hearth-v5';
 const SHELL = [
   './',
   './index.html',
@@ -9,6 +9,8 @@ const SHELL = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
+  './fonts/phosphor.css',
+  './fonts/Phosphor.woff2',
   './js/app.js',
   './js/store.js',
   './js/ui.js',
