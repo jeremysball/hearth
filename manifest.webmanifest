@@ -1,0 +1,17 @@
+{
+  "name": "Hearth — Baby Tracker",
+  "short_name": "Hearth",
+  "description": "A calm, gentle tracker for your baby's sleep, feeds and day.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf3f0",
+  "theme_color": "#f5e1dc",
+  "categories": ["health", "lifestyle", "parenting"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
