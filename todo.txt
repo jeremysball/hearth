@@ -2,31 +2,43 @@
 [x] I want each of the sections on the home screen to be tappable
     and I want them to open a new log for their respective section
     i.e. SweetSpot should allow for you to create a new sleep log
-[?] Whenever you log a feeding in the night it should create a 20
-  minute awake period automatically then back to sleep
-[?] Same with the diaper -- maybe ten minutes? 
-- Copy link should be replaced with share link and it should 
+[x] Copy link should be replaced with share link and it should 
   open the native share sheet on the device
-- still can't remove sleep from the sleep tab
-- can't specify the size of diaper when logging a diaper change
+[x] can't specify the size of diaper when logging a diaper change
 [x] the navbar on the bottom is twice as tall as it needs to be
 [x] try to implement theme.txt theme 
 
+[x] Whenever you log a feeding in the night it should create a 20
+  minute awake period automatically then back to sleep (verified live:
+  hero flips to "Awake since", resumed nap stays hidden until its start
+  time arrives, undo fully reverts)
+[x] Same with the diaper -- maybe ten minutes? (same code path as above,
+  covered by the same fix and the same live verification)
+[x] still can't remove sleep from the sleep tab (Task #3: sleep.js's
+  "today" filter now includes future-start resumed naps and overnight naps
+  ending today, both labeled and deletable via the same entry:open ->
+  delete path; verified live)
 
 
 
 ---------------------------------------------------
-- "Could not create an invite — check your connection" on desktop
-- Able to create negative sleep log
-- Rearranging the cards on the home screen (hold to enter edit mode settings
-  icon becomes a hamburger icon and you can drag them) 
-- Some kind of picker on windows / desktop for the time of day when creating a log?
-- Support for 24 hour time format
-- Different icons for mixed, wet, and dirty diapers
-- Sleep counter essentially wraps around. At 1 minute of sleep it says -59 minutes
-- More colors?
-- The spinner is great but I would 5 more numbers on each top and bottom. Getting smaller
+Feat
+  - Rearranging the cards on the home screen (hold to enter edit mode settings
+    icon becomes a hamburger icon and you can drag them) 
+  - Some kind of picker on windows / desktop for the time of day when creating a log?
+  - Support for 24 hour time format
+  - The spinner is great but I would 5 more numbers on each top and bottom. Getting smaller
   and more transparent as they move from the center. Creating the illusion of a real spinner
-- I also should be able to click into the spinner and type a number. The spinner should update
-  to what I type and then I should be able to click the check mark to save it.
-- Whenever I try to log sleep from the sleep tab it doesn't even appear in that tab. Then whenever I see it on the home screen it doesn't properly calculate the amount of sleep at all it says -54, -55, -56
+  - I also should be able to click into the spinner and type a number. The spinner should update
+    to what I type and then I should be able to click the check mark to save it.
+  - More colors?
+  - Different icons for mixed, wet, and dirty diapers
+  - Animations in the UI for when you log a new entry. Maybe a little confetti or something. Something to make it feel more rewarding to log an entry.
+  - Sounds!
+  - Clicker sound when spinning the spinner
+  - Can we do vibration? 
+  - I do not like how you can select text on the ui
+Bugs
+  - "Could not create an invite — check your connection" on desktop
+  - Able to create negative sleep log
+    - Sleep counter essentially wraps around. At 1 minute of sleep it says -59 minutes. Whenever I try to log sleep from the sleep tab it doesn't even appear in that tab. Then whenever I see it on the home screen it doesn't properly calculate the amount of sleep at all it says -54, -55, -56

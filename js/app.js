@@ -2,6 +2,7 @@
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
 import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet } from './ui.js';
+import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode } from './home.js';
 import { trends } from './trends.js';
 import { sleep } from './sleep.js';
@@ -51,7 +52,7 @@ function setPath(path, val) {
   o[parts[parts.length - 1]] = val;
   save();
   if (path.startsWith('baby.')) enqueueBabySync();
-  else if (path.startsWith('settings.') && path !== 'settings.darkMode') enqueueSettingsSync();
+  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.theme') enqueueSettingsSync();
 }
 function getPath(path) { return path.split('.').reduce((o, k) => (o ? o[k] : undefined), state()); }
 
@@ -91,7 +92,7 @@ document.addEventListener('click', (ev) => {
       $$('.seg-opt', group).forEach((b) => b.classList.remove('on'));
       opt.classList.add('on');
       const bind = group.dataset.bindSeg;
-      if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.darkMode') applyTheme(); }
+      if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
     }
     // don't return; seg-opt has no data-action
   }
@@ -140,6 +141,14 @@ document.addEventListener('click', (ev) => {
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
+    'theme:pick': () => {
+      state().settings.theme = d.theme;
+      state().baby.theme = d.theme;
+      save();
+      enqueueBabySync();
+      applyTheme();
+      router.refresh();
+    },
     'app:reset': () => resetConfirm(),
     'stepper:up': () => stepValue(d.target, 1),
     'stepper:down': () => stepValue(d.target, -1),
@@ -199,7 +208,7 @@ document.addEventListener('pointermove', (e) => {
 // change/input binders
 document.addEventListener('change', (ev) => {
   const b = ev.target.closest('[data-bind]');
-  if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme') applyTheme(); }
+  if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme' || b.dataset.bind === 'settings.theme') applyTheme(); }
 });
 
 function toggle(el, path) {
@@ -233,7 +242,8 @@ async function ensureFamily() {
       })
     });
     if (res.ok) markSynced();
-  } catch (e) {}
+    else log.warn('sync', 'ensureFamily failed', res.status);
+  } catch (e) { log.warn('sync', 'ensureFamily offline', e.message); }
 }
 async function inviteCaregiver() {
   try {
@@ -252,6 +262,7 @@ async function inviteCaregiver() {
       <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Share link</button>`,
       { title: 'Invite a caregiver' });
   } catch (e) {
+    log.warn('invite', 'inviteCaregiver failed', e.message);
     toast('Could not reach the server — check your connection');
   }
 }
@@ -340,16 +351,17 @@ async function syncOnce() {
     setLastSync(data.serverTime);
     if (current !== 'home' || $('#view')) router.refresh();
   } catch (e) {
-    // offline or server unreachable; the next trigger (timer/online/SSE) retries
+    log.warn('sync', 'syncOnce failed', e.message);
   }
 }
 
 let eventSource = null;
 function connectEvents() {
   if (eventSource || !('EventSource' in window)) return;
+  log.event('sync', 'SSE connecting');
   eventSource = new EventSource('/api/events');
   eventSource.onmessage = () => syncOnce();
-  eventSource.onerror = () => { eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
+  eventSource.onerror = () => { log.warn('sync', 'SSE error, reconnecting in 5s'); eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
 }
 
 window.addEventListener('online', syncOnce);

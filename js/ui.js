@@ -1,5 +1,6 @@
 // ui.js — formatting, icon map, sheet/modal machinery, toast, theme.
 import { state } from './store.js';
+import { log } from './log.js';
 
 // ---------- formatting ----------
 const pad = (n) => String(n).padStart(2, '0');
@@ -65,18 +66,33 @@ export const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
 export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ---------- theme ----------
+export const THEMES = [
+  { id: 'girl', label: 'Girl', swatch: 'girl' },
+  { id: 'boy', label: 'Boy', swatch: 'boy' },
+  { id: 'dayjob', label: 'Day Job', swatch: 'dayjob' }
+];
 export function resolveMode() {
   const m = state().settings.darkMode || 'auto';
   if (m === 'auto') return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   return m;
 }
 export function applyTheme() {
-  const t = state().baby.theme || 'girl';
+  const st = state();
+  const t = st.settings.theme || st.baby.theme || 'girl';
   const mode = resolveMode();
   document.body.dataset.theme = t;
   document.body.dataset.mode = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1c1f1b' : '#211f17') : (t === 'boy' ? '#eef0e4' : '#f3eee0');
+  if (meta) {
+    const colors = {
+      girl: { light: '#f3eee0', dark: '#211f17' },
+      boy: { light: '#eef0e4', dark: '#1c1f1b' },
+      dayjob: { light: '#f3ead9', dark: '#221d17' }
+    };
+    const c = colors[t] || colors.girl;
+    meta.content = mode === 'dark' ? c.dark : c.light;
+  }
+  log.event('theme', 'apply', t, mode);
 }
 if (window.matchMedia) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
