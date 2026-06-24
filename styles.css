@@ -352,3 +352,14 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-items { position: absolute; top: 50%; left: 0; right: 0; z-index: 1; will-change: transform; }
 .spinner-item { height: 52px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--muted); }
 .spinner-item.on { font-size: 26px; font-weight: 800; color: var(--ink); }
+.spinner-item.pos-1 { opacity: .85; font-size: 18px; }
+.spinner-item.pos-2 { opacity: .68; font-size: 17px; }
+.spinner-item.pos-3 { opacity: .50; font-size: 15px; }
+.spinner-item.pos-4 { opacity: .35; font-size: 14px; }
+.spinner-item.pos-5 { opacity: .22; font-size: 13px; }
+.spinner-item.pos-6 { opacity: .12; font-size: 12px; }
+.spinner-item.pos-7 { opacity: .06; font-size: 11px; }
+.spinner-item.pos-8 { opacity: .03; font-size: 10px; }
+.spinner-type { display: flex; align-items: center; gap: 6px; }
+.spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
+.spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; }

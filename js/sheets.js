@@ -27,7 +27,7 @@ export function openSpinner(id) {
   let val = parseFloat(el.dataset.value) || 0;
 
   const ITEM_H = 52;
-  const OFF = 5;
+  const OFF = 8;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
   const pxToVal = (px) => val - (px / ITEM_H) * step;
   const valToPx = (v) => (val - v) / step * ITEM_H;
@@ -49,7 +49,8 @@ export function openSpinner(id) {
     for (let i = -OFF; i <= OFF; i++) {
       const v = center + i * step;
       const inRange = v >= min && v <= max;
-      const cls = i === 0 ? 'spinner-item on' : 'spinner-item';
+      const absOff = Math.abs(i);
+      const cls = i === 0 ? 'spinner-item on pos-0' : `spinner-item pos-${absOff}`;
       html += `<div class="${cls}">${inRange ? fmtVal(v) : ''}</div>`;
     }
     return html;
@@ -91,7 +92,7 @@ export function openSpinner(id) {
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  let dragging = false, pid = null;
+  let dragging = false, pid = null, dragged = false;
   let offsetY = 0, dragY = 0;
   let velSamples = [];
 
@@ -110,7 +111,7 @@ export function openSpinner(id) {
   function onDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragging) return;
-    dragging = true; pid = e.pointerId;
+    dragging = true; pid = e.pointerId; dragged = false;
     dragY = e.clientY;
     offsetY = 0; velSamples = [{ y: e.clientY, t: performance.now() }];
     lastCenter = val;
@@ -124,6 +125,7 @@ export function openSpinner(id) {
     const dy = e.clientY - dragY;
     dragY = e.clientY;
     offsetY += dy;
+    if (Math.abs(offsetY) > 3) dragged = true;
 
     velSamples.push({ y: e.clientY, t: performance.now() });
     if (velSamples.length > 5) velSamples.shift();
@@ -135,6 +137,12 @@ export function openSpinner(id) {
   function onUp(e) {
     if (!dragging || e.pointerId !== pid) return;
     dragging = false; pid = null;
+
+    if (!dragged) {
+      // tap without drag — enter type mode on the centered value
+      const onItem = items.querySelector('.spinner-item.on');
+      if (onItem) { enterTypeMode(onItem); return; }
+    }
 
     // velocity from recent samples (px/ms → momentum mapper). Measured as
     // net position change over the exact span it's timed against — summing
@@ -180,6 +188,43 @@ export function openSpinner(id) {
   items.addEventListener('pointermove', onMove);
   items.addEventListener('pointerup', onUp);
   items.addEventListener('pointercancel', onUp);
+
+  // tap-to-type: tapping the centered value opens an inline input
+  items.addEventListener('click', (e) => {
+    if (dragged) return;
+    const onItem = e.target.closest('.spinner-item.on');
+    if (!onItem) return;
+    enterTypeMode(onItem);
+  });
+
+  function enterTypeMode(onItem) {
+    if (onItem.querySelector('input')) return;
+    const current = val;
+    onItem.innerHTML = `<div class="spinner-type"><input type="text" inputmode="decimal" value="${fmtVal(current)}" /><button class="spinner-check" aria-label="Confirm"><svg class="icon"><use href="#check"></use></svg></button></div>`;
+    const inp = onItem.querySelector('input');
+    const btn = onItem.querySelector('.spinner-check');
+
+    function confirm() {
+      const raw = inp.value.trim();
+      const num = Number(raw);
+      if (raw === '' || isNaN(num)) { exitTypeMode(onItem); return; }
+      const snapped = Math.min(max, Math.max(min, Math.round(num / step) * step));
+      commit(snapped);
+      items.innerHTML = trackHTML(snapped);
+      items.style.transform = 'translateY(calc(-50% + 0px))';
+      offsetY = 0; lastCenter = snapped;
+    }
+    inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); confirm(); } });
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); confirm(); });
+    inp.addEventListener('blur', () => exitTypeMode(onItem));
+    requestAnimationFrame(() => inp.focus());
+  }
+
+  function exitTypeMode(onItem) {
+    if (!onItem || !onItem.querySelector('input')) return;
+    items.innerHTML = trackHTML(lastCenter);
+    items.style.transform = 'translateY(calc(-50% + 0px))';
+  }
 
   document.body.appendChild(overlay);
   items.style.transform = `translateY(calc(-50% + 0px))`;
