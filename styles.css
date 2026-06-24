@@ -259,7 +259,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 input[type="time"], input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 44px; }
 input[type="number"] { max-width: 140px; text-align: center; }
 .stepper { display: flex; align-items: center; }
-.stepper input { flex: 1; text-align: center; border-radius: 0; border-left: 0; border-right: 0; max-width: none; }
+.stepper-val { flex: 1; text-align: center; border-top: 1.5px solid var(--hair); border-bottom: 1.5px solid var(--hair); padding: 11px 13px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; user-select: none; outline: none; min-width: 0; background: var(--bg); box-sizing: border-box; }
+.stepper-val:focus-visible { border-color: var(--accent); }
 .stepper-btn { all: unset; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--accent-tint); color: var(--accent-ink); font-size: 18px; font-weight: 700; flex-shrink: 0; }
 .stepper-btn:first-of-type { border-radius: 13px 0 0 13px; border: 1.5px solid var(--hair); border-right: 0; }
 .stepper-btn:last-of-type { border-radius: 0 13px 13px 0; border: 1.5px solid var(--hair); border-left: 0; }
@@ -333,3 +334,14 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .theme-swatch.boy { background: oklch(0.66 0.085 252); }
 .onb-go { margin: 0; }
 .onb-foot { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
+
+/* ---------- spinner overlay ---------- */
+.spinner-overlay { position: fixed; inset: 0; z-index: 10000; background: oklch(0 0 0 / .35); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .18s; }
+.spinner-overlay.show { opacity: 1; }
+.spinner-popup { background: var(--surface); border-radius: 28px; width: min(280px, 80vw); box-shadow: 0 20px 50px oklch(0 0 0 / .25); overflow: hidden; }
+.spinner-window { position: relative; height: 260px; overflow: hidden; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.spinner-window:active { cursor: grabbing; }
+.spinner-highlight { position: absolute; top: 50%; left: 12px; right: 12px; height: 52px; transform: translateY(-50%); background: var(--accent-tint); border-radius: 13px; pointer-events: none; z-index: 0; }
+.spinner-items { position: absolute; top: 50%; left: 0; right: 0; z-index: 1; will-change: transform; }
+.spinner-item { height: 52px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--muted); }
+.spinner-item.on { font-size: 26px; font-weight: 800; color: var(--ink); }
