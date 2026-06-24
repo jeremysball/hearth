@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { state, addEntry, removeEntry, addMeasure, applySyncResponse } = await import('./store.js');
+const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, maybeInterruptSleep, undoInterruptSleep } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -54,4 +54,74 @@ test('applySyncResponse upserts and tombstones log entries by id', () => {
 
   applySyncResponse({ baby: null, settings: null, entries: [{ id: 'sync-e1', deletedAt: '2026-01-02T00:00:00Z' }], growth: [] });
   assert.equal(state().log.find((e) => e.id === 'sync-e1'), undefined);
+});
+
+test('maybeInterruptSleep splits an ongoing sleep and resumes after the gap, during quiet hours', () => {
+  const nap = addEntry({ type: 'sleep', start: '2026-01-01T01:00:00' }); // 1am local, ongoing
+  const before = state().log.filter((e) => e.type === 'sleep').length;
+  maybeInterruptSleep('bottle', '2026-01-01T02:00:00'); // 2am local, within default 20:00-07:00 quiet hours
+  const sleeps = state().log.filter((e) => e.type === 'sleep');
+  assert.equal(sleeps.length, before + 1, 'a new sleep entry should be created for the resumed nap');
+  const closed = sleeps.find((e) => e.id === nap.id);
+  assert.equal(closed.end, '2026-01-01T02:00:00');
+  const resumed = sleeps.find((e) => e.id !== nap.id && !e.end && new Date(e.start) > new Date(nap.start));
+  assert.ok(resumed, 'expected a new ongoing sleep entry after the gap');
+  assert.equal(resumed.start, new Date(new Date('2026-01-01T02:00:00').getTime() + 20 * 60000).toISOString());
+});
+
+test('maybeInterruptSleep does nothing outside quiet hours', () => {
+  const nap = addEntry({ type: 'sleep', start: '2026-01-01T13:00:00' }); // 1pm local, ongoing
+  const before = state().log.filter((e) => e.type === 'sleep').length;
+  maybeInterruptSleep('bottle', '2026-01-01T14:00:00'); // 2pm local, outside default quiet hours
+  const sleeps = state().log.filter((e) => e.type === 'sleep');
+  assert.equal(sleeps.length, before, 'no sleep entry should be added outside quiet hours');
+  assert.equal(sleeps.find((e) => e.id === nap.id).end, undefined);
+});
+
+test('maybeInterruptSleep ignores entry types with no configured gap (e.g. pump)', () => {
+  const nap = addEntry({ type: 'sleep', start: '2026-01-01T03:00:00' }); // 3am local, ongoing
+  const before = state().log.filter((e) => e.type === 'sleep').length;
+  maybeInterruptSleep('pump', '2026-01-01T03:30:00');
+  const sleeps = state().log.filter((e) => e.type === 'sleep');
+  assert.equal(sleeps.length, before, 'pump should not interrupt sleep');
+  assert.equal(sleeps.find((e) => e.id === nap.id).end, undefined);
+});
+
+test('derive.status() reads as awake (not asleep at a future time) during the gap window', () => {
+  // Uses real "now" (not a fixed past date) so the resumed entry's start is
+  // genuinely in the future relative to the assertion below — that's the
+  // exact condition the naive "ongoing = !e.end" check gets wrong.
+  const r = state().settings.reminders;
+  const savedStart = r.quietStart, savedEnd = r.quietEnd;
+  try {
+    // Close any stale ongoing sleeps from other tests
+    state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: e.start }); });
+
+    const now = new Date();
+    const hhmm = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    r.quietStart = hhmm(new Date(now.getTime() - 60 * 60000));
+    r.quietEnd = hhmm(new Date(now.getTime() + 60 * 60000));
+
+    addEntry({ type: 'sleep', start: new Date(now.getTime() - 30 * 60000).toISOString() });
+    const atISO = now.toISOString();
+    maybeInterruptSleep('bottle', atISO);
+
+    const st = derive.status();
+    assert.equal(st.state, 'awake', 'should read as awake during the gap, not asleep at a future time');
+    assert.equal(st.since.getTime(), new Date(atISO).getTime());
+  } finally {
+    r.quietStart = savedStart; r.quietEnd = savedEnd;
+  }
+});
+
+test('undoInterruptSleep fully reverts a split', () => {
+  const nap = addEntry({ type: 'sleep', start: '2026-01-01T06:00:00' }); // 6am local, ongoing
+  const before = state().log.filter((e) => e.type === 'sleep').length;
+  const split = maybeInterruptSleep('bottle', '2026-01-01T06:30:00');
+  assert.ok(split, 'expected a split to have occurred');
+  undoInterruptSleep(split);
+  const sleeps = state().log.filter((e) => e.type === 'sleep');
+  assert.equal(sleeps.length, before, 'the phantom resumed sleep should be removed');
+  const restored = sleeps.find((e) => e.id === nap.id);
+  assert.ok(!restored.end, 'the original sleep should be ongoing again');
 });

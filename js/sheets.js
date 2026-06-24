@@ -1,5 +1,5 @@
 // sheets.js — logging bottom sheet (detailed) + card config sheets.
-import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync } from './store.js';
+import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
 import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowTime, timeToISO } from './ui.js';
 import { router } from './app.js';
 
@@ -284,9 +284,10 @@ export function saveLog(type, id) {
     sheet.close(); toast(TYPES[type].label + ' updated'); router.refresh();
     return;
   }
+  const split = maybeInterruptSleep(type, e.start);
   const added = addEntry(e);
   sheet.close();
-  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); router.refresh(); });
+  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); undoInterruptSleep(split); router.refresh(); });
   router.refresh();
 }
 

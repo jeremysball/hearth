@@ -11,7 +11,7 @@ export function sleep() {
   const todaySleeps = state().log.filter((e) => e.type === 'sleep').map((e) => {
     const s = new Date(e.start), en = e.end ? new Date(e.end) : now;
     return { s, en, ongoing: !e.end, raw: e };
-  }).filter((e) => e.en > dayStart);
+  }).filter((e) => e.en > dayStart && e.s <= now);
 
   // ring segments (clamp to today)
   const r = 86, C = 2 * Math.PI * r;
