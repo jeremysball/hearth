@@ -60,28 +60,32 @@ export function openSpinner(id) {
 
   // press-and-hold: first spin fires on the first interval tick (~80ms).
   // On quick tap, interval never ticks so stopHold fires a single spin.
-  let holdTimer = null, holdDir = 0, holdSpun = false;
+  let holdTimer = null, holdDir = 0, holdSpun = false, holdActive = false;
   function startHold(dir) {
+    clearInterval(holdTimer);
+    if (holdActive) return;
+    holdActive = true;
     holdSpun = false;
     holdDir = dir;
     holdTimer = setInterval(() => { holdSpun = true; spin(dir); }, 80);
   }
   function stopHold() {
+    if (!holdActive) return;
     clearInterval(holdTimer);
     holdTimer = null;
+    holdActive = false;
     if (!holdSpun) spin(holdDir);
-    holdSpun = false;
-    holdDir = 0;
   }
 
-  ['pointerdown', 'touchstart'].forEach((evt) => {
-    overlay.querySelector('.spinner-up').addEventListener(evt, (e) => { e.preventDefault(); startHold(1); });
-    overlay.querySelector('.spinner-down').addEventListener(evt, (e) => { e.preventDefault(); startHold(-1); });
-  });
-  ['pointerup', 'pointerleave', 'pointercancel', 'touchend', 'touchcancel'].forEach((evt) => {
-    overlay.querySelector('.spinner-up').addEventListener(evt, stopHold);
-    overlay.querySelector('.spinner-down').addEventListener(evt, stopHold);
-  });
+  function onDown(dir, e) { e.preventDefault(); startHold(dir); }
+  overlay.querySelector('.spinner-up').addEventListener('pointerdown', (e) => onDown(1, e));
+  overlay.querySelector('.spinner-down').addEventListener('pointerdown', (e) => onDown(-1, e));
+  overlay.querySelector('.spinner-up').addEventListener('pointerup', stopHold);
+  overlay.querySelector('.spinner-down').addEventListener('pointerup', stopHold);
+  overlay.querySelector('.spinner-up').addEventListener('pointerleave', stopHold);
+  overlay.querySelector('.spinner-down').addEventListener('pointerleave', stopHold);
+  overlay.querySelector('.spinner-up').addEventListener('pointercancel', stopHold);
+  overlay.querySelector('.spinner-down').addEventListener('pointercancel', stopHold);
 
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
