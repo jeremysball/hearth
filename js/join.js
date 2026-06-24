@@ -6,7 +6,7 @@ import { router } from './app.js';
 export function joinView(token) {
   return `<div class="onboard">
     <div class="onb-top">
-      <div class="onb-mark"><i class="ph ph-heart-straight"></i></div>
+      <div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div>
       <h1 class="onb-title">You've been invited</h1>
       <p class="onb-sub">Join as a caregiver to see and log alongside the rest of the family.</p>
     </div>
@@ -14,7 +14,7 @@ export function joinView(token) {
       <label class="fld"><span class="fld-l">Your name</span>
         <input id="join-name" placeholder="e.g. Dad" autocomplete="off" /></label>
     </div>
-    <button class="btn-primary onb-go" data-action="join:finish" data-token="${token}"><i class="ph ph-heart-straight"></i> Join family</button>
+    <button class="btn-primary onb-go" data-action="join:finish" data-token="${token}"><svg class="icon"><use href="#heart"></use></svg> Join family</button>
   </div>`;
 }
 

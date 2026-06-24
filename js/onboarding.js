@@ -9,14 +9,14 @@ export function onboarding() {
   const t = document.body.dataset.theme || 'girl';
   return `<div class="onboard">
     <div class="onb-top">
-      <div class="onb-mark"><i class="ph ph-moon-stars"></i></div>
+      <div class="onb-mark"><svg class="icon"><use href="#moon-star"></use></svg></div>
       <h1 class="onb-title">Welcome to Hearth</h1>
       <p class="onb-sub">A calm home for your baby's days and nights. Let's set things up.</p>
     </div>
 
     <div class="onb-card">
       <button class="onb-photo" data-action="onboard:photo" id="onb-photo">
-        <span class="avatar lg"><i class="ph ph-camera"></i></span>
+        <span class="avatar lg"><svg class="icon"><use href="#camera"></use></svg></span>
         <span class="onb-photo-l">Add photo</span>
       </button>
 
@@ -39,7 +39,7 @@ export function onboarding() {
         <input id="onb-cg" placeholder="e.g. Maya" autocomplete="off" /></label>
     </div>
 
-    <button class="btn-primary onb-go" data-action="onboard:finish"><i class="ph ph-heart-straight"></i> Create Hearth</button>
+    <button class="btn-primary onb-go" data-action="onboard:finish"><svg class="icon"><use href="#heart"></use></svg> Create Hearth</button>
     <div class="onb-foot">You can change any of this later in Profile.</div>
   </div>`;
 }

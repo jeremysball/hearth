@@ -46,7 +46,7 @@ export const fmt = {
 // type → icon + label + tone class
 export const TYPES = {
   sleep: { icon: 'moon', label: 'Sleep', tone: 'sleep' },
-  feed: { icon: 'drop', label: 'Nursing', tone: 'feed' },
+  feed: { icon: 'droplet', label: 'Nursing', tone: 'feed' },
   bottle: { icon: 'baby-bottle', label: 'Bottle', tone: 'feed' },
   diaper: { icon: 'baby', label: 'Diaper', tone: 'diaper' },
   medicine: { icon: 'pill', label: 'Medicine', tone: 'med' },
@@ -55,7 +55,7 @@ export const TYPES = {
 };
 // Phosphor fallback for icons that may not exist
 export function icon(name) {
-  const map = { 'baby-bottle': 'baby', 'drop-half': 'drop', 'pill': 'pill', 'note-pencil': 'note-pencil' };
+  const map = { 'baby-bottle': 'milk', 'drop-half': 'droplet', 'pill': 'pill', 'note-pencil': 'notebook-pen' };
   return map[name] || name;
 }
 
@@ -76,7 +76,7 @@ export function applyTheme() {
   document.body.dataset.theme = t;
   document.body.dataset.mode = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1b2230' : '#241a1c') : (t === 'boy' ? '#dce6f5' : '#f5e1dc');
+  if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1c1f1b' : '#211f17') : (t === 'boy' ? '#eef0e4' : '#f3eee0');
 }
 if (window.matchMedia) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -110,7 +110,7 @@ export const sheet = {
     if (scrim.parentNode !== host) host.appendChild(scrim);
     scrim.innerHTML = `<div class="sheet ${opts.size || ''}" role="dialog" aria-modal="true">
         <div class="sheet-grab"></div>
-        ${opts.title ? `<div class="sheet-hd"><h3>${esc(opts.title)}</h3><button class="x" data-action="sheet:close" aria-label="Close"><i class="ph ph-x"></i></button></div>` : ''}
+        ${opts.title ? `<div class="sheet-hd"><h3>${esc(opts.title)}</h3><button class="x" data-action="sheet:close" aria-label="Close"><svg class="icon"><use href="#x"></use></svg></button></div>` : ''}
         <div class="sheet-body">${html}</div>
       </div>`;
     requestAnimationFrame(() => scrim.classList.add('show'));

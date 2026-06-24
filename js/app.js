@@ -25,7 +25,7 @@ function shell() {
   return `<main class="phone app">
     <div class="statusbar"><span>${fmt.clock(new Date())}</span><span class="dots"><span></span><span></span><span></span></span></div>
     <div id="view" class="screen"></div>
-    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><i class="ph ph-${t.icon}"></i></button>`).join('')}</nav>
+    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg></button>`).join('')}</nav>
   </main>`;
 }
 
@@ -62,12 +62,12 @@ function openEntry(id) {
   const s = summary(e);
   sheet.open(`
     <div class="entry-view">
-      <span class="ic-ring ${s.tone}"><i class="ph ph-${s.icon}"></i></span>
+      <span class="ic-ring ${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <div><div class="entry-title">${esc(s.label)}</div><div class="entry-sub">${esc(s.detail)}${s.meta ? ' · ' + esc(s.meta) : ''}</div></div>
     </div>
     ${e.note ? `<div class="entry-note">${esc(e.note)}</div>` : ''}
-    <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><i class="ph ph-pencil-simple"></i> Edit entry</button>
-    <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><i class="ph ph-trash"></i> Delete entry</button>`,
+    <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><svg class="icon"><use href="#pencil"></use></svg> Edit entry</button>
+    <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete entry</button>`,
     { title: 'Entry' });
 }
 
@@ -77,7 +77,7 @@ function openBabyPhoto() {
     <div class="photo-view">
       ${b.photo ? `<img src="${esc(b.photo)}" alt="${esc(b.name || 'Baby')}" />` : `<span class="avatar lg">${esc((b.name || 'B')[0].toUpperCase())}</span>`}
     </div>
-    <button class="btn-primary" data-action="baby:photo-edit"><i class="ph ph-camera"></i> Change photo</button>`,
+    <button class="btn-primary" data-action="baby:photo-edit"><svg class="icon"><use href="#camera"></use></svg> Change photo</button>`,
     { title: b.name || 'Baby' });
 }
 
@@ -223,7 +223,7 @@ async function inviteCaregiver() {
     sheet.open(`
       <p class="empty-note">Share this link with the person you want to invite. It works once and expires in 48 hours.</p>
       <div class="invite-link">${esc(url)}</div>
-      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><i class="ph ph-copy"></i> Copy link</button>`,
+      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Copy link</button>`,
       { title: 'Invite a caregiver' });
   } catch (e) {
     toast('Could not create an invite — check your connection');
@@ -250,7 +250,7 @@ function profilePhoto() {
 }
 function resetConfirm() {
   sheet.open(`<p class="empty-note">This clears all logged activity and setup on this device. This can't be undone.</p>
-    <button class="btn-primary danger-btn" data-action="app:reset-confirm"><i class="ph ph-trash"></i> Reset everything</button>
+    <button class="btn-primary danger-btn" data-action="app:reset-confirm"><svg class="icon"><use href="#trash-2"></use></svg> Reset everything</button>
     <button class="btn-ghost" data-action="sheet:close">Cancel</button>`, { title: 'Reset app?' });
 }
 document.addEventListener('click', (ev) => {
