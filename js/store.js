@@ -25,9 +25,23 @@ let _state = load();
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return Object.assign(DEFAULT(), JSON.parse(raw));
+    if (raw) {
+      const s = Object.assign(DEFAULT(), JSON.parse(raw));
+      s.log = normalizeLog(s.log);
+      return s;
+    }
   } catch (e) {}
   return DEFAULT();
+}
+
+export function normalizeLog(log) {
+  if (!Array.isArray(log)) return [];
+  return log.map((e) => {
+    if (e && e.type === 'sleep' && e.end && new Date(e.end) < new Date(e.start)) {
+      return { ...e, start: e.end, end: e.start };
+    }
+    return e;
+  });
 }
 export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {}

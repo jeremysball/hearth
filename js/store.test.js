@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, maybeInterruptSleep, undoInterruptSleep } = await import('./store.js');
+const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, maybeInterruptSleep, undoInterruptSleep, normalizeLog } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -124,4 +124,18 @@ test('undoInterruptSleep fully reverts a split', () => {
   assert.equal(sleeps.length, before, 'the phantom resumed sleep should be removed');
   const restored = sleeps.find((e) => e.id === nap.id);
   assert.ok(!restored.end, 'the original sleep should be ongoing again');
+});
+
+test('load repairs sleep entries whose end precedes start', () => {
+  // end is BEFORE start → must be swapped so duration is positive
+  const bad = { id: 'bad1', type: 'sleep', start: '2026-01-01T08:00:00.000Z', end: '2026-01-01T07:00:00.000Z' };
+  localStorage.setItem('hearth.state.v1', JSON.stringify({ setup: true, log: [bad], growth: [] }));
+  // normalizeLog repairs the entry so start/end are chronologically ordered
+  const repaired = normalizeLog([bad]);
+  assert.ok(new Date(repaired[0].end) >= new Date(repaired[0].start));
+});
+
+test('normalizeLog swaps reversed sleep timestamps', () => {
+  const out = normalizeLog([{ id: 'x', type: 'sleep', start: '2026-01-01T08:00:00Z', end: '2026-01-01T07:00:00Z' }]);
+  assert.ok(new Date(out[0].end) >= new Date(out[0].start));
 });

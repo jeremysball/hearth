@@ -12,7 +12,7 @@ export const fmt = {
     return h + ':' + pad(m) + ' ' + ap;
   },
   dur(min) {
-    min = Math.round(min);
+    min = Math.max(0, Math.round(min));
     const h = Math.floor(min / 60), m = min % 60;
     if (h <= 0) return m + 'm';
     if (m === 0) return h + 'h';
