@@ -5,6 +5,7 @@ const KEY = 'hearth.state.v1';
 
 const DEFAULT = () => ({
   setup: false,
+  synced: false,
   baby: { name: '', birthdate: '', theme: 'girl', photo: null, caregiver: '' },
   settings: {
     bottleIntervalH: 3,
@@ -46,6 +47,7 @@ export function normalizeLog(log) {
 export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {}
 }
+export function markSynced() { _state.synced = true; save(); }
 export function reset() { _state = DEFAULT(); save(); }
 
 export function state() { return _state; }
