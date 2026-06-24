@@ -87,7 +87,7 @@ function heroCard() {
 
 function sweetCard() {
   const sp = derive.sweetSpot();
-  return `<div class="info-card sweet">
+  return `<div class="info-card sweet" data-action="log:open" data-type="sleep">
     <div class="ic-ring sleep"><svg class="icon"><use href="#moon-star"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">SweetSpot · ${sp.napping ? 'after this nap' : 'next nap'}</div>
@@ -99,7 +99,7 @@ function sweetCard() {
 function bottleCard() {
   const nb = derive.nextBottle();
   const overdue = nb.due < new Date();
-  return `<div class="info-card ${overdue ? 'due' : ''}">
+  return `<div class="info-card ${overdue ? 'due' : ''}" data-action="log:open" data-type="bottle">
     <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">Next bottle · every ${state().settings.bottleIntervalH}h</div>
@@ -119,7 +119,7 @@ function medicineCard() {
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
   }
-  return `<div class="info-card">
+  return `<div class="info-card" data-action="log:open" data-type="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
     <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
     <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
