@@ -48,7 +48,9 @@ body {
 /* ---- phone shell ---- */
 .phone {
   --pad: 22px; width: 100%; max-width: 432px; height: 100%; flex: 1; min-height: 0;
-  background: var(--bg); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  display: flex; flex-direction: column; overflow: hidden;
   transition: background .4s ease; position: relative;
 }
 @media (min-width: 520px) { .phone { max-width: 560px; } }
@@ -119,8 +121,8 @@ body {
 
 /* ---- today / log ---- */
 .today-block { display: flex; flex-direction: column; }
-.today-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.today-hd h2 { font-family: "Archivo"; font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+.today-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
+.today-hd h2 { font-family: "Archivo"; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .today-hd a { font-size: 12px; color: var(--accent-ink); font-weight: 800; cursor: pointer; }
 .today-add { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; background: var(--accent); color: var(--on-accent); flex: 0 0 auto; }
 .today-add:active { transform: scale(.92); }
@@ -182,8 +184,8 @@ body {
 .stat-k { font-size: 11px; color: var(--muted); font-weight: 700; }
 .stat-v { font-family: "Archivo"; font-size: 24px; font-weight: 700; margin-top: 3px; }
 .chart-card { padding: 16px 16px 12px; }
-.chart-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-.chart-hd h2 { font-family: "Archivo"; font-size: 16px; font-weight: 700; margin: 0; }
+.chart-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
+.chart-hd h2 { font-family: "Archivo"; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .chart-note { font-size: 11px; color: var(--muted); font-weight: 600; }
 .chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
