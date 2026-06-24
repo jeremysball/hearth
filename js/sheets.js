@@ -26,10 +26,13 @@ export function openSpinner(id) {
   const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
   let val = parseFloat(el.dataset.value) || 0;
 
-  const ITEM_H = 52; // px per item
-  const VISIBLE = 5; // odd number so center is current
-  const OFF = Math.floor(VISIBLE / 2);
+  const ITEM_H = 52;
+  const OFF = 2;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
+  const pxToVal = (px) => val - (px / ITEM_H) * step;
+  const valToPx = (v) => (val - v) / step * ITEM_H;
+
+  let lastCenter = val;
 
   function commit(v) {
     v = Math.round(v * 1e6) / 1e6;
@@ -63,9 +66,12 @@ export function openSpinner(id) {
   const items = overlay.querySelector('#spinner-items');
 
   function render(offset) {
-    const raw = val - (offset / ITEM_H) * step;
+    const raw = pxToVal(offset);
     const center = Math.round(raw / step) * step;
-    items.innerHTML = trackHTML(center);
+    if (center !== lastCenter) {
+      lastCenter = center;
+      items.innerHTML = trackHTML(center);
+    }
     items.style.transform = `translateY(${offset % ITEM_H}px)`;
     items.style.transition = 'none';
     return center;
@@ -79,18 +85,29 @@ export function openSpinner(id) {
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  // ----- drag + momentum -----
   let dragging = false, pid = null;
-  let dragY = 0, offsetY = 0;
-  let velY = 0, lastY = 0, lastT = 0;
-  let animFrame = null;
+  let offsetY = 0, dragY = 0;
+  let velSamples = [];
+
+  function clampOffset(offset) {
+    if (min !== -Infinity) {
+      const maxDown = valToPx(min); // most positive offset allowed
+      offset = Math.min(maxDown, offset);
+    }
+    if (max !== Infinity) {
+      const maxUp = valToPx(max); // most negative offset allowed
+      offset = Math.max(maxUp, offset);
+    }
+    return offset;
+  }
 
   function onDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragging) return;
     dragging = true; pid = e.pointerId;
-    dragY = e.clientY; lastY = dragY; lastT = performance.now();
-    offsetY = 0; velY = 0;
+    dragY = e.clientY;
+    offsetY = 0; velSamples = [];
+    lastCenter = val;
     items.setPointerCapture(pid);
     items.style.transition = 'none';
   }
@@ -98,40 +115,44 @@ export function openSpinner(id) {
   function onMove(e) {
     if (!dragging || e.pointerId !== pid) return;
     e.preventDefault();
-    const now = performance.now();
-    const dy = e.clientY - lastY;
-    if (dy !== 0) { velY = dy; }
-    lastY = e.clientY; lastT = now;
-    offsetY += e.clientY - dragY;
+    const dy = e.clientY - dragY;
     dragY = e.clientY;
+    offsetY += dy;
 
-    const center = render(offsetY);
-    const clamped = Math.min(max, Math.max(min, center));
-    if (center !== clamped) {
-      offsetY -= ((center - clamped) / step) * ITEM_H;
-      render(offsetY);
-    }
+    velSamples.push({ dy, t: performance.now() });
+    if (velSamples.length > 5) velSamples.shift();
+
+    offsetY = clampOffset(offsetY);
+    render(offsetY);
   }
 
   function onUp(e) {
     if (!dragging || e.pointerId !== pid) return;
     dragging = false; pid = null;
 
-    const momentum = offsetY + velY * 6;
-    const steps = Math.round(momentum / ITEM_H);
-    const target = val + steps * step;
-    const clamped = Math.min(max, Math.max(min, target));
+    // velocity from recent samples — px/ms, scaled to momentum
+    let vel = 0;
+    if (velSamples.length > 1) {
+      const dt = velSamples[velSamples.length - 1].t - velSamples[0].t;
+      const dd = velSamples.reduce((s, v) => s + v.dy, 0);
+      if (dt > 0) vel = (dd / dt) * 250;
+    }
+    let momentum = offsetY + vel;
+    let steps = Math.round(momentum / ITEM_H);
+    let target = val - steps * step;
+    if (target < min) target = min;
+    if (target > max) target = max;
 
-    items.style.transition = 'transform .3s cubic-bezier(0.22, 0.61, 0.36, 1)';
+    items.style.transition = 'transform .25s cubic-bezier(0.22, 0.61, 0.36, 1)';
     items.style.transform = 'translateY(0px)';
 
     const onEnd = () => {
       items.removeEventListener('transitionend', onEnd);
       if (overlay._closed) return;
       items.style.transition = 'none';
-      items.innerHTML = trackHTML(clamped);
-      commit(clamped);
-      offsetY = 0; velY = 0;
+      items.innerHTML = trackHTML(target);
+      commit(target);
+      offsetY = 0;
     };
     items.addEventListener('transitionend', onEnd);
   }
