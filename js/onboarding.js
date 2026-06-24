@@ -9,9 +9,8 @@ export function onboarding() {
   const t = document.body.dataset.theme || 'girl';
   return `<div class="onboard">
     <div class="onb-top">
-      <div class="onb-mark"><svg class="icon"><use href="#moon-star"></use></svg></div>
-      <h1 class="onb-title">Welcome to Hearth</h1>
-      <p class="onb-sub">A calm home for your baby's days and nights. Let's set things up.</p>
+      <img src="icons/hearth-logo.svg" class="onb-logo" alt="Hearth" />
+      <p class="onb-sub">A calm home for your baby's days and nights.<br>Let's set things up.</p>
     </div>
 
     <div class="onb-card">
