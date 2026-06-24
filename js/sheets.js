@@ -62,8 +62,8 @@ export function openSpinner(id) {
   // On quick tap, interval never ticks so stopHold fires a single spin.
   let holdTimer = null, holdDir = 0, holdSpun = false, holdActive = false;
   function startHold(dir) {
-    clearInterval(holdTimer);
     if (holdActive) return;
+    clearInterval(holdTimer);
     holdActive = true;
     holdSpun = false;
     holdDir = dir;
