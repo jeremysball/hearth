@@ -33,7 +33,7 @@ export function sleep() {
   const naps = todaySleeps.filter((e) => !(hoursInto(e.s, dayStart) < 0)).sort((a, b) => b.s - a.s);
   const napsHTML = naps.length ? naps.map((e) => {
     const dur = (e.en - e.s) / MIN;
-    return `<div class="row">
+    return `<div class="row" data-action="entry:open" data-id="${e.raw.id}">
       <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
       <span class="row-txt"><span class="what">${e.ongoing ? 'Asleep now' : (dur > 240 ? 'Night sleep' : 'Nap')}</span>
       <span class="when">${fmt.clock(e.s)} – ${e.ongoing ? 'now' : fmt.clock(e.en)}</span></span>
