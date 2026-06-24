@@ -137,7 +137,7 @@ document.addEventListener('click', (ev) => {
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
     'cg:invite': () => inviteCaregiver(),
-    'cg:invite-copy': () => { navigator.clipboard.writeText(d.url).then(() => toast('Link copied')); },
+    'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'app:reset': () => resetConfirm(),
@@ -213,6 +213,13 @@ function addMed() {
   const id = 'm' + Date.now().toString(36);
   list.insertAdjacentHTML('beforeend', medRow({ id, name: '', dose: '1', unit: '', everyH: 24 }));
 }
+function shareInviteLink(url) {
+  if (navigator.share) {
+    navigator.share({ title: 'Join us on Hearth', url }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url).then(() => toast('Link copied'));
+  }
+}
 async function inviteCaregiver() {
   try {
     const res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
@@ -222,7 +229,7 @@ async function inviteCaregiver() {
     sheet.open(`
       <p class="empty-note">Share this link with the person you want to invite. It works once and expires in 48 hours.</p>
       <div class="invite-link">${esc(url)}</div>
-      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Copy link</button>`,
+      <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Share link</button>`,
       { title: 'Invite a caregiver' });
   } catch (e) {
     toast('Could not create an invite — check your connection');
