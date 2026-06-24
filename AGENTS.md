@@ -11,7 +11,7 @@ Hearth is a free, private baby tracker — an alternative to Huckleberry.
 
 ## Rules
 
-- **BUMP THE FUCKING VERSION ON EVERY COMMIT.** Update both `index.html` (`<meta name="version">`) and `sw.js` (`VERSION` constant) to the current UTC timestamp (`date -u +%Y-%m-%dT%H:%M`). The two strings must match, differing only by the `hearth-` prefix in `sw.js`. This is the cache buster — without it the service worker serves stale assets and users never see your changes. First thing before commit, every time, no exceptions.
+- **BUMP THE FUCKING VERSION ON EVERY CHANGE.** Update both `index.html` (`<meta name="version">`) and `sw.js` (`VERSION` constant) to the current UTC timestamp (`date -u +%Y-%m-%dT%H:%M`). The two strings must match, differing only by the `hearth-` prefix in `sw.js`. This is the cache buster — without it the service worker serves stale assets and users never see your changes. First thing BEFORE you commit, every time, no exceptions.
 - No framework. Vanilla JS PWA + Go backend + SQLite.
 - Phosphor icons only, Quicksand for display type, Nunito for body.
 - Round everything you touch: pills for controls, big radii for cards, circles for identity.
