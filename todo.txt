@@ -1,13 +1,32 @@
-- the little navbar at the top with the three dots and the time has to go
-- I want each of the sections on the home screen to be tappable
-  and I want them to open a new log for their respective section
-  i.e. sweetspot should allow for you to create a new sleep log
-- Whenever you log a feeding in the night it should create a 20
+[x] the little navbar at the top with the three dots and the time has to go
+[x] I want each of the sections on the home screen to be tappable
+    and I want them to open a new log for their respective section
+    i.e. SweetSpot should allow for you to create a new sleep log
+[?] Whenever you log a feeding in the night it should create a 20
   minute awake period automatically then back to sleep
-- Same with the diaper -- maybe ten minutes? 
+[?] Same with the diaper -- maybe ten minutes? 
 - Copy link should be replaced with share link and it should 
   open the native share sheet on the device
 - still can't remove sleep from the sleep tab
 - can't specify the size of diaper when logging a diaper change
-- the navbar on the bottom is twice as tall as it needs to be
-- try to implement theme.txt theme 
+[x] the navbar on the bottom is twice as tall as it needs to be
+[x] try to implement theme.txt theme 
+
+
+
+
+---------------------------------------------------
+- "Could not create an invite — check your connection" on desktop
+- Able to create negative sleep log
+- Rearranging the cards on the home screen (hold to enter edit mode settings
+  icon becomes a hamburger icon and you can drag them) 
+- Some kind of picker on windows / desktop for the time of day when creating a log?
+- Support for 24 hour time format
+- Different icons for mixed, wet, and dirty diapers
+- Sleep counter essentially wraps around. At 1 minute of sleep it says -59 minutes
+- More colors?
+- The spinner is great but I would 5 more numbers on each top and bottom. Getting smaller
+  and more transparent as they move from the center. Creating the illusion of a real spinner
+- I also should be able to click into the spinner and type a number. The spinner should update
+  to what I type and then I should be able to click the check mark to save it.
+- Whenever I try to log sleep from the sleep tab it doesn't even appear in that tab. Then whenever I see it on the home screen it doesn't properly calculate the amount of sleep at all it says -54, -55, -56

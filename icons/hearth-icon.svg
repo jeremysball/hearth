@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="hearth-icon-title">
+  <title id="hearth-icon-title">Hearth</title>
+  <!-- Glyph only: thin-line hearth arch + flame on transparent ground. Forest olive. -->
+  <!-- 192-space paths scaled to 48 (0.25) and nudged to center the mark. -->
+  <g transform="translate(0 -2) scale(0.25)" fill="none" stroke="#5a6b3a"
+     stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Firebox: rounded arch opening -->
+    <path d="M48 138 V92 a48 48 0 0 1 96 0 v46"/>
+    <!-- Mantel / hearth base line -->
+    <path d="M40 138 H152"/>
+    <!-- Flame inside the firebox -->
+    <path d="M96 122
+             c-13 -7 -16 -19 -8 -29
+             c2 5 5 7 9 8
+             c-4 -10 0 -20 9 -26
+             c-2 9 3 14 8 19
+             c5 5 6 13 1 19
+             c-2 -4 -5 -6 -9 -6
+             c4 6 2 12 -3 15
+             c2 -5 0 -9 -7 -13 Z"/>
+  </g>
+</svg>
