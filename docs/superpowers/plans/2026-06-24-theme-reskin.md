@@ -103,6 +103,21 @@ Replace it with:
 ```
 (`.sleep`/`.tone-sleep` and `.feed`/`.tone-feed` derive from `--good`/`--accent` and retint automatically from Steps 1-2. `.diaper`/`.tone-diaper` and `.note`/`.tone-note` are unchanged — leave them exactly as they are.)
 
+- [ ] **Step 3b: Fix the hardcoded onboarding theme-picker swatches**
+
+`js/onboarding.js:32-34` renders two preview swatches (`<span class="theme-swatch girl">`, `<span class="theme-swatch boy">`) so a new user can see each theme before picking it. Unlike everything else in `styles.css`, these two rules hardcode the old accent color directly instead of referencing `var(--accent)`, so Steps 1-2 above do not retint them automatically.
+
+Find:
+```css
+.theme-swatch.girl { background: oklch(0.72 0.085 18); }
+.theme-swatch.boy { background: oklch(0.66 0.085 252); }
+```
+Replace it with:
+```css
+.theme-swatch.girl { background: oklch(0.42 0.07 125); }
+.theme-swatch.boy { background: oklch(0.45 0.06 175); }
+```
+
 - [ ] **Step 4: Replace the shared dark-mode block**
 
 Find:
