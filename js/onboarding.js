@@ -1,6 +1,6 @@
 // onboarding.js — first-run setup (name, birthdate, theme, photo, caregiver).
 import { state, save, seed, markSynced } from './store.js';
-import { $, applyTheme, toast, $$ } from './ui.js';
+import { $, applyTheme, toast, $$, THEMES } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
 
@@ -28,10 +28,7 @@ export function onboarding() {
 
       <div class="fld"><span class="fld-l">Theme</span>
         <div class="theme-pick">
-          <button type="button" class="theme-opt ${t === 'girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl">
-            <span class="theme-swatch girl"></span><span>Girl</span></button>
-          <button type="button" class="theme-opt ${t === 'boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy">
-            <span class="theme-swatch boy"></span><span>Boy</span></button>
+          ${THEMES.map((th) => `<button type="button" class="theme-opt ${t === th.id ? 'on' : ''}" data-action="onboard:theme" data-theme="${th.id}"><span class="theme-swatch ${th.swatch}"></span><span>${th.label}</span></button>`).join('')}
         </div>
       </div>
 
@@ -48,7 +45,10 @@ export function onboardTheme(theme) {
   document.body.dataset.theme = theme;
   $$('.theme-opt').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'boy' ? '#dce6f5' : '#f5e1dc';
+  if (meta) {
+    const colors = { girl: '#f5e1dc', boy: '#dce6f5', dayjob: '#f3ead9' };
+    meta.content = colors[theme] || '#f3eee0';
+  }
 }
 
 export function onboardPhoto() {

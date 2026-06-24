@@ -9,6 +9,7 @@ const DEFAULT = () => ({
   synced: false,
   baby: { name: '', birthdate: '', theme: 'girl', photo: null, caregiver: '' },
   settings: {
+    theme: '',
     bottleIntervalH: 3,
     meds: [
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
