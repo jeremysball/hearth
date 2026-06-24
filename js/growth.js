@@ -44,7 +44,7 @@ function lineChart(points) {
 
 function measureRow(m, prev) {
   return `<div class="row" data-action="measure:open" data-id="${m.id}">
-    <span class="row-ic tone-med"><i class="ph ph-ruler"></i></span>
+    <span class="row-ic tone-med"><svg class="icon"><use href="#ruler"></use></svg></span>
     <span class="row-txt"><span class="what">${dispW(m.weightKg)}</span>
     <span class="when">${localDate(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${dispL(m.heightCm)}</span></span>
     ${prev ? `<span class="meta">${delta(m.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ''), '')}</span>` : ''}
@@ -73,7 +73,7 @@ export function growth() {
     </div>
 
     <div class="today-block">
-      <div class="today-hd"><h2>History</h2><button class="today-add" data-action="measure:open" data-id="" aria-label="Add measurement"><i class="ph ph-plus"></i></button></div>
+      <div class="today-hd"><h2>History</h2><button class="today-add" data-action="measure:open" data-id="" aria-label="Add measurement"><svg class="icon"><use href="#plus"></use></svg></button></div>
       <div class="card log">${g.length ? g.slice().reverse().map((m, i, arr) => measureRow(m, arr[i + 1])).join('') : `<div class="empty-log">No measurements yet — tap the + button to add one.</div>`}</div>
     </div>`;
 }

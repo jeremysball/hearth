@@ -2,6 +2,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
 input, select, textarea, button { font-family: inherit; }
+.icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
 
 body {
   font-family: "Archivo", system-ui, sans-serif;
