@@ -251,11 +251,18 @@ body {
 .delta.down { color: oklch(0.6 0.12 25); }
 
 /* ---- inputs / forms ---- */
-.fld { display: flex; flex-direction: column; gap: 6px; }
+.fld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .fld-l { font-size: 12px; color: var(--soft); font-weight: 700; }
 .fld .opt { color: var(--muted); font-weight: 600; }
-input, select, textarea { border: 1.5px solid var(--hair); background: var(--bg); border-radius: 13px; padding: 11px 13px; font-size: 14px; font-weight: 600; color: var(--ink); outline: none; transition: border-color .15s; width: 100%; }
+input, select, textarea { box-sizing: border-box; border: 1.5px solid var(--hair); background: var(--bg); border-radius: 13px; padding: 11px 13px; font-size: 14px; font-weight: 600; color: var(--ink); outline: none; transition: border-color .15s; width: 100%; min-width: 0; max-width: 100%; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input[type="time"], input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 44px; }
+input[type="number"] { max-width: 140px; text-align: center; }
+.stepper { display: flex; align-items: center; }
+.stepper input { flex: 1; text-align: center; border-radius: 0; border-left: 0; border-right: 0; max-width: none; }
+.stepper-btn { all: unset; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--accent-tint); color: var(--accent-ink); font-size: 18px; font-weight: 700; flex-shrink: 0; }
+.stepper-btn:first-of-type { border-radius: 13px 0 0 13px; border: 1.5px solid var(--hair); border-right: 0; }
+.stepper-btn:last-of-type { border-radius: 0 13px 13px 0; border: 1.5px solid var(--hair); border-left: 0; }
 textarea { resize: none; }
 input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
