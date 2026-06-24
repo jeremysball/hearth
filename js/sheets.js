@@ -12,9 +12,9 @@ function seg(group, opts, sel) {
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
-    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><i class="ph ph-minus"></i></button>
+    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><svg class="icon"><use href="#minus"></use></svg></button>
     <div class="stepper-val" id="${id}" tabindex="0" role="spinbutton" aria-valuenow="${val}" aria-valuemin="${min != null ? min : ''}" aria-valuemax="${max != null ? max : ''}" data-step="${step}" data-min="${min != null ? min : ''}" data-max="${max != null ? max : ''}" data-value="${val}" data-action="stepper:open">${val}</div>
-    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><i class="ph ph-plus"></i></button>
+    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><svg class="icon"><use href="#plus"></use></svg></button>
   </div>`);
 }
 
@@ -251,8 +251,8 @@ export function openLog(type, entry) {
   const cfg = TYPES[type];
   const editing = entry && entry.id;
   sheet.open(
-    FORMS[type]() + `<button class="btn-primary" data-action="log:save" data-type="${type}" data-id="${editing ? entry.id : ''}"><i class="ph ph-check"></i> ${editing ? 'Save changes' : 'Log ' + cfg.label.toLowerCase()}</button>` +
-      (editing ? `<button class="btn-ghost danger" data-action="entry:delete" data-id="${entry.id}"><i class="ph ph-trash"></i> Delete</button>` : ''),
+    FORMS[type]() + `<button class="btn-primary" data-action="log:save" data-type="${type}" data-id="${editing ? entry.id : ''}"><svg class="icon"><use href="#check"></use></svg> ${editing ? 'Save changes' : 'Log ' + cfg.label.toLowerCase()}</button>` +
+      (editing ? `<button class="btn-ghost danger" data-action="entry:delete" data-id="${entry.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete</button>` : ''),
     { title: (editing ? 'Edit ' : 'Log ') + cfg.label.toLowerCase(), size: 'sheet-form' }
   );
   if (editing) prefill(type, entry);
@@ -295,7 +295,7 @@ export function openTypeChooser() {
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];
       return `<button class="chooser-item" data-action="log:open" data-type="${t}">
-        <span class="chooser-ic tone-${c.tone}"><i class="ph ph-${icon(c.icon)}"></i></span>
+        <span class="chooser-ic tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span>
         <span>${c.label}</span></button>`;
     }).join('') + `</div>`,
     { title: 'Log activity' }
@@ -309,7 +309,7 @@ export function editCard(which) {
     sheet.open(`
       ${stepperField('Remind every (hours)', 'c-int', 1, 8, 0.5, s.bottleIntervalH)}
       <p class="empty-note">Next bottle is predicted from your last feed plus this interval.</p>
-      <button class="btn-primary" data-action="card:save-bottle"><i class="ph ph-check"></i> Save</button>
+      <button class="btn-primary" data-action="card:save-bottle"><svg class="icon"><use href="#check"></use></svg> Save</button>
       <button class="btn-ghost" data-action="card:hide" data-card="bottle">Hide this card</button>`,
       { title: 'Bottle reminder' });
   } else if (which === 'medicine') {
@@ -327,8 +327,8 @@ function medForm() {
   return `<div id="med-list" class="med-list">` +
     (meds.length ? meds.map(medRow).join('') : `<p class="empty-note">No medicines yet.</p>`) +
     `</div>
-    <button class="btn-ghost" data-action="med:add"><i class="ph ph-plus"></i> Add medicine</button>
-    <button class="btn-primary" data-action="card:save-meds"><i class="ph ph-check"></i> Save</button>
+    <button class="btn-ghost" data-action="med:add"><svg class="icon"><use href="#plus"></use></svg> Add medicine</button>
+    <button class="btn-primary" data-action="card:save-meds"><svg class="icon"><use href="#check"></use></svg> Save</button>
     <button class="btn-ghost" data-action="card:hide" data-card="medicine">Hide this card</button>`;
 }
 export function medRow(m) {
@@ -339,7 +339,7 @@ export function medRow(m) {
       <input class="med-unit" placeholder="unit" value="${esc(m.unit)}" />
       <span class="med-every">every</span>
       <input class="med-eh" type="number" min="1" max="48" value="${m.everyH}" /><span class="med-every">h</span>
-      <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><i class="ph ph-trash"></i></button>
+      <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>
   </div>`;
 }
@@ -380,8 +380,8 @@ export function openMeasure(id) {
     ${stepperField('Height (' + lU + ')', 'g-h', 0, 999, 0.1, hVal)}
     ${stepperField('Head circumference (' + lU + ')', 'g-hd', 0, 999, 0.1, hdVal)}
     ${field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…">${m && m.note ? esc(m.note) : ''}</textarea>`)}
-    <button class="btn-primary" data-action="measure:save" data-id="${id || ''}"><i class="ph ph-check"></i> ${id ? 'Save changes' : 'Add measurement'}</button>
-    ${id ? `<button class="btn-ghost danger" data-action="measure:delete" data-id="${id}"><i class="ph ph-trash"></i> Delete</button>` : ''}`,
+    <button class="btn-primary" data-action="measure:save" data-id="${id || ''}"><svg class="icon"><use href="#check"></use></svg> ${id ? 'Save changes' : 'Add measurement'}</button>
+    ${id ? `<button class="btn-ghost danger" data-action="measure:delete" data-id="${id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete</button>` : ''}`,
     { title: id ? 'Edit measurement' : 'Add measurement', size: 'sheet-form' });
 }
 

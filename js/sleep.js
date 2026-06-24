@@ -34,7 +34,7 @@ export function sleep() {
   const napsHTML = naps.length ? naps.map((e) => {
     const dur = (e.en - e.s) / MIN;
     return `<div class="row">
-      <span class="row-ic tone-sleep"><i class="ph ph-moon"></i></span>
+      <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
       <span class="row-txt"><span class="what">${e.ongoing ? 'Asleep now' : (dur > 240 ? 'Night sleep' : 'Nap')}</span>
       <span class="when">${fmt.clock(e.s)} – ${e.ongoing ? 'now' : fmt.clock(e.en)}</span></span>
       <span class="meta">${fmt.dur(dur)}</span></div>`;
@@ -81,7 +81,7 @@ export function sleep() {
           <div class="ring-big">${tb.h}<span class="u">h</span> ${tb.m}<span class="u">m</span></div>
         </div>
       </div>
-      ${night ? `<div class="night-strip"><i class="ph ph-moon-stars"></i> Last night · <b>${fmt.dur(night.dur)}</b> · ${fmt.clock(night.s)}–${fmt.clock(night.en)}</div>` : ''}
+      ${night ? `<div class="night-strip"><svg class="icon"><use href="#moon-star"></use></svg> Last night · <b>${fmt.dur(night.dur)}</b> · ${fmt.clock(night.s)}–${fmt.clock(night.en)}</div>` : ''}
     </div>
 
     <div class="sched-card card">
@@ -90,7 +90,7 @@ export function sleep() {
     </div>
 
     <div class="today-block">
-      <div class="today-hd"><h2>Today's sleep</h2><button class="today-add" data-action="log:open" data-type="sleep" aria-label="Log sleep"><i class="ph ph-plus"></i></button></div>
+      <div class="today-hd"><h2>Today's sleep</h2><button class="today-add" data-action="log:open" data-type="sleep" aria-label="Log sleep"><svg class="icon"><use href="#plus"></use></svg></button></div>
       <div class="card log">${napsHTML}</div>
     </div>`;
 }
