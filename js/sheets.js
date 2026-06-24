@@ -1,6 +1,6 @@
 // sheets.js — logging bottom sheet (detailed) + card config sheets.
 import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
-import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowTime, timeToISO } from './ui.js';
+import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT } from './ui.js';
 import { router } from './app.js';
 
 // segmented control
@@ -186,14 +186,14 @@ export function openSpinner(id) {
   requestAnimationFrame(() => overlay.classList.add('show'));
   el._closeSpinner = close;
 }
-const timeRow = () => field('Time', `<input type="time" id="f-time" value="${nowTime()}" />`);
+const timeRow = () => field('Time', `<input type="datetime-local" id="f-time" value="${nowLocalDT()}" />`);
 const noteRow = () => field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…"></textarea>`);
 const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); return el ? el.dataset.val : null; };
 
 const FORMS = {
   sleep: () => `
-    ${field('Fell asleep', `<input type="time" id="f-time" value="${nowTime()}" />`)}
-    ${field('Woke (leave blank if still asleep)', `<input type="time" id="f-end" />`)}
+    ${field('Fell asleep', `<input type="datetime-local" id="f-time" value="${nowLocalDT()}" />`)}
+    ${field('Woke (leave blank if still asleep)', `<input type="datetime-local" id="f-end" />`)}
     ${field('Quality', seg('quality', ['Restless', 'Okay', 'Good', 'Great'], 'Good'))}
     ${noteRow()}`,
   feed: () => `
@@ -223,14 +223,14 @@ const FORMS = {
 };
 
 function gather(type) {
-  const time = $('#f-time') ? timeToISO($('#f-time').value || nowTime()) : new Date().toISOString();
+  const time = $('#f-time') ? dtToISO($('#f-time').value) : new Date().toISOString();
   const note = $('#f-note') ? $('#f-note').value.trim() : '';
   const base = { type, start: time };
   if (note) base.note = note;
   if (type === 'sleep') {
     base.quality = segVal('quality');
     const end = $('#f-end').value;
-    if (end) base.end = timeToISO(end);
+    if (end) base.end = dtToISO(end);
   } else if (type === 'feed') {
     base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
@@ -259,15 +259,14 @@ export function openLog(type, entry) {
   if (editing) prefill(type, entry);
 }
 
-function localTime(iso) { const d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function setSeg(group, val) {
   const g = $(`[data-seg="${group}"]`); if (!g || val == null) return;
   $$('.seg-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
 function prefill(type, e) {
-  if ($('#f-time')) $('#f-time').value = localTime(e.start);
+  if ($('#f-time')) $('#f-time').value = isoToLocalDT(e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
-  if (type === 'sleep') { setSeg('quality', e.quality); if (e.end) $('#f-end').value = localTime(e.end); }
+  if (type === 'sleep') { setSeg('quality', e.quality); if (e.end && $('#f-end')) $('#f-end').value = isoToLocalDT(e.end); }
   else if (type === 'feed') { setSeg('side', e.side); const fdur = $('#f-dur'); if (fdur) { fdur.dataset.value = e.duration || 0; fdur.textContent = e.duration || 0; } }
   else if (type === 'bottle' || type === 'pump') {
     setSeg('side', e.side); setSeg('contents', e.contents);
