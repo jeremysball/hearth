@@ -121,3 +121,15 @@ go run .
 ```
 
 To serve the frontend with hot-reload during dev, use any static file server (e.g. `python3 -m http.server 8080`) while the Go API runs separately.
+
+## Testing
+
+Browser tests live under `tests/` and run against a self-spawned Hearth server on plain HTTP (no TLS, no Tailscale) so they work in CI:
+
+```bash
+npm install        # brings in Playwright
+npx playwright install chromium
+npm test           # runs every tests/*.test.js with summary + exit code
+```
+
+The test runner builds the Go binary if it's missing, starts the server on `127.0.0.1:18787`, drives Chromium via Playwright, and tears down on exit. Each suite reports `N pass, N fail` and returns non-zero on any failure.

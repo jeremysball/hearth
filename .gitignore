@@ -4,3 +4,6 @@ screenshots/
 .env
 *.db
 .thumbnail
+node_modules/
+hearth-server
+test-results/
