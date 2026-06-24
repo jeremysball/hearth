@@ -1,5 +1,6 @@
 // ui.js — formatting, icon map, sheet/modal machinery, toast, theme.
 import { state } from './store.js';
+import { log } from './log.js';
 
 // ---------- formatting ----------
 const pad = (n) => String(n).padStart(2, '0');
@@ -77,6 +78,7 @@ export function applyTheme() {
   document.body.dataset.mode = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1c1f1b' : '#211f17') : (t === 'boy' ? '#eef0e4' : '#f3eee0');
+  log.event('theme', 'apply', t, mode);
 }
 if (window.matchMedia) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

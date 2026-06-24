@@ -2,6 +2,7 @@
 import { state, save, seed, markSynced } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
+import { log } from './log.js';
 
 let _onbPhoto = null;
 
@@ -102,8 +103,8 @@ export async function onboardFinish() {
       })
     });
     if (res.ok) markSynced();
-    else console.warn('hearth', 'onboard', 'family create failed', res.status);
+    else log.warn('onboard', 'family create failed', res.status);
   } catch (e) {
-    console.warn('hearth', 'onboard', 'family create offline', e);
+    log.warn('onboard', 'family create offline', e);
   }
 }

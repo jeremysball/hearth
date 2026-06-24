@@ -2,6 +2,7 @@
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
 import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet } from './ui.js';
+import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode } from './home.js';
 import { trends } from './trends.js';
 import { sleep } from './sleep.js';
@@ -233,7 +234,8 @@ async function ensureFamily() {
       })
     });
     if (res.ok) markSynced();
-  } catch (e) {}
+    else log.warn('sync', 'ensureFamily failed', res.status);
+  } catch (e) { log.warn('sync', 'ensureFamily offline', e.message); }
 }
 async function inviteCaregiver() {
   try {
@@ -252,6 +254,7 @@ async function inviteCaregiver() {
       <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Share link</button>`,
       { title: 'Invite a caregiver' });
   } catch (e) {
+    log.warn('invite', 'inviteCaregiver failed', e.message);
     toast('Could not reach the server — check your connection');
   }
 }
@@ -340,16 +343,17 @@ async function syncOnce() {
     setLastSync(data.serverTime);
     if (current !== 'home' || $('#view')) router.refresh();
   } catch (e) {
-    // offline or server unreachable; the next trigger (timer/online/SSE) retries
+    log.warn('sync', 'syncOnce failed', e.message);
   }
 }
 
 let eventSource = null;
 function connectEvents() {
   if (eventSource || !('EventSource' in window)) return;
+  log.event('sync', 'SSE connecting');
   eventSource = new EventSource('/api/events');
   eventSource.onmessage = () => syncOnce();
-  eventSource.onerror = () => { eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
+  eventSource.onerror = () => { log.warn('sync', 'SSE error, reconnecting in 5s'); eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
 }
 
 window.addEventListener('online', syncOnce);
