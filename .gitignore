@@ -1,6 +1,5 @@
 certs/
 screenshots/
-CLAUDE.md
 .prettierrc
 .env
 *.db
