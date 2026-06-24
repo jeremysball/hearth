@@ -14,10 +14,14 @@ func main() {
 	defer db.Close()
 
 	hub := newHub()
-	mux := newRouter(db, hub)
+	mux := newRouter(db, hub, cfg.StaticDir)
 	addr := cfg.Host + ":" + cfg.Port
 
-	log.Printf("Hearth server listening on %s (db: %s, static: %s)", addr, cfg.DBPath, cfg.StaticDir)
+	staticSrc := cfg.StaticDir
+	if staticSrc == "" {
+		staticSrc = "embedded"
+	}
+	log.Printf("Hearth server listening on %s (db: %s, static: %s)", addr, cfg.DBPath, staticSrc)
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
 		log.Fatal(http.ListenAndServeTLS(addr, cfg.CertFile, cfg.KeyFile, mux))
 	} else {
