@@ -68,6 +68,37 @@ async function runSuite(base) {
   console.log('  items:', itemTexts);
   await closeOverlay();
 
+  // ---------- Mid-drag alignment: highlight must track the "on" item continuously ----------
+  // Regression for a bug where the rendered item and its on-screen position
+  // disagreed by a full row for the back half of every step (only visible
+  // while the pointer is down — settled/before/after checks never caught it).
+  console.log('\n--- Spinner: mid-drag alignment (no row-snap glitch) ---');
+  const overlay1b = await openSpinner();
+  const win1b = await (await overlay1b.$('.spinner-window')).boundingBox();
+  const cx1b = win1b.x + win1b.width / 2;
+  const cy1b = win1b.y + win1b.height / 2;
+  const itemH = (await (await overlay1b.$('.spinner-item')).boundingBox()).height;
+
+  await page.mouse.move(cx1b, cy1b);
+  await page.mouse.down();
+  let maxDelta = 0;
+  for (let dy = 0; dy <= Math.round(itemH); dy++) {
+    await page.mouse.move(cx1b, cy1b - dy, { steps: 1 });
+    const delta = await page.evaluate(() => {
+      const hi = document.querySelector('.spinner-highlight').getBoundingClientRect();
+      const on = document.querySelector('.spinner-item.on');
+      if (!on) return 0;
+      const onR = on.getBoundingClientRect();
+      return Math.abs((onR.top + onR.height / 2) - (hi.top + hi.height / 2));
+    });
+    if (delta > maxDelta) maxDelta = delta;
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+  console.log('  max highlight/on-item misalignment across a 1-step drag:', maxDelta.toFixed(1) + 'px (row height ' + itemH + 'px)');
+  check('on-item stays within half a row of the highlight while dragging', maxDelta <= itemH / 2 + 1, maxDelta.toFixed(1) + 'px');
+  await closeOverlay();
+
   // ---------- Drag up: smooth multi-step settle ----------
   console.log('\n--- Spinner: drag up 100px (smooth settle) ---');
   const overlay2 = await openSpinner();
@@ -124,6 +155,59 @@ async function runSuite(base) {
   check('fling moved up (>=135)', Number(flingVal) >= 135, flingVal);
   check('fling snapped to step', Number(flingVal) % 5 === 0, flingVal);
   check('fling selected matches stepper', flingOn[0] === flingVal, flingOn[0] + ' vs ' + flingVal);
+  await closeOverlay();
+
+  // ---------- Fling: momentum matches the gesture's true average speed ----------
+  // Regression for a velocity-sampling bug: summing N per-event deltas over
+  // a window timed across only the last (N-1) intervals overstates speed by
+  // N/(N-1) — worst for short, fast flings — so the wheel lands a step (or
+  // more) further than the actual gesture implies ("looks like it'll land
+  // on 13, lands on 14"). Verified against an independent capture of the
+  // exact same browser pointer events, mirroring the app's own formula.
+  console.log('\n--- Spinner: fling momentum matches true gesture speed ---');
+  const overlay6 = await openSpinner();
+  // Attach AFTER opening — openSpinner() itself clicks through two menus,
+  // which would otherwise contaminate the capture with unrelated pointer
+  // events before the actual fling gesture even starts.
+  await page.evaluate(() => {
+    window.__raw = [];
+    const push = (e) => window.__raw.push({ y: e.clientY, t: performance.now() });
+    document.addEventListener('pointerdown', push, { capture: true });
+    document.addEventListener('pointermove', push, { capture: true });
+  });
+  const stepAttr = await page.$eval('#f-amt', el => parseFloat(el.dataset.step));
+  const startVal = await page.$eval('#f-amt', el => parseFloat(el.dataset.value));
+  const rowH = (await (await overlay6.$('.spinner-item')).boundingBox()).height;
+  const w6 = await (await overlay6.$('.spinner-window')).boundingBox();
+  const cx6 = w6.x + w6.width / 2;
+  const cy6 = w6.y + w6.height / 2 + 60;
+
+  await page.mouse.move(cx6, cy6);
+  await page.mouse.down();
+  await page.mouse.move(cx6, cy6 - 20, { steps: 1 });
+  await page.mouse.move(cx6, cy6 - 60, { steps: 1 });
+  await page.mouse.move(cx6, cy6 - 110, { steps: 1 });
+  await page.mouse.move(cx6, cy6 - 170, { steps: 1 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  const raw = await page.evaluate(() => window.__raw);
+  const finalVal = Number(await (await page.$('.stepper-val')).getAttribute('data-value'));
+
+  // Replicate the app's own physics (offsetY + windowed velocity → nearest
+  // step) from the independently-captured ground truth.
+  const offsetTotal = raw[raw.length - 1].y - raw[0].y;
+  const win5 = raw.slice(-5);
+  let vel = 0;
+  if (win5.length > 1) {
+    const dt = win5[win5.length - 1].t - win5[0].t;
+    if (dt > 0) vel = (win5[win5.length - 1].y - win5[0].y) / dt * 100;
+  }
+  const expectedSteps = Math.round((offsetTotal + vel) / rowH);
+  const expectedVal = startVal - expectedSteps * stepAttr;
+
+  console.log('  raw samples:', raw.length, 'offset:', offsetTotal, 'vel:', vel.toFixed(1), 'expected:', expectedVal, 'actual:', finalVal);
+  check('fling lands where the true gesture speed predicts (within a step)', Math.abs(finalVal - expectedVal) <= stepAttr * 0.6, 'expected ' + expectedVal + ', got ' + finalVal);
   await closeOverlay();
 
   // ---------- Boundary: heavy drag past min, no negatives ----------

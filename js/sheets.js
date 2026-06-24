@@ -73,7 +73,12 @@ export function openSpinner(id) {
       lastCenter = center;
       items.innerHTML = trackHTML(center);
     }
-    items.style.transform = `translateY(calc(-50% + ${offset % ITEM_H}px))`;
+    // Residual must be measured from the rendered `center` (chosen by
+    // rounding), not `offset % ITEM_H` — that modulo implicitly floors
+    // toward zero, which disagrees with the rounding for the back half of
+    // every step and snaps the track a full row out of place mid-drag.
+    const residual = offset - valToPx(center);
+    items.style.transform = `translateY(calc(-50% + ${residual}px))`;
     items.style.transition = 'none';
     return center;
   }
@@ -107,7 +112,7 @@ export function openSpinner(id) {
     if (dragging) return;
     dragging = true; pid = e.pointerId;
     dragY = e.clientY;
-    offsetY = 0; velSamples = [];
+    offsetY = 0; velSamples = [{ y: e.clientY, t: performance.now() }];
     lastCenter = val;
     items.setPointerCapture(pid);
     items.style.transition = 'none';
@@ -120,7 +125,7 @@ export function openSpinner(id) {
     dragY = e.clientY;
     offsetY += dy;
 
-    velSamples.push({ dy, t: performance.now() });
+    velSamples.push({ y: e.clientY, t: performance.now() });
     if (velSamples.length > 5) velSamples.shift();
 
     offsetY = clampOffset(offsetY);
@@ -131,12 +136,15 @@ export function openSpinner(id) {
     if (!dragging || e.pointerId !== pid) return;
     dragging = false; pid = null;
 
-    // velocity from recent samples (px/ms → momentum mapper)
+    // velocity from recent samples (px/ms → momentum mapper). Measured as
+    // net position change over the exact span it's timed against — summing
+    // per-event dy over a window whose dt only covers (n-1) of the n
+    // intervals overstates speed by n/(n-1), worst for short flings.
     let vel = 0;
     if (velSamples.length > 1) {
-      const dt = velSamples[velSamples.length - 1].t - velSamples[0].t;
-      const dd = velSamples.reduce((s, v) => s + v.dy, 0);
-      if (dt > 0) vel = (dd / dt) * 100;
+      const first = velSamples[0], last = velSamples[velSamples.length - 1];
+      const dt = last.t - first.t;
+      if (dt > 0) vel = ((last.y - first.y) / dt) * 100;
     }
     const momentum = offsetY + vel;
     const steps = Math.round(momentum / ITEM_H);
