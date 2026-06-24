@@ -58,7 +58,7 @@ body {
 .screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
 .screen::-webkit-scrollbar { display: none; }
 
-.tabbar { flex: 0 0 auto; display: flex; justify-content: space-around; align-items: center; padding: 12px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hair); background: var(--surface); }
+.tabbar { flex: 0 0 auto; display: flex; justify-content: space-around; align-items: center; padding: 6px 0 calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hair); background: var(--surface); }
 .tab { all: unset; cursor: pointer; font-size: 23px; color: var(--muted); padding: 6px 18px; border-radius: 14px; transition: color .15s; }
 .tab.on { color: var(--accent); }
 
