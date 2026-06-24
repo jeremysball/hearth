@@ -13,9 +13,79 @@ function field(label, inner) { return `<label class="fld"><span class="fld-l">${
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
     <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><i class="ph ph-minus"></i></button>
-    <input type="number" id="${id}" value="${val}" min="${min != null ? min : ''}" max="${max != null ? max : ''}" data-step="${step}" data-min="${min != null ? min : ''}" data-max="${max != null ? max : ''}" />
+    <div class="stepper-val" id="${id}" tabindex="0" role="spinbutton" aria-valuenow="${val}" aria-valuemin="${min != null ? min : ''}" aria-valuemax="${max != null ? max : ''}" data-step="${step}" data-min="${min != null ? min : ''}" data-max="${max != null ? max : ''}" data-value="${val}" data-action="stepper:open">${val}</div>
     <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><i class="ph ph-plus"></i></button>
   </div>`);
+}
+
+export function openSpinner(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const step = parseFloat(el.dataset.step || 1);
+  const min = el.dataset.min !== '' ? parseFloat(el.dataset.min) : -Infinity;
+  const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
+  let val = parseFloat(el.dataset.value) || 0;
+
+  function render() {
+    const d = document.getElementById('spinner-display');
+    if (!d) return;
+    d.textContent = String(step % 1 !== 0 ? val.toFixed(1) : val);
+  }
+
+  function spin(dir) {
+    val = Math.round((val + dir * step) * 1e6) / 1e6;
+    if (val < min) val = min;
+    if (val > max) val = max;
+    el.dataset.value = val;
+    el.textContent = String(step % 1 !== 0 ? val.toFixed(1) : val);
+    el.setAttribute('aria-valuenow', val);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    render();
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'spinner-overlay';
+  overlay.innerHTML = `<div class="spinner-popup">
+    <button class="spinner-up" aria-label="Increase"><i class="ph ph-caret-up"></i></button>
+    <div class="spinner-val" id="spinner-display">${step % 1 !== 0 ? val.toFixed(1) : val}</div>
+    <button class="spinner-down" aria-label="Decrease"><i class="ph ph-caret-down"></i></button>
+  </div>`;
+
+  function close() {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  // press-and-hold: first spin fires on the first interval tick (~80ms).
+  // On quick tap, interval never ticks so stopHold fires a single spin.
+  let holdTimer = null, holdDir = 0, holdSpun = false;
+  function startHold(dir) {
+    holdSpun = false;
+    holdDir = dir;
+    holdTimer = setInterval(() => { holdSpun = true; spin(dir); }, 80);
+  }
+  function stopHold() {
+    clearInterval(holdTimer);
+    holdTimer = null;
+    if (!holdSpun) spin(holdDir);
+    holdSpun = false;
+    holdDir = 0;
+  }
+
+  ['pointerdown', 'touchstart'].forEach((evt) => {
+    overlay.querySelector('.spinner-up').addEventListener(evt, (e) => { e.preventDefault(); startHold(1); });
+    overlay.querySelector('.spinner-down').addEventListener(evt, (e) => { e.preventDefault(); startHold(-1); });
+  });
+  ['pointerup', 'pointerleave', 'pointercancel', 'touchend', 'touchcancel'].forEach((evt) => {
+    overlay.querySelector('.spinner-up').addEventListener(evt, stopHold);
+    overlay.querySelector('.spinner-down').addEventListener(evt, stopHold);
+  });
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  el._closeSpinner = close;
 }
 const timeRow = () => field('Time', `<input type="time" id="f-time" value="${nowTime()}" />`);
 const noteRow = () => field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…"></textarea>`);
@@ -62,10 +132,10 @@ function gather(type) {
     const end = $('#f-end').value;
     if (end) base.end = timeToISO(end);
   } else if (type === 'feed') {
-    base.side = segVal('side'); base.duration = Number($('#f-dur').value) || 0;
+    base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
     base.side = segVal('side'); base.contents = segVal('contents');
-    let amt = Number($('#f-amt').value) || 0;
+    let amt = Number($('#f-amt').dataset.value) || 0;
     if (state().settings.units.volume === 'oz') amt = amt * 29.5735; // store ml
     base.amount = Math.round(amt); base.unit = 'ml';
   } else if (type === 'diaper') {
@@ -98,11 +168,11 @@ function prefill(type, e) {
   if ($('#f-time')) $('#f-time').value = localTime(e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
   if (type === 'sleep') { setSeg('quality', e.quality); if (e.end) $('#f-end').value = localTime(e.end); }
-  else if (type === 'feed') { setSeg('side', e.side); if ($('#f-dur')) $('#f-dur').value = e.duration || 0; }
+  else if (type === 'feed') { setSeg('side', e.side); const fdur = $('#f-dur'); if (fdur) { fdur.dataset.value = e.duration || 0; fdur.textContent = e.duration || 0; } }
   else if (type === 'bottle' || type === 'pump') {
     setSeg('side', e.side); setSeg('contents', e.contents);
     let a = Number(e.amount) || 0; if (state().settings.units.volume === 'oz') a = Math.round((a / 29.5735) * 10) / 10;
-    if ($('#f-amt')) $('#f-amt').value = a;
+    const famt = $('#f-amt'); if (famt) { famt.dataset.value = a; famt.textContent = a; }
   } else if (type === 'diaper') { setSeg('kind', e.kind); }
   else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
 }
@@ -176,7 +246,7 @@ export function medRow(m) {
 }
 
 export function saveBottle() {
-  state().settings.bottleIntervalH = Number($('#c-int').value) || 3;
+  state().settings.bottleIntervalH = Number($('#c-int').dataset.value) || 3;
   save(); enqueueSettingsSync(); sheet.close(); toast('Bottle reminder updated'); router.refresh();
 }
 export function saveMeds() {
@@ -219,7 +289,7 @@ export function openMeasure(id) {
 export function saveMeasure(id) {
   const impW = state().settings.units.weight === 'lb';
   const impL = (state().settings.units.length || 'cm') === 'in';
-  const w = Number($('#g-w').value), h = Number($('#g-h').value), hd = Number($('#g-hd').value);
+  const w = Number($('#g-w').dataset.value), h = Number($('#g-h').dataset.value), hd = Number($('#g-hd').dataset.value);
   const m = {
     id: id || undefined,
     date: $('#g-date').value || new Date().toISOString().slice(0, 10),

@@ -107,7 +107,7 @@ hearth/
 └── docker-compose.yml  # App + Tailscale sidecar
 ```
 
-The Go server handles the API, multi-device sync over SSE, and multi-tenancy (families, caregivers, invites). The frontend is a vanilla JS PWA that stores data in localStorage and syncs through the server when connected. SQLite holds shared state.
+The Go server handles the API, multi-device sync over SSE, and family-scoped data isolation. One family has one baby, one or more caregivers, and shared settings, entries, and growth data — each scoped by `family_id`. The frontend is a vanilla JS PWA that stores data in localStorage and syncs through the server when connected. SQLite holds shared state.
 
 Tailscale serves as the auth layer — only devices on your tailnet can reach the server. No login page, no password hashing, no session tokens. The Go server trusts that anyone who can connect is authorized.
 
