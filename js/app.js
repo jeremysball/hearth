@@ -152,8 +152,8 @@ function stepValue(id, dir) {
   const el = document.getElementById(id);
   if (!el) return;
   const step = parseFloat(el.dataset.step || 1);
-  const min = el.dataset.min != null ? parseFloat(el.dataset.min) : -Infinity;
-  const max = el.dataset.max != null ? parseFloat(el.dataset.max) : Infinity;
+  const min = el.dataset.min !== '' ? parseFloat(el.dataset.min) : -Infinity;
+  const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
   let val = parseFloat(el.value) || 0;
   val = Math.round((val + dir * step) * 1e6) / 1e6;
   if (val < min) val = min;

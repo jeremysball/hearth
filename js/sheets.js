@@ -12,9 +12,9 @@ function seg(group, opts, sel) {
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
-    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}"><i class="ph ph-minus"></i></button>
+    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><i class="ph ph-minus"></i></button>
     <input type="number" id="${id}" value="${val}" min="${min != null ? min : ''}" max="${max != null ? max : ''}" data-step="${step}" data-min="${min != null ? min : ''}" data-max="${max != null ? max : ''}" />
-    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}"><i class="ph ph-plus"></i></button>
+    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><i class="ph ph-plus"></i></button>
   </div>`);
 }
 const timeRow = () => field('Time', `<input type="time" id="f-time" value="${nowTime()}" />`);
