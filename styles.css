@@ -338,11 +338,10 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* ---------- spinner overlay ---------- */
 .spinner-overlay { position: fixed; inset: 0; z-index: 10000; background: oklch(0 0 0 / .35); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .18s; }
 .spinner-overlay.show { opacity: 1; }
-.spinner-popup { background: var(--surface); border-radius: 28px; width: min(320px, 88vw); padding: 8px 0; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px oklch(0 0 0 / .25); }
-.spinner-popup .spinner-val { font-size: 64px; font-weight: 800; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; user-select: none; padding: 8px 0; }
-.spinner-popup .spinner-up,
-.spinner-popup .spinner-down { all: unset; cursor: pointer; width: 100%; height: 64px; display: flex; align-items: center; justify-content: center; color: var(--accent-ink); font-size: 36px; border-radius: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-.spinner-popup .spinner-up:active,
-.spinner-popup .spinner-down:active { background: var(--accent-tint); }
-.spinner-popup .spinner-up { border-radius: 28px 28px 0 0; }
-.spinner-popup .spinner-down { border-radius: 0 0 28px 28px; }
+.spinner-popup { background: var(--surface); border-radius: 28px; width: min(280px, 80vw); box-shadow: 0 20px 50px oklch(0 0 0 / .25); overflow: hidden; }
+.spinner-window { position: relative; height: 260px; overflow: hidden; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.spinner-window:active { cursor: grabbing; }
+.spinner-highlight { position: absolute; top: 50%; left: 12px; right: 12px; height: 52px; transform: translateY(-50%); background: var(--accent-tint); border-radius: 13px; pointer-events: none; z-index: 0; }
+.spinner-items { position: relative; z-index: 1; padding: 104px 0; will-change: transform; }
+.spinner-item { height: 52px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--muted); transition: color .15s, font-size .15s, font-weight .15s; }
+.spinner-item.on { font-size: 26px; font-weight: 800; color: var(--ink); }

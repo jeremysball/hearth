@@ -26,66 +26,120 @@ export function openSpinner(id) {
   const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
   let val = parseFloat(el.dataset.value) || 0;
 
-  function render() {
-    const d = document.getElementById('spinner-display');
-    if (!d) return;
-    d.textContent = String(step % 1 !== 0 ? val.toFixed(1) : val);
-  }
+  const ITEM_H = 52; // px per item
+  const VISIBLE = 5; // odd number so center is current
+  const OFF = Math.floor(VISIBLE / 2);
+  const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
 
-  function spin(dir) {
-    val = Math.round((val + dir * step) * 1e6) / 1e6;
-    if (val < min) val = min;
-    if (val > max) val = max;
+  function commit(v) {
+    v = Math.round(v * 1e6) / 1e6;
+    if (v < min) v = min; else if (v > max) v = max;
+    val = v;
     el.dataset.value = val;
-    el.textContent = String(step % 1 !== 0 ? val.toFixed(1) : val);
+    el.textContent = fmtVal(val);
     el.setAttribute('aria-valuenow', val);
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    render();
+  }
+
+  function trackHTML(center) {
+    let html = '';
+    for (let i = -OFF; i <= OFF; i++) {
+      const v = center + i * step;
+      const cls = i === 0 ? 'spinner-item on' : 'spinner-item';
+      html += `<div class="${cls}">${fmtVal(v)}</div>`;
+    }
+    return html;
   }
 
   const overlay = document.createElement('div');
   overlay.className = 'spinner-overlay';
   overlay.innerHTML = `<div class="spinner-popup">
-    <button class="spinner-up" aria-label="Increase"><i class="ph ph-caret-up"></i></button>
-    <div class="spinner-val" id="spinner-display">${step % 1 !== 0 ? val.toFixed(1) : val}</div>
-    <button class="spinner-down" aria-label="Decrease"><i class="ph ph-caret-down"></i></button>
+    <div class="spinner-window">
+      <div class="spinner-highlight"></div>
+      <div class="spinner-items" id="spinner-items">${trackHTML(val)}</div>
+    </div>
   </div>`;
 
+  const items = overlay.querySelector('#spinner-items');
+
+  function render(offset) {
+    const raw = val - (offset / ITEM_H) * step;
+    const center = Math.round(raw / step) * step;
+    items.innerHTML = trackHTML(center);
+    items.style.transform = `translateY(${offset % ITEM_H}px)`;
+    items.style.transition = 'none';
+    return center;
+  }
+
   function close() {
+    overlay._closed = true;
     overlay.classList.remove('show');
     setTimeout(() => overlay.remove(), 200);
   }
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  // press-and-hold: first spin fires on the first interval tick (~80ms).
-  // On quick tap, interval never ticks so stopHold fires a single spin.
-  let holdTimer = null, holdDir = 0, holdSpun = false, holdActive = false;
-  function startHold(dir) {
-    if (holdActive) return;
-    clearInterval(holdTimer);
-    holdActive = true;
-    holdSpun = false;
-    holdDir = dir;
-    holdTimer = setInterval(() => { holdSpun = true; spin(dir); }, 80);
-  }
-  function stopHold() {
-    if (!holdActive) return;
-    clearInterval(holdTimer);
-    holdTimer = null;
-    holdActive = false;
-    if (!holdSpun) spin(holdDir);
+  // ----- drag + momentum -----
+  let dragging = false, pid = null;
+  let dragY = 0, offsetY = 0;
+  let velY = 0, lastY = 0, lastT = 0;
+  let animFrame = null;
+
+  function onDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (dragging) return;
+    dragging = true; pid = e.pointerId;
+    dragY = e.clientY; lastY = dragY; lastT = performance.now();
+    offsetY = 0; velY = 0;
+    items.setPointerCapture(pid);
+    items.style.transition = 'none';
   }
 
-  function onDown(dir, e) { e.preventDefault(); startHold(dir); }
-  overlay.querySelector('.spinner-up').addEventListener('pointerdown', (e) => onDown(1, e));
-  overlay.querySelector('.spinner-down').addEventListener('pointerdown', (e) => onDown(-1, e));
-  overlay.querySelector('.spinner-up').addEventListener('pointerup', stopHold);
-  overlay.querySelector('.spinner-down').addEventListener('pointerup', stopHold);
-  overlay.querySelector('.spinner-up').addEventListener('pointerleave', stopHold);
-  overlay.querySelector('.spinner-down').addEventListener('pointerleave', stopHold);
-  overlay.querySelector('.spinner-up').addEventListener('pointercancel', stopHold);
-  overlay.querySelector('.spinner-down').addEventListener('pointercancel', stopHold);
+  function onMove(e) {
+    if (!dragging || e.pointerId !== pid) return;
+    e.preventDefault();
+    const now = performance.now();
+    const dy = e.clientY - lastY;
+    if (dy !== 0) { velY = dy; }
+    lastY = e.clientY; lastT = now;
+    offsetY += e.clientY - dragY;
+    dragY = e.clientY;
+
+    const center = render(offsetY);
+    const clamped = Math.min(max, Math.max(min, center));
+    if (center !== clamped) {
+      offsetY -= ((center - clamped) / step) * ITEM_H;
+      render(offsetY);
+    }
+  }
+
+  function onUp(e) {
+    if (!dragging || e.pointerId !== pid) return;
+    dragging = false; pid = null;
+
+    const momentum = offsetY + velY * 6;
+    const steps = Math.round(momentum / ITEM_H);
+    const target = val + steps * step;
+    const clamped = Math.min(max, Math.max(min, target));
+
+    items.style.transition = 'transform .3s cubic-bezier(0.22, 0.61, 0.36, 1)';
+    items.style.transform = 'translateY(0px)';
+
+    const onEnd = () => {
+      items.removeEventListener('transitionend', onEnd);
+      if (overlay._closed) return;
+      items.style.transition = 'none';
+      items.innerHTML = trackHTML(clamped);
+      commit(clamped);
+      offsetY = 0; velY = 0;
+    };
+    items.addEventListener('transitionend', onEnd);
+  }
+
+  items.addEventListener('pointerdown', onDown);
+  items.addEventListener('pointermove', onMove);
+  items.addEventListener('pointerup', onUp);
+  items.addEventListener('pointercancel', onUp);
 
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
