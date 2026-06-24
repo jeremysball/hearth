@@ -9,6 +9,11 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
+// Minimal DOM globals so ui.js imports cleanly under Node
+globalThis.window = globalThis;
+globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
+globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
+
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, maybeInterruptSleep, undoInterruptSleep, normalizeLog } = await import('./store.js');
 
 function outboxOps() {
@@ -138,4 +143,13 @@ test('load repairs sleep entries whose end precedes start', () => {
 test('normalizeLog swaps reversed sleep timestamps', () => {
   const out = normalizeLog([{ id: 'x', type: 'sleep', start: '2026-01-01T08:00:00Z', end: '2026-01-01T07:00:00Z' }]);
   assert.ok(new Date(out[0].end) >= new Date(out[0].start));
+});
+
+test('fmt.clock honors the clock24 setting', async () => {
+  const { fmt } = await import('./ui.js');
+  const d = new Date('2026-01-01T23:05:00');
+  state().settings.clock24 = '12h';
+  assert.equal(fmt.clock(d), '11:05 PM');
+  state().settings.clock24 = '24h';
+  assert.equal(fmt.clock(d), '23:05');
 });

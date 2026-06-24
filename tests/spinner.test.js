@@ -62,7 +62,7 @@ async function runSuite(base) {
   const selCenter = selItem ? (selItem.top + selItem.bottom) / 2 : -1;
   const hiCenter = (highlightBox.y * 2 + highlightBox.height) / 2;
 
-  check('item count is 11', itemCount === 11, 'got ' + itemCount);
+  check('item count is 17', itemCount === 17, 'got ' + itemCount);
   check('selected is 120', onItems[0] === '120', 'got ' + onItems[0]);
   check('selected aligns with highlight (<5px)', Math.abs(selCenter - hiCenter) < 5, 'delta ' + Math.abs(selCenter - hiCenter).toFixed(1));
   console.log('  items:', itemTexts);
@@ -249,6 +249,40 @@ async function runSuite(base) {
   const tapVal = await (await page.$('.stepper-val')).getAttribute('data-value');
   console.log('  value after tap:', tapVal);
   check('tap keeps value at 120', tapVal === '120', tapVal);
+  await closeOverlay();
+
+  // ---------- Tap-to-type: click centered value, type a new value, commit ----------
+  console.log('\n--- Spinner: tap-to-type entry ---');
+  const overlay7 = await openSpinner();
+  const w7 = await (await overlay7.$('.spinner-window')).boundingBox();
+  const onItemBox = await (await overlay7.$('.spinner-item.on')).boundingBox();
+  const cx7 = onItemBox.x + onItemBox.width / 2;
+  const cy7 = onItemBox.y + onItemBox.height / 2;
+
+  // Click the centered item to enter type mode (explicit down/up for reliability)
+  await page.mouse.move(cx7, cy7);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  // Should now show an input inside the centered item
+  const input = await overlay7.$('.spinner-item.on input');
+  const html = await overlay7.$eval('.spinner-item.on', el => el.innerHTML);
+  console.log('  centered item HTML after tap:', html ? html.substring(0, 80) : '(none)');
+  check('type-mode input appears', input !== null);
+  if (!input) { await closeOverlay(); } else {
+    // Type a new value
+    await input.fill('175');
+    await page.waitForTimeout(200);
+
+    // Press Enter to commit
+    await input.press('Enter');
+    await page.waitForTimeout(500);
+
+    const typedVal = await (await page.$('.stepper-val')).getAttribute('data-value');
+    console.log('  value after typing 175:', typedVal);
+    check('typed value snaps to nearest step (175)', typedVal === '175', typedVal);
+  }
   await closeOverlay();
 
   exitCode = tally() === 0 ? 0 : 1;
