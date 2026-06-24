@@ -206,6 +206,7 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
+    ${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}
     ${timeRow()} ${noteRow()}`,
   medicine: () => {
     const meds = state().settings.meds;
@@ -238,7 +239,7 @@ function gather(type) {
     if (state().settings.units.volume === 'oz') amt = amt * 29.5735; // store ml
     base.amount = Math.round(amt); base.unit = 'ml';
   } else if (type === 'diaper') {
-    base.kind = segVal('kind');
+    base.kind = segVal('kind'); base.size = segVal('size');
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
@@ -272,7 +273,7 @@ function prefill(type, e) {
     setSeg('side', e.side); setSeg('contents', e.contents);
     let a = Number(e.amount) || 0; if (state().settings.units.volume === 'oz') a = Math.round((a / 29.5735) * 10) / 10;
     const famt = $('#f-amt'); if (famt) { famt.dataset.value = a; famt.textContent = a; }
-  } else if (type === 'diaper') { setSeg('kind', e.kind); }
+  } else if (type === 'diaper') { setSeg('kind', e.kind); setSeg('size', e.size); }
   else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
 }
 
