@@ -361,20 +361,27 @@ git commit -m "feat(theme): swap Quicksand/Nunito for Archivo/Playfair Display"
 ### Task 3: Icon system — Lucide SVG sprite replacing Phosphor
 
 **Files:**
-- Create: `icons/sprite.svg`
+- Modify: `index.html` (inline `<svg>` sprite added to `<body>`; remove the `phosphor.css` link)
+- Modify: `sw.js` (remove the two Phosphor entries from `SHELL`)
 - Delete: `fonts/Phosphor.woff2`, `fonts/phosphor.css`
-- Modify: `index.html` (remove the `phosphor.css` link)
 - Modify: `styles.css` (add `.icon` rule)
-- Modify: `js/ui.js` (`TYPES` table, `icon()` fallback map, one direct icon usage)
-- Modify: `js/app.js`, `js/home.js`, `js/sheets.js`, `js/sleep.js`, `js/growth.js`, `js/profile.js`, `js/onboarding.js`, `js/join.js` (every `<i class="ph ph-...">` call site)
+- Modify: `js/ui.js`, `js/app.js`, `js/home.js`, `js/sheets.js`, `js/sleep.js`, `js/growth.js`, `js/profile.js`, `js/onboarding.js`, `js/join.js` (every `<i class="ph ph-...">` call site)
+
+**Why inline, not a separate sprite file:** WebKit (iOS Safari, which this app explicitly targets per `CLAUDE.md`) has a long history of not reliably supporting `<use>` references into an *external* SVG document — that's the entire reason the `svg4everybody` polyfill exists. A same-document `<use href="#name">` reference, by contrast, is universally supported. Inlining the sprite as a single `<svg style="display:none">` block in `index.html`'s `<body>` — as a sibling of `#app`, not inside it — means it survives every `$('#app').innerHTML = ...` view swap (`router.go`, `router.refresh`, onboarding, join) without needing to be re-inserted, since none of those touch anything outside `#app`.
 
 **Interfaces:** Independent of Tasks 1-2 (touches no palette or font-family lines). This task must land as a single atomic commit — do not split it across multiple commits, because a partially-completed sweep would leave some icons rendering as blank Phosphor-font glyphs that no longer exist.
 
-- [ ] **Step 1: Create the icon sprite**
+- [ ] **Step 1: Inline the icon sprite into `index.html`**
 
-Create `icons/sprite.svg` with exactly this content:
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+In `index.html`, find:
+```html
+<body data-theme="girl">
+  <div id="app"></div>
+```
+Replace it with (the `<svg>` block goes immediately before `<div id="app">`, as its sibling):
+```html
+<body data-theme="girl">
+<svg style="display:none">
 <!-- Lucide icons, ISC license: https://lucide.dev -->
 <symbol id="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
@@ -496,29 +503,36 @@ Create `icons/sprite.svg` with exactly this content:
   <path d="m6 6 12 12" />
 </symbol>
 </svg>
+  <div id="app"></div>
 ```
 
-- [ ] **Step 2: Verify the sprite is well-formed XML**
+- [ ] **Step 2: Remove the Phosphor link from `index.html`**
 
-Run:
-```bash
-xmllint --noout icons/sprite.svg && echo OK
+Find and delete this line entirely:
+```html
+<link rel="stylesheet" href="fonts/phosphor.css" />
 ```
-Expected: `OK`. If `xmllint` isn't installed, run instead:
-```bash
-python3 -c "import xml.dom.minidom as m; m.parse('icons/sprite.svg'); print('OK')"
-```
-Expected: `OK`.
 
-- [ ] **Step 3: Delete the Phosphor font assets and add the `.icon` CSS rule**
+- [ ] **Step 3: Remove the two Phosphor entries from `sw.js`'s precache list — required before deleting the files**
+
+In `sw.js`, find:
+```js
+  './icons/apple-touch-icon.png',
+  './fonts/phosphor.css',
+  './fonts/Phosphor.woff2',
+  './js/app.js',
+```
+Replace it with:
+```js
+  './icons/apple-touch-icon.png',
+  './js/app.js',
+```
+This is not optional cleanup — `SHELL` is passed to `caches.open(VERSION).then((c) => c.addAll(SHELL))` on service-worker install, and `addAll` fails atomically if *any* entry 404s. Deleting the Phosphor files in Step 4 below while they're still listed here would break the service worker install for every user on their next visit.
+
+- [ ] **Step 4: Delete the Phosphor font assets and add the `.icon` CSS rule**
 
 ```bash
 git rm fonts/Phosphor.woff2 fonts/phosphor.css
-```
-
-In `index.html`, find and delete this line entirely:
-```html
-<link rel="stylesheet" href="fonts/phosphor.css" />
 ```
 
 In `styles.css`, find:
@@ -531,7 +545,7 @@ input, select, textarea, button { font-family: inherit; }
 .icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
 ```
 
-- [ ] **Step 4: Update `js/ui.js`'s `TYPES` table, `icon()` fallback map, and direct icon usage**
+- [ ] **Step 5: Update `js/ui.js`'s `TYPES` table, `icon()` fallback map, and direct icon usage**
 
 Find:
 ```js
@@ -580,10 +594,10 @@ Find:
 ```
 Replace it with:
 ```js
-        ${opts.title ? `<div class="sheet-hd"><h3>${esc(opts.title)}</h3><button class="x" data-action="sheet:close" aria-label="Close"><svg class="icon"><use href="icons/sprite.svg#x"></use></svg></button></div>` : ''}
+        ${opts.title ? `<div class="sheet-hd"><h3>${esc(opts.title)}</h3><button class="x" data-action="sheet:close" aria-label="Close"><svg class="icon"><use href="#x"></use></svg></button></div>` : ''}
 ```
 
-- [ ] **Step 5: Sweep `js/app.js`**
+- [ ] **Step 6: Sweep `js/app.js`**
 
 Find each line and replace it exactly as shown (7 occurrences):
 
@@ -592,7 +606,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="icons/sprite.svg#${t.icon}"></use></svg></button>`).join('')}</nav>
+    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg></button>`).join('')}</nav>
 ```
 
 ```js
@@ -600,7 +614,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-      <span class="ic-ring ${s.tone}"><svg class="icon"><use href="icons/sprite.svg#${s.icon}"></use></svg></span>
+      <span class="ic-ring ${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
 ```
 
 ```js
@@ -608,7 +622,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-    <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><svg class="icon"><use href="icons/sprite.svg#pencil"></use></svg> Edit entry</button>
+    <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><svg class="icon"><use href="#pencil"></use></svg> Edit entry</button>
 ```
 
 ```js
@@ -616,7 +630,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-    <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg> Delete entry</button>`,
+    <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete entry</button>`,
 ```
 
 ```js
@@ -624,7 +638,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-    <button class="btn-primary" data-action="baby:photo-edit"><svg class="icon"><use href="icons/sprite.svg#camera"></use></svg> Change photo</button>`,
+    <button class="btn-primary" data-action="baby:photo-edit"><svg class="icon"><use href="#camera"></use></svg> Change photo</button>`,
 ```
 
 ```js
@@ -632,7 +646,7 @@ Find each line and replace it exactly as shown (7 occurrences):
 ```
 →
 ```js
-    <button class="btn-primary danger-btn" data-action="app:reset-confirm"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg> Reset everything</button>
+    <button class="btn-primary danger-btn" data-action="app:reset-confirm"><svg class="icon"><use href="#trash-2"></use></svg> Reset everything</button>
 ```
 
 The invite-link button is the one call site that may already have been changed by a separate, independently-approved plan (it replaces "Copy link" with "Share link"). Check what's currently there:
@@ -641,23 +655,23 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 - If you see `data-action="cg:invite-copy"` with `<i class="ph ph-copy"></i> Copy link`, replace that whole line with:
   ```js
-      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><svg class="icon"><use href="icons/sprite.svg#share-2"></use></svg> Copy link</button>`,
+      <button class="btn-primary" data-action="cg:invite-copy" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Copy link</button>`,
   ```
   (keep the `cg:invite-copy` action name and "Copy link" text exactly as found — only the icon markup changes here; the action/label rename is the other plan's job, not this one's.)
 - If you see `data-action="cg:invite-share"` with `<i class="ph ph-share"></i> Share link` (i.e. the other plan already ran), replace just the icon:
   ```js
-      <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="icons/sprite.svg#share-2"></use></svg> Share link</button>`,
+      <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Share link</button>`,
   ```
-- Either way, the end state for this line is: same action name and button text as you found, `<i class="ph ph-...">` replaced by `<svg class="icon"><use href="icons/sprite.svg#share-2"></use></svg>`.
+- Either way, the end state for this line is: same action name and button text as you found, `<i class="ph ph-...">` replaced by `<svg class="icon"><use href="#share-2"></use></svg>`.
 
-- [ ] **Step 6: Sweep `js/onboarding.js`**
+- [ ] **Step 7: Sweep `js/onboarding.js`**
 
 ```js
       <div class="onb-mark"><i class="ph ph-moon-stars"></i></div>
 ```
 →
 ```js
-      <div class="onb-mark"><svg class="icon"><use href="icons/sprite.svg#moon-star"></use></svg></div>
+      <div class="onb-mark"><svg class="icon"><use href="#moon-star"></use></svg></div>
 ```
 
 ```js
@@ -665,7 +679,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-        <span class="avatar lg"><svg class="icon"><use href="icons/sprite.svg#camera"></use></svg></span>
+        <span class="avatar lg"><svg class="icon"><use href="#camera"></use></svg></span>
 ```
 
 ```js
@@ -673,17 +687,17 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="btn-primary onb-go" data-action="onboard:finish"><svg class="icon"><use href="icons/sprite.svg#heart"></use></svg> Create Hearth</button>
+    <button class="btn-primary onb-go" data-action="onboard:finish"><svg class="icon"><use href="#heart"></use></svg> Create Hearth</button>
 ```
 
-- [ ] **Step 7: Sweep `js/join.js`**
+- [ ] **Step 8: Sweep `js/join.js`**
 
 ```js
       <div class="onb-mark"><i class="ph ph-heart-straight"></i></div>
 ```
 →
 ```js
-      <div class="onb-mark"><svg class="icon"><use href="icons/sprite.svg#heart"></use></svg></div>
+      <div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div>
 ```
 
 ```js
@@ -691,10 +705,10 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="btn-primary onb-go" data-action="join:finish" data-token="${token}"><svg class="icon"><use href="icons/sprite.svg#heart"></use></svg> Join family</button>
+    <button class="btn-primary onb-go" data-action="join:finish" data-token="${token}"><svg class="icon"><use href="#heart"></use></svg> Join family</button>
 ```
 
-- [ ] **Step 8: Sweep `js/home.js`**
+- [ ] **Step 9: Sweep `js/home.js`**
 
 ```js
       <span class="row-ic tone-${s.tone}"><i class="ph ph-${s.icon}"></i></span>
@@ -708,14 +722,14 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="icons/sprite.svg#${s.icon}"></use></svg></span>
+      <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(s.detail)}</span></span>
-      <button class="row-act edit" data-action="entry:edit" data-id="${e.id}" aria-label="Edit"><svg class="icon"><use href="icons/sprite.svg#pencil"></use></svg></button>
-      <button class="row-act del" data-action="entry:delete" data-id="${e.id}" aria-label="Delete"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg></button>
+      <button class="row-act edit" data-action="entry:edit" data-id="${e.id}" aria-label="Edit"><svg class="icon"><use href="#pencil"></use></svg></button>
+      <button class="row-act del" data-action="entry:delete" data-id="${e.id}" aria-label="Delete"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>`;
   }
   return `<div class="row" data-action="entry:open" data-id="${e.id}">
-    <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="icons/sprite.svg#${s.icon}"></use></svg></span>
+    <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
 ```
 
 ```js
@@ -723,7 +737,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <div class="ic-ring sleep"><svg class="icon"><use href="icons/sprite.svg#moon-star"></use></svg></div>
+    <div class="ic-ring sleep"><svg class="icon"><use href="#moon-star"></use></svg></div>
 ```
 
 ```js
@@ -731,7 +745,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="ic-edit" data-action="card:edit" data-card="sweetspot" aria-label="Edit"><svg class="icon"><use href="icons/sprite.svg#sliders-horizontal"></use></svg></button>
+    <button class="ic-edit" data-action="card:edit" data-card="sweetspot" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
 ```
 
 ```js
@@ -739,7 +753,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <div class="ic-ring feed"><svg class="icon"><use href="icons/sprite.svg#${icon('baby-bottle')}"></use></svg></div>
+    <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
 ```
 
 ```js
@@ -747,7 +761,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="ic-edit" data-action="card:edit" data-card="bottle" aria-label="Edit"><svg class="icon"><use href="icons/sprite.svg#sliders-horizontal"></use></svg></button>
+    <button class="ic-edit" data-action="card:edit" data-card="bottle" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
 ```
 
 ```js
@@ -755,7 +769,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <div class="ic-ring med"><svg class="icon"><use href="icons/sprite.svg#${icon('pill')}"></use></svg></div>
+    <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
 ```
 
 ```js
@@ -763,7 +777,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><svg class="icon"><use href="icons/sprite.svg#sliders-horizontal"></use></svg></button>
+    <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
 ```
 
 ```js
@@ -771,7 +785,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-  return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
+  return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
 ```
 
 ```js
@@ -779,7 +793,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-          <span class="tok tone-${c.tone}"><svg class="icon"><use href="icons/sprite.svg#${icon(c.icon)}"></use></svg></span><span class="act-lbl">${c.label}</span></button>`;
+          <span class="tok tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span><span class="act-lbl">${c.label}</span></button>`;
 ```
 
 ```js
@@ -787,17 +801,17 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <button class="act" data-action="log:more"><span class="tok"><svg class="icon"><use href="icons/sprite.svg#ellipsis"></use></svg></span><span class="act-lbl">More</span></button>
+      <button class="act" data-action="log:more"><span class="tok"><svg class="icon"><use href="#ellipsis"></use></svg></span><span class="act-lbl">More</span></button>
 ```
 
-- [ ] **Step 9: Sweep `js/sheets.js`**
+- [ ] **Step 10: Sweep `js/sheets.js`**
 
 ```js
     <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><i class="ph ph-minus"></i></button>
 ```
 →
 ```js
-    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><svg class="icon"><use href="icons/sprite.svg#minus"></use></svg></button>
+    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><svg class="icon"><use href="#minus"></use></svg></button>
 ```
 
 ```js
@@ -805,7 +819,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg></button>
+    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><svg class="icon"><use href="#plus"></use></svg></button>
 ```
 
 ```js
@@ -814,8 +828,8 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    FORMS[type]() + `<button class="btn-primary" data-action="log:save" data-type="${type}" data-id="${editing ? entry.id : ''}"><svg class="icon"><use href="icons/sprite.svg#check"></use></svg> ${editing ? 'Save changes' : 'Log ' + cfg.label.toLowerCase()}</button>` +
-      (editing ? `<button class="btn-ghost danger" data-action="entry:delete" data-id="${entry.id}"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg> Delete</button>` : ''),
+    FORMS[type]() + `<button class="btn-primary" data-action="log:save" data-type="${type}" data-id="${editing ? entry.id : ''}"><svg class="icon"><use href="#check"></use></svg> ${editing ? 'Save changes' : 'Log ' + cfg.label.toLowerCase()}</button>` +
+      (editing ? `<button class="btn-ghost danger" data-action="entry:delete" data-id="${entry.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete</button>` : ''),
 ```
 
 ```js
@@ -823,7 +837,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-        <span class="chooser-ic tone-${c.tone}"><svg class="icon"><use href="icons/sprite.svg#${icon(c.icon)}"></use></svg></span>
+        <span class="chooser-ic tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span>
 ```
 
 ```js
@@ -831,7 +845,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <button class="btn-primary" data-action="card:save-bottle"><svg class="icon"><use href="icons/sprite.svg#check"></use></svg> Save</button>
+      <button class="btn-primary" data-action="card:save-bottle"><svg class="icon"><use href="#check"></use></svg> Save</button>
 ```
 
 ```js
@@ -840,8 +854,8 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="btn-ghost" data-action="med:add"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg> Add medicine</button>
-    <button class="btn-primary" data-action="card:save-meds"><svg class="icon"><use href="icons/sprite.svg#check"></use></svg> Save</button>
+    <button class="btn-ghost" data-action="med:add"><svg class="icon"><use href="#plus"></use></svg> Add medicine</button>
+    <button class="btn-primary" data-action="card:save-meds"><svg class="icon"><use href="#check"></use></svg> Save</button>
 ```
 
 ```js
@@ -849,7 +863,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg></button>
+      <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
 ```
 
 ```js
@@ -858,18 +872,18 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="btn-primary" data-action="measure:save" data-id="${id || ''}"><svg class="icon"><use href="icons/sprite.svg#check"></use></svg> ${id ? 'Save changes' : 'Add measurement'}</button>
-    ${id ? `<button class="btn-ghost danger" data-action="measure:delete" data-id="${id}"><svg class="icon"><use href="icons/sprite.svg#trash-2"></use></svg> Delete</button>` : ''}`,
+    <button class="btn-primary" data-action="measure:save" data-id="${id || ''}"><svg class="icon"><use href="#check"></use></svg> ${id ? 'Save changes' : 'Add measurement'}</button>
+    ${id ? `<button class="btn-ghost danger" data-action="measure:delete" data-id="${id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete</button>` : ''}`,
 ```
 
-- [ ] **Step 10: Sweep `js/profile.js`**
+- [ ] **Step 11: Sweep `js/profile.js`**
 
 ```js
         <span class="photo-edit"><i class="ph ph-camera"></i></span>
 ```
 →
 ```js
-        <span class="photo-edit"><svg class="icon"><use href="icons/sprite.svg#camera"></use></svg></span>
+        <span class="photo-edit"><svg class="icon"><use href="#camera"></use></svg></span>
 ```
 
 ```js
@@ -877,7 +891,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <button class="add-row" data-action="cg:invite"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg> Invite a caregiver</button>
+      <button class="add-row" data-action="cg:invite"><svg class="icon"><use href="#plus"></use></svg> Invite a caregiver</button>
 ```
 
 ```js
@@ -885,7 +899,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="icons/sprite.svg#undo-2"></use></svg> Reset app & start over</button>
+    <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="#undo-2"></use></svg> Reset app & start over</button>
 ```
 
 ```js
@@ -893,17 +907,17 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <svg class="icon"><use href="icons/sprite.svg#circle-user"></use></svg>
+    <svg class="icon"><use href="#circle-user"></use></svg>
 ```
 
-- [ ] **Step 11: Sweep `js/growth.js`**
+- [ ] **Step 12: Sweep `js/growth.js`**
 
 ```js
     <span class="row-ic tone-med"><i class="ph ph-ruler"></i></span>
 ```
 →
 ```js
-    <span class="row-ic tone-med"><svg class="icon"><use href="icons/sprite.svg#ruler"></use></svg></span>
+    <span class="row-ic tone-med"><svg class="icon"><use href="#ruler"></use></svg></span>
 ```
 
 ```js
@@ -911,17 +925,17 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-    <div class="today-hd"><h2>History</h2><button class="today-add" data-action="measure:open" data-id="" aria-label="Add measurement"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg></button></div>
+    <div class="today-hd"><h2>History</h2><button class="today-add" data-action="measure:open" data-id="" aria-label="Add measurement"><svg class="icon"><use href="#plus"></use></svg></button></div>
 ```
 
-- [ ] **Step 12: Sweep `js/sleep.js`**
+- [ ] **Step 13: Sweep `js/sleep.js`**
 
 ```js
       <span class="row-ic tone-sleep"><i class="ph ph-moon"></i></span>
 ```
 →
 ```js
-      <span class="row-ic tone-sleep"><svg class="icon"><use href="icons/sprite.svg#moon"></use></svg></span>
+      <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
 ```
 
 ```js
@@ -929,7 +943,7 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      ${night ? `<div class="night-strip"><svg class="icon"><use href="icons/sprite.svg#moon-star"></use></svg> Last night · <b>${fmt.dur(night.dur)}</b> · ${fmt.clock(night.s)}–${fmt.clock(night.en)}</div>` : ''}
+      ${night ? `<div class="night-strip"><svg class="icon"><use href="#moon-star"></use></svg> Last night · <b>${fmt.dur(night.dur)}</b> · ${fmt.clock(night.s)}–${fmt.clock(night.en)}</div>` : ''}
 ```
 
 ```js
@@ -937,18 +951,18 @@ rg -n 'data-action="cg:invite-' js/app.js
 ```
 →
 ```js
-      <div class="today-hd"><h2>Today's sleep</h2><button class="today-add" data-action="log:open" data-type="sleep" aria-label="Log sleep"><svg class="icon"><use href="icons/sprite.svg#plus"></use></svg></button></div>
+      <div class="today-hd"><h2>Today's sleep</h2><button class="today-add" data-action="log:open" data-type="sleep" aria-label="Log sleep"><svg class="icon"><use href="#plus"></use></svg></button></div>
 ```
 
-- [ ] **Step 13: Bump the version** per Global Constraints.
+- [ ] **Step 14: Bump the version** per Global Constraints.
 
-- [ ] **Step 14: Verify**
+- [ ] **Step 15: Verify**
 
 Run:
 ```bash
-rg -n 'class="ph' js/*.js index.html styles.css
+rg -n 'class="ph |icons/sprite\.svg' js/*.js index.html styles.css sw.js
 ```
-Expected: no output — every Phosphor-pattern call site is gone.
+Expected: no output — every Phosphor-pattern call site and every external-sprite-file reference is gone (the sprite is inline now, referenced only as `href="#name"`).
 
 Run:
 ```bash
@@ -958,15 +972,21 @@ Expected: `deleted`.
 
 Run:
 ```bash
+rg -n "phosphor" sw.js
+```
+Expected: no output — confirms `SHELL` no longer references the deleted files.
+
+Run:
+```bash
 node js/store.test.js && npm test
 ```
-Expected: all tests pass. `tests/spinner.test.js` and `tests/persistence.test.js` both load real pages in a real browser and log any `pageerror` — if an icon edit introduced a JS syntax error, these will fail or print `PAGEERROR:` lines; if you see any, find and fix the exact line before continuing.
+Expected: all tests pass. `tests/spinner.test.js` and `tests/persistence.test.js` both load real pages in a real browser and log any `pageerror` — if an icon edit introduced a JS syntax error, or the inline sprite broke `index.html`'s markup, these will fail or print `PAGEERROR:` lines; if you see any, find and fix the exact line before continuing.
 
-- [ ] **Step 15: Commit**
+- [ ] **Step 16: Commit**
 
 ```bash
-git add icons/sprite.svg styles.css index.html js/ui.js js/app.js js/onboarding.js js/join.js js/home.js js/sheets.js js/profile.js js/growth.js js/sleep.js sw.js
-git commit -m "feat(icons): replace Phosphor with a local Lucide SVG sprite"
+git add styles.css index.html sw.js js/ui.js js/app.js js/onboarding.js js/join.js js/home.js js/sheets.js js/profile.js js/growth.js js/sleep.js
+git commit -m "feat(icons): replace Phosphor with an inline Lucide SVG sprite"
 ```
 
 ---
@@ -1084,7 +1104,7 @@ In `CLAUDE.md`, find:
 ```
 Replace it with:
 ```
-- Lucide icons only (vendored locally as an SVG sprite, `icons/sprite.svg`), Playfair Display for the baby's name and the hero timer, Archivo for everything else.
+- Lucide icons only (vendored locally as an inline SVG sprite in `index.html`'s `<body>`), Playfair Display for the baby's name and the hero timer, Archivo for everything else.
 ```
 
 - [ ] **Step 2: Rewrite `theme.txt` to document the new system**
@@ -1145,9 +1165,11 @@ instead of blush and powder blue.
   number, every page/sheet/section title, every label, every button. It
   replaced both Quicksand's old structural job and Nunito's old body job,
   so the app still has exactly two type voices, never three.
-- **Lucide** (thin 2px-stroke line icons, vendored locally as
-  `icons/sprite.svg`, referenced via `<svg class="icon"><use
-  href="icons/sprite.svg#name"></use></svg>`) supplies every glyph.
+- **Lucide** (thin 2px-stroke line icons, vendored locally as an inline
+  `<svg>` sprite in `index.html`'s `<body>`, referenced via `<svg
+  class="icon"><use href="#name"></use></svg>` — same-document references
+  only, since cross-document `<use>` into an external file is unreliable
+  on iOS Safari) supplies every glyph.
 
 **Why the pairing works:** a heavy grotesque next to a high-contrast
 serif is a classic "editorial" move — the grotesque supplies structure
@@ -1169,9 +1191,10 @@ competing voice.
 
 ## 4. Iconography
 Lucide's regular line-icon set, one stroke weight, vendored as a single
-local SVG sprite (`icons/sprite.svg`) — no font, no CDN, no build step.
-The icon vocabulary is enumerated in `js/ui.js`'s `TYPES` table and
-`icon()` fallback map.
+inline `<svg>` sprite in `index.html`'s `<body>` — no font, no CDN, no
+build step, no external file (same-document `<use>` is what's reliable
+across browsers, including iOS Safari). The icon vocabulary is
+enumerated in `js/ui.js`'s `TYPES` table and `icon()` fallback map.
 
 ## 5. Vocabulary — Named Moves Worth Reusing
 - **Shared-role, swap-the-hue theming** — unchanged mechanism from before
@@ -1187,8 +1210,9 @@ The icon vocabulary is enumerated in `js/ui.js`'s `TYPES` table and
    before this reskin, see `styles.css`'s `:root`/`[data-theme]` blocks.
 2. **Keep the two-typeface rule.** If a third typeface ever shows up, it
    should replace a job (proud or quiet), not add a third voice.
-3. **New icons go in `icons/sprite.svg` as a `<symbol>`,** sourced from
-   Lucide (ISC license) to match the existing stroke weight and grid.
+3. **New icons go in the inline sprite in `index.html`'s `<body>` as a
+   `<symbol>`,** sourced from Lucide (ISC license) to match the existing
+   stroke weight and grid.
 ```
 
 - [ ] **Step 3: Bump the version** per Global Constraints.
