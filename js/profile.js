@@ -54,6 +54,8 @@ export function profile() {
       <div class="set-row"><span>Temperature</span>${segBind('settings.units.temp', [{ v: 'C', l: '°C' }, { v: 'F', l: '°F' }], s.units.temp)}</div>
       <div class="set-row"><span>Weight</span>${segBind('settings.units.weight', [{ v: 'kg', l: 'kg' }, { v: 'lb', l: 'lb' }], s.units.weight)}</div>
       <div class="set-row"><span>Length</span>${segBind('settings.units.length', [{ v: 'cm', l: 'cm' }, { v: 'in', l: 'in' }], s.units.length)}</div>
+      <div class="set-row"><span>Clock</span>${segBind('settings.clock24', [{ v: '12h', l: '12h' }, { v: '24h', l: '24h' }], s.clock24)}</div>
+      <div class="set-row"><span>Sound & haptics</span>${sw('settings.sound', s.sound !== false)}</div>
     </div>
 
     <div class="sec-label">Caregivers & sharing</div>
