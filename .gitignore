@@ -1,7 +1,9 @@
 certs/
 screenshots/
-CLAUDE.md
 .prettierrc
 .env
 *.db
 .thumbnail
+node_modules/
+hearth-server
+test-results/

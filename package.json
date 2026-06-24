@@ -1,0 +1,12 @@
+{
+  "name": "hearth",
+  "private": true,
+  "description": "Hearth baby tracker PWA",
+  "scripts": {
+    "test": "node tests/run.js",
+    "test:spinner": "node tests/spinner.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}

@@ -9,7 +9,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 
 let current = 'home';
@@ -143,9 +143,17 @@ document.addEventListener('click', (ev) => {
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'app:reset': () => resetConfirm(),
     'stepper:up': () => stepValue(d.target, 1),
-    'stepper:down': () => stepValue(d.target, -1)
+    'stepper:down': () => stepValue(d.target, -1),
+    'stepper:open': () => openSpinner(el.id)
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
+});
+
+// keyboard activation for spinbuttons (Enter / Space)
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  const el = ev.target.closest('[data-action="stepper:open"]');
+  if (el) { ev.preventDefault(); openSpinner(el.id); }
 });
 
 function stepValue(id, dir) {
@@ -154,11 +162,13 @@ function stepValue(id, dir) {
   const step = parseFloat(el.dataset.step || 1);
   const min = el.dataset.min !== '' ? parseFloat(el.dataset.min) : -Infinity;
   const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
-  let val = parseFloat(el.value) || 0;
+  let val = parseFloat(el.dataset.value) || 0;
   val = Math.round((val + dir * step) * 1e6) / 1e6;
   if (val < min) val = min;
   if (val > max) val = max;
-  el.value = val;
+  el.dataset.value = val;
+  el.textContent = String(step % 1 !== 0 ? val.toFixed(1) : val);
+  el.setAttribute('aria-valuenow', val);
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
