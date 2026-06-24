@@ -1,5 +1,5 @@
 // app.js — shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
 import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet } from './ui.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode } from './home.js';
@@ -220,10 +220,30 @@ function shareInviteLink(url) {
     navigator.clipboard.writeText(url).then(() => toast('Link copied'));
   }
 }
+async function ensureFamily() {
+  const baby = state().baby;
+  try {
+    const res = await fetch('/api/family', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        babyName: baby.name || 'Baby', birthdate: baby.birthdate || '',
+        theme: baby.theme || 'girl', caregiverName: baby.caregiver || 'Parent'
+      })
+    });
+    if (res.ok) markSynced();
+  } catch (e) {}
+}
 async function inviteCaregiver() {
   try {
-    const res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
-    if (!res.ok) throw new Error('invite failed: ' + res.status);
+    let res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
+    if (res.status === 401 && !state().synced) {
+      await ensureFamily();
+      res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
+    }
+    if (res.status === 401) return toast('Finish setup sync before inviting');
+    if (!res.ok) return toast('Server error creating the invite — try again');
     const { token } = await res.json();
     const url = location.origin + '/join/' + token;
     sheet.open(`
@@ -232,7 +252,7 @@ async function inviteCaregiver() {
       <button class="btn-primary" data-action="cg:invite-share" data-url="${esc(url)}"><svg class="icon"><use href="#share-2"></use></svg> Share link</button>`,
       { title: 'Invite a caregiver' });
   } catch (e) {
-    toast('Could not create an invite — check your connection');
+    toast('Could not reach the server — check your connection');
   }
 }
 function profilePhoto() {

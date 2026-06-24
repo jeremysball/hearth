@@ -11,7 +11,7 @@ export function sleep() {
   const todaySleeps = state().log.filter((e) => e.type === 'sleep').map((e) => {
     const s = new Date(e.start), en = e.end ? new Date(e.end) : now;
     return { s, en, ongoing: !e.end, raw: e };
-  }).filter((e) => e.en > dayStart && e.s <= now);
+  }).filter((e) => e.en > dayStart && e.s < new Date(dayStart.getTime() + 86400000));
 
   // ring segments (clamp to today)
   const r = 86, C = 2 * Math.PI * r;
@@ -30,13 +30,16 @@ export function sleep() {
   const tb = fmt.durBig(totalMin);
 
   // naps list (today, exclude overnight long >5h that started yesterday)
-  const naps = todaySleeps.filter((e) => !(hoursInto(e.s, dayStart) < 0)).sort((a, b) => b.s - a.s);
+  const naps = todaySleeps.sort((a, b) => b.s - a.s);
   const napsHTML = naps.length ? naps.map((e) => {
-    const dur = (e.en - e.s) / MIN;
+    const pending = e.ongoing && e.s > now;
+    const dur = pending ? 0 : Math.max(0, (e.en - e.s) / MIN);
+    const label = e.ongoing ? (pending ? 'Resuming soon' : 'Asleep now') : (dur > 240 ? 'Night sleep' : 'Nap');
+    const endLabel = e.ongoing ? (pending ? 'soon' : 'now') : fmt.clock(e.en);
     return `<div class="row" data-action="entry:open" data-id="${e.raw.id}">
       <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
-      <span class="row-txt"><span class="what">${e.ongoing ? 'Asleep now' : (dur > 240 ? 'Night sleep' : 'Nap')}</span>
-      <span class="when">${fmt.clock(e.s)} – ${e.ongoing ? 'now' : fmt.clock(e.en)}</span></span>
+      <span class="row-txt"><span class="what">${label}</span>
+      <span class="when">${fmt.clock(e.s)} – ${endLabel}</span></span>
       <span class="meta">${fmt.dur(dur)}</span></div>`;
   }).join('') : `<div class="empty-log">No sleep logged today yet.</div>`;
 

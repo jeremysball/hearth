@@ -1,5 +1,5 @@
 // onboarding.js — first-run setup (name, birthdate, theme, photo, caregiver).
-import { state, save, seed } from './store.js';
+import { state, save, seed, markSynced } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
 
@@ -92,7 +92,7 @@ export async function onboardFinish() {
   toast('Welcome, ' + name + ' 🤍');
 
   try {
-    await fetch('/api/family', {
+    const res = await fetch('/api/family', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -101,8 +101,9 @@ export async function onboardFinish() {
         caregiverName: st.baby.caregiver || 'Parent'
       })
     });
+    if (res.ok) markSynced();
+    else console.warn('hearth', 'onboard', 'family create failed', res.status);
   } catch (e) {
-    // Offline at setup time: app stays fully local-only, with no automatic
-    // retry, since state().setup is already true and onboarding won't show again.
+    console.warn('hearth', 'onboard', 'family create offline', e);
   }
 }
