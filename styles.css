@@ -15,33 +15,33 @@ body {
 
 /* ---- themes ---- */
 :root, [data-theme="girl"] {
-  --page: oklch(0.965 0.018 22); --page-glow: oklch(0.93 0.04 18 / .5);
-  --bg: oklch(0.985 0.01 30); --surface: oklch(0.997 0.003 90);
-  --ink: oklch(0.36 0.03 25); --soft: oklch(0.52 0.03 25); --muted: oklch(0.66 0.025 28);
-  --hair: oklch(0.93 0.015 24);
-  --accent: oklch(0.72 0.085 18); --accent-ink: oklch(0.56 0.092 18);
-  --accent-soft: oklch(0.92 0.04 18); --accent-tint: oklch(0.965 0.024 22);
-  --on-accent: oklch(0.997 0.004 90);
-  --good: oklch(0.66 0.08 168); --good-deep: oklch(0.44 0.075 168); --good-halo: oklch(0.9 0.05 168);
-  --good-tint: oklch(0.93 0.05 168 / .5); --ring-track: oklch(0.93 0.02 22);
+  --page: oklch(0.96 0.016 95); --page-glow: oklch(0.91 0.035 88 / .5);
+  --bg: oklch(0.985 0.009 95); --surface: oklch(0.996 0.005 95);
+  --ink: oklch(0.32 0.035 110); --soft: oklch(0.46 0.032 110); --muted: oklch(0.6 0.028 105);
+  --hair: oklch(0.9 0.018 95);
+  --accent: oklch(0.42 0.07 125); --accent-ink: oklch(0.34 0.065 125);
+  --accent-soft: oklch(0.88 0.035 120); --accent-tint: oklch(0.95 0.02 100);
+  --on-accent: oklch(0.98 0.012 95);
+  --good: oklch(0.62 0.1 75); --good-deep: oklch(0.46 0.09 70); --good-halo: oklch(0.88 0.06 78);
+  --good-tint: oklch(0.92 0.05 78 / .5); --ring-track: oklch(0.91 0.015 95);
 }
 [data-theme="boy"] {
-  --page: oklch(0.965 0.016 248); --page-glow: oklch(0.92 0.04 250 / .55);
-  --bg: oklch(0.985 0.008 250); --surface: oklch(0.997 0.003 250);
-  --ink: oklch(0.36 0.028 255); --soft: oklch(0.52 0.028 255); --muted: oklch(0.66 0.022 255);
-  --hair: oklch(0.93 0.013 250);
-  --accent: oklch(0.66 0.085 252); --accent-ink: oklch(0.52 0.09 252);
-  --accent-soft: oklch(0.92 0.038 252); --accent-tint: oklch(0.965 0.02 252);
-  --on-accent: oklch(0.997 0.003 250);
-  --good: oklch(0.66 0.08 200); --good-deep: oklch(0.45 0.08 205); --good-halo: oklch(0.9 0.045 200);
-  --good-tint: oklch(0.93 0.05 200 / .5); --ring-track: oklch(0.93 0.018 250);
+  --page: oklch(0.96 0.013 135); --page-glow: oklch(0.91 0.028 142 / .5);
+  --bg: oklch(0.985 0.008 135); --surface: oklch(0.996 0.004 135);
+  --ink: oklch(0.32 0.03 165); --soft: oklch(0.46 0.028 165); --muted: oklch(0.6 0.024 160);
+  --hair: oklch(0.9 0.015 142);
+  --accent: oklch(0.45 0.06 175); --accent-ink: oklch(0.36 0.055 175);
+  --accent-soft: oklch(0.88 0.03 170); --accent-tint: oklch(0.95 0.016 145);
+  --on-accent: oklch(0.98 0.008 135);
+  --good: oklch(0.6 0.08 90); --good-deep: oklch(0.45 0.075 88); --good-halo: oklch(0.88 0.05 92);
+  --good-tint: oklch(0.92 0.045 92 / .5); --ring-track: oklch(0.91 0.013 142);
 }
 
 /* category tones */
 .sleep,.tone-sleep { --tc: var(--good-deep); --tcb: var(--good-tint); }
 .feed,.tone-feed { --tc: var(--accent-ink); --tcb: var(--accent-soft); }
 .diaper,.tone-diaper { --tc: oklch(0.55 0.08 70); --tcb: oklch(0.93 0.05 78); }
-.med,.tone-med { --tc: oklch(0.52 0.1 300); --tcb: oklch(0.93 0.045 300); }
+.med,.tone-med { --tc: oklch(0.5 0.09 35); --tcb: oklch(0.92 0.045 40); }
 .note,.tone-note { --tc: var(--muted); --tcb: var(--hair); }
 
 /* ---- phone shell ---- */
@@ -145,25 +145,25 @@ body {
 
 /* ---- dark mode ---- */
 [data-mode="dark"] {
-  --page: oklch(0.15 0.012 52); --page-glow: oklch(0.22 0.02 48 / .6);
-  --bg: oklch(0.18 0.014 50); --surface: oklch(0.22 0.014 50);
-  --ink: oklch(0.92 0.01 70); --soft: oklch(0.72 0.012 65); --muted: oklch(0.67 0.012 64);
-  --hair: oklch(0.28 0.014 52);
-  --ring-track: oklch(0.26 0.015 52);
+  --page: oklch(0.22 0.016 95); --page-glow: oklch(0.28 0.03 88 / .4);
+  --bg: oklch(0.18 0.012 95); --surface: oklch(0.24 0.014 95);
+  --ink: oklch(0.92 0.02 90); --soft: oklch(0.78 0.022 90); --muted: oklch(0.6 0.02 90);
+  --hair: oklch(0.32 0.018 95);
+  --ring-track: oklch(0.3 0.015 95);
 }
 [data-mode="dark"][data-theme="girl"] {
-  --accent: oklch(0.75 0.09 18); --accent-ink: oklch(0.85 0.07 20);
-  --accent-soft: oklch(0.28 0.04 20); --accent-tint: oklch(0.24 0.025 22);
-  --on-accent: oklch(0.16 0.01 50);
-  --good: oklch(0.68 0.09 168); --good-deep: oklch(0.78 0.07 165); --good-halo: oklch(0.28 0.06 165);
-  --good-tint: oklch(0.25 0.05 165 / .6);
+  --accent: oklch(0.68 0.09 125); --accent-ink: oklch(0.78 0.08 125);
+  --accent-soft: oklch(0.32 0.05 122); --accent-tint: oklch(0.28 0.03 110);
+  --on-accent: oklch(0.18 0.01 95);
+  --good: oklch(0.7 0.1 78); --good-deep: oklch(0.55 0.09 75); --good-halo: oklch(0.34 0.06 78);
+  --good-tint: oklch(0.3 0.05 78 / .5);
 }
 [data-mode="dark"][data-theme="boy"] {
-  --accent: oklch(0.70 0.09 252); --accent-ink: oklch(0.82 0.07 252);
-  --accent-soft: oklch(0.26 0.04 252); --accent-tint: oklch(0.22 0.025 252);
-  --on-accent: oklch(0.16 0.01 250);
-  --good: oklch(0.68 0.09 200); --good-deep: oklch(0.78 0.07 198); --good-halo: oklch(0.28 0.06 200);
-  --good-tint: oklch(0.25 0.05 200 / .6);
+  --accent: oklch(0.68 0.075 175); --accent-ink: oklch(0.78 0.065 175);
+  --accent-soft: oklch(0.32 0.04 172); --accent-tint: oklch(0.28 0.025 150);
+  --on-accent: oklch(0.18 0.008 140);
+  --good: oklch(0.68 0.085 92); --good-deep: oklch(0.53 0.078 90); --good-halo: oklch(0.34 0.05 92);
+  --good-tint: oklch(0.3 0.045 92 / .5);
 }
 [data-mode="dark"] .card { box-shadow: 0 8px 24px oklch(0 0 0 / .35); }
 [data-mode="dark"] .info-card { box-shadow: 0 4px 14px oklch(0 0 0 / .3); }
@@ -330,8 +330,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; }
 .theme-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); }
 .theme-swatch { width: 22px; height: 22px; border-radius: 50%; }
-.theme-swatch.girl { background: oklch(0.72 0.085 18); }
-.theme-swatch.boy { background: oklch(0.66 0.085 252); }
+.theme-swatch.girl { background: oklch(0.42 0.07 125); }
+.theme-swatch.boy { background: oklch(0.45 0.06 175); }
 .onb-go { margin: 0; }
 .onb-foot { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
 

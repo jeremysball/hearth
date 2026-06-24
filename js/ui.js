@@ -76,7 +76,7 @@ export function applyTheme() {
   document.body.dataset.theme = t;
   document.body.dataset.mode = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1b2230' : '#241a1c') : (t === 'boy' ? '#dce6f5' : '#f5e1dc');
+  if (meta) meta.content = mode === 'dark' ? (t === 'boy' ? '#1c1f1b' : '#211f17') : (t === 'boy' ? '#eef0e4' : '#f3eee0');
 }
 if (window.matchMedia) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
