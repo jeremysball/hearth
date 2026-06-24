@@ -327,9 +327,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* ---- onboarding ---- */
 .onboard { display: flex; flex-direction: column; gap: 16px; padding: 8px var(--pad) calc(26px + env(safe-area-inset-bottom)); overflow-y: auto; min-height: 0; flex: 1; }
 .onb-top { text-align: center; padding: 20px 0 4px; }
-.onb-mark { width: 64px; height: 64px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 14px; box-shadow: 0 12px 28px var(--accent-soft); }
-.onb-title { font-family: "Archivo"; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
-.onb-sub { font-size: 14px; color: var(--muted); font-weight: 600; margin: 6px auto 0; max-width: 280px; line-height: 1.5; }
+.onb-logo { display: block; margin: 0 auto 18px; height: 48px; width: auto; }
+.onb-sub { font-size: 14px; color: var(--muted); font-weight: 600; margin: 0 auto; max-width: 280px; line-height: 1.5; }
 .onb-card { background: var(--surface); border-radius: 26px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 24px oklch(0.6 0.05 20 / .07); }
 .onb-photo { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; }
 .onb-photo .avatar { background: var(--accent-tint); color: var(--accent-ink); font-size: 26px; }
