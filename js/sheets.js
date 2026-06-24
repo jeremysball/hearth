@@ -10,6 +10,13 @@ function seg(group, opts, sel) {
     `</div>`;
 }
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
+function stepperField(label, id, min, max, step, val) {
+  return field(label, `<div class="stepper">
+    <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><i class="ph ph-minus"></i></button>
+    <input type="number" id="${id}" value="${val}" min="${min != null ? min : ''}" max="${max != null ? max : ''}" data-step="${step}" data-min="${min != null ? min : ''}" data-max="${max != null ? max : ''}" />
+    <button type="button" class="stepper-btn" data-action="stepper:up" data-target="${id}" aria-label="Increase"><i class="ph ph-plus"></i></button>
+  </div>`);
+}
 const timeRow = () => field('Time', `<input type="time" id="f-time" value="${nowTime()}" />`);
 const noteRow = () => field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…"></textarea>`);
 const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); return el ? el.dataset.val : null; };
@@ -22,11 +29,11 @@ const FORMS = {
     ${noteRow()}`,
   feed: () => `
     ${field('Side', seg('side', ['Left', 'Right', 'Both'], 'Left'))}
-    ${field('Duration (min)', `<input type="number" id="f-dur" min="0" max="120" value="15" />`)}
+    ${stepperField('Duration (min)', 'f-dur', 0, 120, 1, 15)}
     ${timeRow()} ${noteRow()}`,
   bottle: () => `
     ${field('Contents', seg('contents', ['Formula', 'Breast milk', 'Water'], 'Formula'))}
-    ${field('Amount (' + state().settings.units.volume + ')', `<input type="number" id="f-amt" min="0" step="5" value="120" />`)}
+    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 120)}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
@@ -40,7 +47,7 @@ const FORMS = {
   },
   pump: () => `
     ${field('Side', seg('side', ['Left', 'Right', 'Both'], 'Both'))}
-    ${field('Amount (' + state().settings.units.volume + ')', `<input type="number" id="f-amt" min="0" step="5" value="90" />`)}
+    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 90)}
     ${timeRow()} ${noteRow()}`,
   note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`
 };
@@ -131,7 +138,7 @@ export function editCard(which) {
   const s = state().settings;
   if (which === 'bottle') {
     sheet.open(`
-      ${field('Remind every (hours)', `<input type="number" id="c-int" min="1" max="8" step="0.5" value="${s.bottleIntervalH}" />`)}
+      ${stepperField('Remind every (hours)', 'c-int', 1, 8, 0.5, s.bottleIntervalH)}
       <p class="empty-note">Next bottle is predicted from your last feed plus this interval.</p>
       <button class="btn-primary" data-action="card:save-bottle"><i class="ph ph-check"></i> Save</button>
       <button class="btn-ghost" data-action="card:hide" data-card="bottle">Hide this card</button>`,
@@ -200,9 +207,9 @@ export function openMeasure(id) {
   const hdVal = m && m.headCm ? (impL ? (m.headCm / 2.54).toFixed(1) : m.headCm) : '';
   sheet.open(`
     ${field('Date', `<input type="date" id="g-date" max="${new Date().toISOString().slice(0, 10)}" value="${m ? m.date : new Date().toISOString().slice(0, 10)}" />`)}
-    ${field('Weight (' + wU + ')', `<input type="number" id="g-w" step="0.1" min="0" value="${wVal}" placeholder="0.0" />`)}
-    ${field('Height (' + lU + ')', `<input type="number" id="g-h" step="0.1" min="0" value="${hVal}" placeholder="0" />`)}
-    ${field('Head circumference (' + lU + ')', `<input type="number" id="g-hd" step="0.1" min="0" value="${hdVal}" placeholder="optional" />`)}
+    ${stepperField('Weight (' + wU + ')', 'g-w', 0, 999, 0.1, wVal)}
+    ${stepperField('Height (' + lU + ')', 'g-h', 0, 999, 0.1, hVal)}
+    ${stepperField('Head circumference (' + lU + ')', 'g-hd', 0, 999, 0.1, hdVal)}
     ${field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…">${m && m.note ? esc(m.note) : ''}</textarea>`)}
     <button class="btn-primary" data-action="measure:save" data-id="${id || ''}"><i class="ph ph-check"></i> ${id ? 'Save changes' : 'Add measurement'}</button>
     ${id ? `<button class="btn-ghost danger" data-action="measure:delete" data-id="${id}"><i class="ph ph-trash"></i> Delete</button>` : ''}`,
