@@ -2,7 +2,7 @@
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
 import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet } from './ui.js';
-import { home, summary, enterTodayEditMode, exitTodayEditMode } from './home.js';
+import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
 import { trends } from './trends.js';
 import { sleep } from './sleep.js';
 import { growth } from './growth.js';
@@ -34,6 +34,7 @@ export const router = {
   },
   go(view) {
     exitTodayEditMode();
+    exitCardEditMode();
     current = view;
     const v = $('#view');
     if (!v) { router.boot(); }
@@ -140,6 +141,7 @@ document.addEventListener('click', (ev) => {
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
+    'cards:edit-done': () => { exitCardEditMode(); router.refresh(); },
     'app:reset': () => resetConfirm(),
     'stepper:up': () => stepValue(d.target, 1),
     'stepper:down': () => stepValue(d.target, -1),
@@ -171,19 +173,22 @@ function stepValue(id, dir) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-// ---------- long-press to enter Today edit mode ----------
+// ---------- long-press to enter edit modes ----------
 let suppressClickUntil = 0;
 let lpTimer = null, lpStartX = 0, lpStartY = 0, lpActive = false;
+const LONGPRESS = { today: enterTodayEditMode, cards: enterCardEditMode };
 document.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
-  const target = e.target.closest('[data-longpress="today"]');
+  const target = e.target.closest('[data-longpress]');
   if (!target) return;
+  const enter = LONGPRESS[target.dataset.longpress];
+  if (!enter) return;
   lpStartX = e.clientX; lpStartY = e.clientY; lpActive = true;
   clearTimeout(lpTimer);
   lpTimer = setTimeout(() => {
     if (!lpActive) return;
     lpActive = false;
-    if (enterTodayEditMode()) {
+    if (enter()) {
       suppressClickUntil = Date.now() + 400;
       router.refresh();
       if (navigator.vibrate) navigator.vibrate(12);
@@ -195,6 +200,33 @@ document.addEventListener('pointermove', (e) => {
   if (Math.abs(e.clientX - lpStartX) > 10 || Math.abs(e.clientY - lpStartY) > 10) { lpActive = false; clearTimeout(lpTimer); }
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => { lpActive = false; clearTimeout(lpTimer); }));
+
+// ---------- drag-to-reorder cards (independent of long-press) ----------
+let dragKey = null;
+document.addEventListener('pointerdown', (e) => {
+  const handle = e.target.closest('.ic-edit.drag'); if (!handle) return;
+  dragKey = handle.dataset.card;
+  handle.closest('.info-card').classList.add('dragging');
+});
+document.addEventListener('pointermove', (e) => {
+  if (!dragKey) return;
+  const stack = $('.info-stack'); if (!stack) return;
+  const dragging = stack.querySelector('.info-card.dragging'); if (!dragging) return;
+  const over = [...stack.querySelectorAll('.info-card')].filter((el) => el !== dragging)
+    .find((el) => { const r = el.getBoundingClientRect(); return e.clientY > r.top && e.clientY < r.bottom; });
+  if (over) {
+    const r = over.getBoundingClientRect();
+    stack.insertBefore(dragging, e.clientY < r.top + r.height / 2 ? over : over.nextSibling);
+  }
+});
+['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
+  if (!dragKey) return;
+  dragKey = null;
+  const stack = $('.info-stack'); if (!stack) return;
+  state().settings.cards.order = [...stack.querySelectorAll('.info-card')].map((el) => el.dataset.card);
+  save(); enqueueSettingsSync();
+  const d = stack.querySelector('.info-card.dragging'); if (d) d.classList.remove('dragging');
+}));
 
 // change/input binders
 document.addEventListener('change', (ev) => {

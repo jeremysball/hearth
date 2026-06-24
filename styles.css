@@ -106,6 +106,8 @@ body {
 .ic-rel { font-family: "Archivo"; font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
 .ic-edit { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; flex: 0 0 auto; }
 .ic-edit:active { background: var(--hair); }
+.ic-edit.drag { cursor: grab; }
+.info-card.dragging { opacity: .6; cursor: grabbing; }
 
 .hidden-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 7px 13px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
@@ -123,6 +125,8 @@ body {
 .today-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
 .today-hd h2 { font-family: "Archivo"; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .today-hd a { font-size: 12px; color: var(--accent-ink); font-weight: 800; cursor: pointer; }
+.cards-hd { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.cards-hd a { font-size: 12px; color: var(--accent-ink); font-weight: 800; cursor: pointer; }
 .today-add { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; background: var(--accent); color: var(--on-accent); flex: 0 0 auto; }
 .today-add:active { transform: scale(.92); }
 .log { overflow: hidden; }

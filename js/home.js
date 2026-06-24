@@ -32,6 +32,13 @@ export function enterTodayEditMode() {
   todayEditMode = true;
   return true;
 }
+let cardEditMode = false;
+export function exitCardEditMode() { cardEditMode = false; }
+export function enterCardEditMode() {
+  if ((state().settings.cards.order || CARD_KEYS).filter((k) => state().settings.cards[k]).length < 2) return false;
+  cardEditMode = true;
+  return true;
+}
 
 function logRow(e) {
   const s = summary(e);
@@ -85,27 +92,33 @@ function heroCard() {
   </div>`;
 }
 
+function icEdit(key) {
+  return cardEditMode
+    ? `<button class="ic-edit drag" aria-label="Drag to reorder" data-card="${key}"><svg class="icon"><use href="#menu"></use></svg></button>`
+    : `<button class="ic-edit" data-action="card:edit" data-card="${key}" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>`;
+}
+
 function sweetCard() {
   const sp = derive.sweetSpot();
-  return `<div class="info-card sweet" data-action="log:open" data-type="sleep">
+  return `<div class="info-card sweet" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="sleep" data-card="sweetspot">
     <div class="ic-ring sleep"><svg class="icon"><use href="#moon-star"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">SweetSpot · ${sp.napping ? 'after this nap' : 'next nap'}</div>
       <div class="ic-val">${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}</div>
     </div>
-    <button class="ic-edit" data-action="card:edit" data-card="sweetspot" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
+    ${icEdit('sweetspot')}
   </div>`;
 }
 function bottleCard() {
   const nb = derive.nextBottle();
   const overdue = nb.due < new Date();
-  return `<div class="info-card ${overdue ? 'due' : ''}" data-action="log:open" data-type="bottle">
+  return `<div class="info-card ${overdue ? 'due' : ''}" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="bottle" data-card="bottle">
     <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">Next bottle · every ${state().settings.bottleIntervalH}h</div>
       <div class="ic-val">${fmt.clock(nb.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(nb.due)}</span></div>
     </div>
-    <button class="ic-edit" data-action="card:edit" data-card="bottle" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
+    ${icEdit('bottle')}
   </div>`;
 }
 function medicineCard() {
@@ -119,16 +132,19 @@ function medicineCard() {
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
   }
-  return `<div class="info-card" data-action="log:open" data-type="medicine">
+  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="medicine" data-card="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
     <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
-    <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
+    ${icEdit('medicine')}
   </div>`;
 }
 
+const CARD_KEYS = ['sweetspot', 'bottle', 'medicine'];
+const CARD_RENDER = { sweetspot: sweetCard, bottle: bottleCard, medicine: medicineCard };
+
 function hiddenRow() {
   const c = state().settings.cards;
-  const hidden = Object.keys(c).filter((k) => !c[k]);
+  const hidden = CARD_KEYS.filter((k) => !c[k]);
   if (!hidden.length) return '';
   const names = { sweetspot: 'SweetSpot', bottle: 'Bottle', medicine: 'Medicine' };
   return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
@@ -154,10 +170,9 @@ export function home() {
       ${avatar()}
     </div>
     ${heroCard()}
-    <div class="info-stack">
-      ${cards.sweetspot ? sweetCard() : ''}
-      ${cards.bottle ? bottleCard() : ''}
-      ${cards.medicine ? medicineCard() : ''}
+    ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
+    <div class="info-stack" data-longpress="cards">
+      ${(cards.order || CARD_KEYS).filter((k) => cards[k]).map((k) => CARD_RENDER[k]()).join('')}
     </div>
     ${hiddenRow()}
     <div class="actions">
