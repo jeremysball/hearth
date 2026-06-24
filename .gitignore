@@ -1,5 +1,6 @@
 certs/
 screenshots/
+.worktrees/
 .prettierrc
 .env
 *.db
