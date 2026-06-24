@@ -15,6 +15,7 @@ const DEFAULT = () => ({
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { sweetspot: true, bottle: true, medicine: true },
+    clock24: '12h',
     darkMode: 'auto'
   },
   log: [],

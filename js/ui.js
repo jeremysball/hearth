@@ -7,6 +7,7 @@ export const fmt = {
   clock(d) {
     d = new Date(d);
     let h = d.getHours(), m = d.getMinutes();
+    if (state().settings.clock24 === '24h') return pad(h) + ':' + pad(m);
     const ap = h < 12 ? 'AM' : 'PM';
     h = h % 12 || 12;
     return h + ':' + pad(m) + ' ' + ap;

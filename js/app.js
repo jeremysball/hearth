@@ -51,7 +51,7 @@ function setPath(path, val) {
   o[parts[parts.length - 1]] = val;
   save();
   if (path.startsWith('baby.')) enqueueBabySync();
-  else if (path.startsWith('settings.') && path !== 'settings.darkMode') enqueueSettingsSync();
+  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.clock24') enqueueSettingsSync();
 }
 function getPath(path) { return path.split('.').reduce((o, k) => (o ? o[k] : undefined), state()); }
 
