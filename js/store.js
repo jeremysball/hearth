@@ -62,6 +62,35 @@ export function updateEntry(id, patch) {
   return e;
 }
 
+const INTERRUPT_GAP_MIN = { feed: 20, bottle: 20, diaper: 10 };
+function inQuietHours(d) {
+  const r = _state.settings.reminders;
+  const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+  const s = toMin(r.quietStart || '20:00'), e = toMin(r.quietEnd || '07:00');
+  const cur = d.getHours() * 60 + d.getMinutes();
+  return s > e ? (cur >= s || cur < e) : (cur >= s && cur < e);
+}
+// A feed/bottle/diaper logged while a sleep is ongoing, during quiet hours,
+// implies the baby briefly woke up: close the sleep at that moment and
+// auto-resume it after a short type-specific gap. Returns a descriptor for
+// undoInterruptSleep, or null if nothing was split.
+export function maybeInterruptSleep(type, atISO) {
+  const gap = INTERRUPT_GAP_MIN[type];
+  if (!gap) return null;
+  const at = new Date(atISO);
+  if (!inQuietHours(at)) return null;
+  const ongoing = _state.log.find((e) => e.type === 'sleep' && !e.end && new Date(e.start) <= at);
+  if (!ongoing) return null;
+  updateEntry(ongoing.id, { end: atISO });
+  const resumed = addEntry({ type: 'sleep', start: new Date(at.getTime() + gap * 60000).toISOString() });
+  return { sleepId: ongoing.id, resumedId: resumed.id };
+}
+export function undoInterruptSleep(split) {
+  if (!split) return;
+  removeEntry(split.resumedId);
+  updateEntry(split.sleepId, { end: null });
+}
+
 // ---------- growth helpers ----------
 export function addMeasure(m) {
   m.id = m.id || uid();
@@ -108,7 +137,7 @@ const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
 export const derive = {
   status() {
     const ss = sleeps();
-    const ongoing = ss.find((e) => !e.end);
+    const ongoing = ss.find((e) => !e.end && new Date(e.start) <= new Date());
     if (ongoing) return { state: 'asleep', since: new Date(ongoing.start) };
     let lastWake = null;
     ss.forEach((e) => { if (e.end) { const d = new Date(e.end); if (!lastWake || d > lastWake) lastWake = d; } });
