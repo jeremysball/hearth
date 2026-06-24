@@ -22,22 +22,31 @@ Track sleep, feeds, diapers, medicine, and pumping. Everything lives on your dev
 
 ## Install & Run
 
-### With Docker
+### With Docker (Tailscale)
+
+Hearth uses **Tailscale** for both networking and authentication. The `docker-compose.yml` runs two containers:
+
+- **Tailscale** — joins your tailnet and advertises the hostname `hearth`
+- **App** — shares Tailscale's network namespace via `network_mode: "service:tailscale"`
+
+Because the app sits behind Tailscale, only devices on your tailnet can reach it — no accounts, no passwords, no exposed ports. Tailscale also provides TLS certificates for the `*.ts.net` domain, so traffic stays encrypted end-to-end.
 
 ```bash
-# Clone the repo
 git clone https://github.com/jeremysball/hearth.git
 cd hearth
 
-# Generate TLS certs (place cert and key in certs/)
-# Copy and edit the env file
-cp .env.example .env
+# Get a Tailscale auth key from https://login.tailscale.com/admin/settings/keys
+echo "TS_AUTHKEY=tskey-auth-..." > .env
 
-# Build and start both the Tailscale sidecar and the app
+# Tailscale-issued TLS certs for your hostname go in certs/
+# (e.g. certs/hearth.your-tailnet.ts.net.crt, certs/hearth.your-tailnet.ts.net.key)
+cp .env.example .env
+# Set CERT_FILE and KEY_FILE to point at those certs
+
 sudo docker compose up -d
 ```
 
-The app listens on port **8443**. With Tailscale active, it's reachable at `https://hearth.<your-tailnet>.ts.net:8443`.
+Once running, the app is reachable at `https://hearth.<your-tailnet>.ts.net:8443` — but only from devices on your tailnet.
 
 ### Without Docker
 
@@ -98,7 +107,9 @@ hearth/
 └── docker-compose.yml  # App + Tailscale sidecar
 ```
 
-The Go server handles the API, auth, and multi-device sync over SSE. The frontend is a vanilla JS PWA that stores data in localStorage and syncs through the server when connected. SQLite holds shared state (caregivers, entries, invites).
+The Go server handles the API, multi-device sync over SSE, and multi-tenancy (families, caregivers, invites). The frontend is a vanilla JS PWA that stores data in localStorage and syncs through the server when connected. SQLite holds shared state.
+
+Tailscale serves as the auth layer — only devices on your tailnet can reach the server. No login page, no password hashing, no session tokens. The Go server trusts that anyone who can connect is authorized.
 
 ## Development
 
