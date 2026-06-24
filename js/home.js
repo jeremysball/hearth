@@ -1,6 +1,6 @@
 // home.js — home view + entry summary helper.
 import { state, derive, ageLabel, awakeWindowMin } from './store.js';
-import { fmt, esc, icon, TYPES } from './ui.js';
+import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
@@ -22,7 +22,7 @@ export function summary(e) {
   } else if (e.type === 'note') {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
   }
-  return { label, detail, meta, tone: c.tone, icon: icon(c.icon) };
+  return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
 
 let todayEditMode = false;

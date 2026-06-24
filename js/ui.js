@@ -49,7 +49,7 @@ export const TYPES = {
   sleep: { icon: 'moon', label: 'Sleep', tone: 'sleep' },
   feed: { icon: 'droplet', label: 'Nursing', tone: 'feed' },
   bottle: { icon: 'baby-bottle', label: 'Bottle', tone: 'feed' },
-  diaper: { icon: 'baby', label: 'Diaper', tone: 'diaper' },
+  diaper: { icon: 'droplet', label: 'Diaper', tone: 'diaper' },
   medicine: { icon: 'pill', label: 'Medicine', tone: 'med' },
   pump: { icon: 'drop-half', label: 'Pump', tone: 'feed' },
   note: { icon: 'note-pencil', label: 'Note', tone: 'note' }
@@ -58,6 +58,11 @@ export const TYPES = {
 export function icon(name) {
   const map = { 'baby-bottle': 'milk', 'drop-half': 'droplet', 'pill': 'pill', 'note-pencil': 'notebook-pen' };
   return map[name] || name;
+}
+export function diaperIcon(kind) {
+  if (kind === 'Dirty') return 'turtle';
+  if (kind === 'Mixed') return 'layers';
+  return 'droplet'; // Wet or default
 }
 
 // ---------- DOM helper ----------
