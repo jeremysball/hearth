@@ -19,7 +19,7 @@ export function profile() {
     <div class="card prof-baby">
       <button class="prof-photo" data-action="profile:photo">
         ${b.photo ? `<span class="avatar lg" style="background-image:url('${b.photo}')"></span>` : `<span class="avatar lg">${esc((b.name || 'B')[0].toUpperCase())}</span>`}
-        <span class="photo-edit"><i class="ph ph-camera"></i></span>
+        <span class="photo-edit"><svg class="icon"><use href="#camera"></use></svg></span>
       </button>
       <div class="prof-fields">
         <label class="fld"><span class="fld-l">Name</span><input data-bind="baby.name" value="${esc(b.name)}" /></label>
@@ -57,10 +57,10 @@ export function profile() {
     <div class="sec-label">Caregivers & sharing</div>
     <div class="card row-card" id="cg-list">
       ${caregiversSnapshot().length ? caregiversSnapshot().map(caregiverRow).join('') : `<p class="empty-note">Just you so far.</p>`}
-      <button class="add-row" data-action="cg:invite"><i class="ph ph-plus"></i> Invite a caregiver</button>
+      <button class="add-row" data-action="cg:invite"><svg class="icon"><use href="#plus"></use></svg> Invite a caregiver</button>
     </div>
 
-    <button class="btn-ghost danger" data-action="app:reset"><i class="ph ph-arrow-counter-clockwise"></i> Reset app & start over</button>
+    <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="#undo-2"></use></svg> Reset app & start over</button>
     <div class="foot-note">Hearth · prototype · data stored on this device · ${document.querySelector('meta[name="version"]')?.content || ''}</div>`;
 }
 
@@ -80,7 +80,7 @@ export function caregiversSnapshot() { return cachedCaregivers; }
 
 function caregiverRow(c) {
   return `<div class="cg-row">
-    <i class="ph ph-user-circle"></i>
+    <svg class="icon"><use href="#circle-user"></use></svg>
     <span class="cg-display"><b>${esc(c.displayName)}</b><span class="fld-l">${esc(c.role)}</span></span>
   </div>`;
 }

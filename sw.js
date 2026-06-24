@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-24T03:00'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-24T05:12'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -9,8 +9,6 @@ const SHELL = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
-  './fonts/phosphor.css',
-  './fonts/Phosphor.woff2',
   './js/app.js',
   './js/store.js',
   './js/ui.js',

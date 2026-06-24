@@ -37,14 +37,14 @@ function logRow(e) {
   const s = summary(e);
   if (todayEditMode) {
     return `<div class="row row-edit" data-id="${e.id}">
-      <span class="row-ic tone-${s.tone}"><i class="ph ph-${s.icon}"></i></span>
+      <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(s.detail)}</span></span>
-      <button class="row-act edit" data-action="entry:edit" data-id="${e.id}" aria-label="Edit"><i class="ph ph-pencil-simple"></i></button>
-      <button class="row-act del" data-action="entry:delete" data-id="${e.id}" aria-label="Delete"><i class="ph ph-trash"></i></button>
+      <button class="row-act edit" data-action="entry:edit" data-id="${e.id}" aria-label="Edit"><svg class="icon"><use href="#pencil"></use></svg></button>
+      <button class="row-act del" data-action="entry:delete" data-id="${e.id}" aria-label="Delete"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>`;
   }
   return `<div class="row" data-action="entry:open" data-id="${e.id}">
-    <span class="row-ic tone-${s.tone}"><i class="ph ph-${s.icon}"></i></span>
+    <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
     <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(s.detail)}</span></span>
     ${s.meta ? `<span class="meta">${esc(s.meta)}</span>` : ''}
   </div>`;
@@ -88,24 +88,24 @@ function heroCard() {
 function sweetCard() {
   const sp = derive.sweetSpot();
   return `<div class="info-card sweet">
-    <div class="ic-ring sleep"><i class="ph ph-moon-stars"></i></div>
+    <div class="ic-ring sleep"><svg class="icon"><use href="#moon-star"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">SweetSpot · ${sp.napping ? 'after this nap' : 'next nap'}</div>
       <div class="ic-val">${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}</div>
     </div>
-    <button class="ic-edit" data-action="card:edit" data-card="sweetspot" aria-label="Edit"><i class="ph ph-sliders-horizontal"></i></button>
+    <button class="ic-edit" data-action="card:edit" data-card="sweetspot" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
   </div>`;
 }
 function bottleCard() {
   const nb = derive.nextBottle();
   const overdue = nb.due < new Date();
   return `<div class="info-card ${overdue ? 'due' : ''}">
-    <div class="ic-ring feed"><i class="ph ph-${icon('baby-bottle')}"></i></div>
+    <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">Next bottle · every ${state().settings.bottleIntervalH}h</div>
       <div class="ic-val">${fmt.clock(nb.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(nb.due)}</span></div>
     </div>
-    <button class="ic-edit" data-action="card:edit" data-card="bottle" aria-label="Edit"><i class="ph ph-sliders-horizontal"></i></button>
+    <button class="ic-edit" data-action="card:edit" data-card="bottle" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
   </div>`;
 }
 function medicineCard() {
@@ -120,9 +120,9 @@ function medicineCard() {
     val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
   }
   return `<div class="info-card">
-    <div class="ic-ring med"><i class="ph ph-${icon('pill')}"></i></div>
+    <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
     <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
-    <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><i class="ph ph-sliders-horizontal"></i></button>
+    <button class="ic-edit" data-action="card:edit" data-card="medicine" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>
   </div>`;
 }
 
@@ -131,7 +131,7 @@ function hiddenRow() {
   const hidden = Object.keys(c).filter((k) => !c[k]);
   if (!hidden.length) return '';
   const names = { sweetspot: 'SweetSpot', bottle: 'Bottle', medicine: 'Medicine' };
-  return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><i class="ph ph-plus"></i> ${names[k]}</button>`).join('')}</div>`;
+  return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
 }
 
 const QUICK = [
@@ -164,9 +164,9 @@ export function home() {
       ${QUICK.map((q) => {
         const c = TYPES[q.t];
         return `<button class="act ${q.primary ? 'primary' : ''}" data-action="log:open" data-type="${q.t}">
-          <span class="tok tone-${c.tone}"><i class="ph ph-${icon(c.icon)}"></i></span><span class="act-lbl">${c.label}</span></button>`;
+          <span class="tok tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span><span class="act-lbl">${c.label}</span></button>`;
       }).join('')}
-      <button class="act" data-action="log:more"><span class="tok"><i class="ph ph-dots-three"></i></span><span class="act-lbl">More</span></button>
+      <button class="act" data-action="log:more"><span class="tok"><svg class="icon"><use href="#ellipsis"></use></svg></span><span class="act-lbl">More</span></button>
     </div>
     <div class="today-block">
       <div class="today-hd"><h2>Today</h2>${todayEditMode ? `<a data-action="today:edit-done">Done</a>` : `<a data-action="nav:sleep">Timeline</a>`}</div>

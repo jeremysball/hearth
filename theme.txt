@@ -1,131 +1,101 @@
 # Hearth: A Design-Language Breakdown
 
 ## TL;DR
-- Hearth's look is "nursery, not hospital": soft OKLCH pastels, a rounded
-  phone-shaped shell, fully-pill buttons, and big squashy cards with the
-  faintest shadow — built to be glanced at by a tired parent at 3am without
-  hurting anyone's eyes.
-- Two palettes ship today — a warm coral "girl" theme and a cool periwinkle
-  "boy" theme — built from the *same* set of roles (page, surface, ink,
-  accent, "good"), so swapping one out never reshuffles the layout, just the
-  mood lighting.
-- Type does two jobs: **Quicksand** is the proud one (baby's name, the big
-  sleep timer, stat numbers) and **Nunito** is the quiet one (everything you
-  read in a hurry). Phosphor's line icons sit on top, never shouting.
-- Everything rounds. Buttons round to full pills, cards round to 20–26px,
-  tokens and avatars round to full circles. Nothing in this app has a sharp
-  corner pointed at you.
+- Hearth's look is "modern apothecary, not pastel nursery": a muted-earth
+  palette (cream/oat paper, deep olive or sage accent), a two-voice type
+  system (Playfair Display for the two moments meant to be felt, Archivo
+  for everything else), a local Lucide icon sprite, and a barely-visible
+  paper-grain texture.
+- Two palettes ship — a warm "girl" olive theme and a cool "boy" sage
+  theme — built from the *same* set of CSS variable roles (page, surface,
+  ink, accent, good), so swapping one out never reshuffles the layout,
+  just the mood.
+- Type does two jobs: **Playfair Display** is the proud one (baby's name,
+  the big sleep timer) and **Archivo** is the quiet one (everything else,
+  including every other number and heading in the app). Lucide's thin
+  line icons sit on top, one stroke weight, never shouting.
+- Pills, big-radius cards, and circular avatars are unchanged from before
+  this reskin — "round everything" was already true and theme.txt's own
+  source material recommended the same shapes.
 
-## What's Actually Implemented
-All of the below is read straight from `styles.css` — no invented hexes, no
-aspirational palette. If a value here and the CSS ever disagree, the CSS wins.
-
-### 1. Palette — "Soft Pastel, Two Moods"
+## 1. Palette — "Muted Earth, Two Moods"
 Both themes share the same *roles*; only the hue shifts. Values are OKLCH
-(lightness, chroma, hue) straight from `:root`/`[data-theme]`:
+straight from `:root`/`[data-theme]` in `styles.css`:
 
-| Role | What it's for | Girl (warm) | Boy (cool) |
+| Role | What it's for | Girl (warm olive) | Boy (cool sage) |
 |---|---|---|---|
-| `--page` | app backdrop | `oklch(0.965 0.018 22)` blush | `oklch(0.965 0.016 248)` powder blue |
-| `--bg` / `--surface` | phone shell, cards | near-white, barely tinted | near-white, barely tinted |
-| `--ink` | primary text | `oklch(0.36 0.03 25)` warm charcoal | `oklch(0.36 0.028 255)` cool charcoal |
-| `--accent` | buttons, baby's avatar | `oklch(0.72 0.085 18)` coral | `oklch(0.66 0.085 252)` periwinkle |
-| `--good` | sleep ring, live-dot | `oklch(0.66 0.08 168)` seafoam | `oklch(0.66 0.08 200)` lagoon teal |
+| `--page` | app backdrop | `oklch(0.96 0.016 95)` cream | `oklch(0.96 0.013 135)` oat |
+| `--ink` | primary text | `oklch(0.32 0.035 110)` | `oklch(0.32 0.03 165)` |
+| `--accent` | buttons, baby's avatar | `oklch(0.42 0.07 125)` forest-olive | `oklch(0.45 0.06 175)` sage |
+| `--good` | sleep ring, live-dot | `oklch(0.62 0.1 75)` ochre-gold | `oklch(0.6 0.08 90)` cooler gold |
 
-Activity categories get their own quiet tint on top of whichever theme is
-active — diapers lean amber (`oklch(0.55 0.08 70)`), medicine leans soft
-violet (`oklch(0.52 0.1 300)`), notes just borrow `--muted`. Nothing competes
-with the hero accent for attention.
+Dark mode relights the same roles into a shared deep charcoal-olive
+backdrop (never pure black), then nudges `--accent`/`--good` brighter per
+theme so they still read against the dark surface.
 
-**Why it works:** every color here sits in the same narrow lightness band —
-nothing near-black, nothing pure white, nothing saturated enough to ping off
-the screen. That's what makes a coral and a periwinkle theme feel like *the
-same app* instead of two different skins: the contrast and chroma budget is
-identical, only the hue turns the dial between "warm nursery" and "cool
-nursery."
+Category tones: diaper stays amber, medicine moved from violet to a muted
+clay/terracotta (`oklch(0.5 0.09 35)`) to stay inside the earth-tone
+family, note stays tied to `--muted`/`--hair`.
 
-### 2. Typography — One Proud Voice, One Quiet One
-- **Quicksand** (rounded, geometric, a little bit storybook) is reserved for
-  things you're meant to *feel* before you read: the baby's name (`.baby`,
-  28px/700), the big awake/asleep timer (`.timer`, 50px/700), stat numbers
-  (`.stat-v`, `.ring-big`), card headings. It's the typeface equivalent of a
-  warm hand on your shoulder saying "here's the important bit."
-- **Nunito** is the workhorse — body copy, labels, everything you skim. It's
-  rounded too (matches Quicksand's terminals) but plain enough to disappear
-  when it should.
-- **Phosphor** (regular weight, single-stroke line icons, vendored locally in
-  `fonts/`) supplies every glyph in the app. One weight, one style, always —
-  so the icon language never gets visually noisier than the type around it.
+**Why it works:** every color sits in the same narrow lightness/chroma
+band, and neither palette goes near pure white or pure black — the same
+discipline the old pastel system used, just recentered on cream and olive
+instead of blush and powder blue.
 
-**Why the pairing works:** Quicksand and Nunito are both rounded-terminal
-sans-serifs from the same family of "friendly geometric" type, so they never
-clash — they just take turns being loud and quiet. That's a softer, calmer
-move than the classic "heavy grotesque vs. high-contrast serif" editorial
-pairing — appropriate, since Hearth is trying to feel like a hush, not a
-headline.
+## 2. Typography — One Proud Voice, One Quiet One
+- **Playfair Display** (high-contrast calligraphic serif) is reserved for
+  exactly two elements: the baby's name (`.baby`) and the big sleep/awake
+  timer (`.timer`) — the two things designed to be *felt* before they're
+  read.
+- **Archivo** (grotesque) is everything else: body copy, every stat
+  number, every page/sheet/section title, every label, every button. It
+  replaced both Quicksand's old structural job and Nunito's old body job,
+  so the app still has exactly two type voices, never three.
+- **Lucide** (thin 2px-stroke line icons, vendored locally as an inline
+  `<svg>` sprite in `index.html`'s `<body>`, referenced via `<svg
+  class="icon"><use href="#name"></use></svg>` — same-document references
+  only, since cross-document `<use>` into an external file is unreliable
+  on iOS Safari) supplies every glyph.
 
-### 3. Layout & Shape — Round Everything, Rush Nothing
-- The whole app lives in a **phone-shaped shell** (`.phone`, max-width
-  432–560px) — even on desktop, Hearth insists on feeling like the thing in
-  your pocket.
-- **Cards** (`.card`): 20–26px corner radius, a shadow so faint
-  (`oklch(0.6 0.05 20 / .07)`) it reads as "resting on the page" rather than
-  "floating above it."
-- **Pills, fully** (`border-radius: 999px`): the bottle-interval chip, the
-  hidden-card chips, the dark-mode switch, the medicine "every Xh" stepper —
-  any control you tap more than once is a pill.
-- **Circles for identity**: the baby's avatar, every icon token (`.tok`,
-  `.row-ic`, `.ic-ring`), every per-entry icon badge. Circles read as
-  "person/thing," squares read as "control" — Hearth keeps that distinction
-  consistent everywhere.
-- **One live pulse** (`.livedot`): a single soft `box-shadow` ping every
-  2.4 seconds on the "awake/asleep" indicator — the only animation in the app
-  that runs unprompted, and it's deliberately gentle, like a sleeping baby's
-  breathing rather than a notification badge.
+**Why the pairing works:** a heavy grotesque next to a high-contrast
+serif is a classic "editorial" move — the grotesque supplies structure
+and the serif supplies a felt, proud moment — but Hearth only ever lets
+the serif own two elements, so it reads as a quiet accent, not a second
+competing voice.
 
-**Why it reads calm:** rounded geometry has no corner to "point" anywhere, so
-the eye never gets directed urgently. Combined with a single ambient
-animation (instead of several competing for attention), the whole interface
-reads as *settled* — which matters a lot at 3am.
+## 3. Layout & Shape — Unchanged From Before
+- Phone-shaped shell, pill controls, big-radius cards, circular avatars —
+  all exactly as before this reskin. Nothing here needed to change to
+  match the new design language.
+- New: a near-invisible SVG `feTurbulence` paper-grain texture on `.phone`
+  (alpha baked into the filter itself via `feComponentTransfer`, not a
+  CSS blend mode, so it looks correct across both palettes and both
+  light/dark modes automatically).
+- New: section labels ("Today", "SweetSpot schedule") are all-caps,
+  letter-spaced, and sit above a 1px `--hair` rule — a print-derived
+  sectioning device.
 
-### 4. Iconography
-Phosphor's **regular** (single-weight line) icon set, always inside a
-circular tinted token — never bare on the page. The token's tint comes from
-the category tone (`--tc`/`--tcb`), so a diaper icon, a sleep icon, and a
-medicine icon are instantly distinguishable by color *before* you've read the
-glyph.
+## 4. Iconography
+Lucide's regular line-icon set, one stroke weight, vendored as a single
+inline `<svg>` sprite in `index.html`'s `<body>` — no font, no CDN, no
+build step, no external file (same-document `<use>` is what's reliable
+across browsers, including iOS Safari). The icon vocabulary is
+enumerated in `js/ui.js`'s `TYPES` table and `icon()` fallback map.
 
-### 5. Vocabulary — Named Moves Worth Reusing
-- **Shared-role, swap-the-hue theming** — two palettes, one set of CSS
-  variable names, zero layout drift between them.
-- **One loud face, one quiet face** — Quicksand for feeling, Nunito for
-  reading, never the reverse.
-- **Round everything you touch** — pills for controls, big radii for
-  containers, circles for identity.
-- **One ambient animation, not several** — a single slow pulse earns its
-  keep precisely because it's the only one.
-- **Tint by meaning, not by decoration** — category color always maps to
-  category tone, never to arbitrary variety.
+## 5. Vocabulary — Named Moves Worth Reusing
+- **Shared-role, swap-the-hue theming** — unchanged mechanism from before
+  this reskin, just retuned values.
+- **One loud face, one quiet face** — now Playfair-for-feeling,
+  Archivo-for-reading, never the reverse.
+- **Bake opacity into the filter, not the blend mode** — the paper-grain
+  texture's alpha lives inside its own SVG filter so it never needs
+  separate per-theme/per-mode tuning.
 
 ## Recommendations (for the next theme, or the next contributor)
-1. **New themes inherit the role list, not the values.** Define `--page`,
-   `--bg`, `--surface`, `--ink`, `--soft`, `--muted`, `--hair`, `--accent`,
-   `--accent-ink`, `--accent-soft`, `--accent-tint`, `--on-accent`, `--good`
-   (+ `-deep`/`-halo`/`-tint`), `--ring-track` — keep lightness/chroma in the
-   same band as girl/boy so the new theme still feels like *this* app.
+1. **New themes inherit the role list, not the values** — same rule as
+   before this reskin, see `styles.css`'s `:root`/`[data-theme]` blocks.
 2. **Keep the two-typeface rule.** If a third typeface ever shows up, it
    should replace a job (proud or quiet), not add a third voice.
-3. **New controls default to a pill or a big-radius card** — a sharp-cornered
-   button would be the most visible thing on the screen, for the wrong
-   reasons.
-4. **New activity types get one tone, used consistently** in their icon
-   token, row background, and chart bars — never a one-off color.
-
-## Caveats
-- Dark mode (`[data-mode="dark"]`) swaps `--page` to a near-black OKLCH and
-  nudges `--accent`/`--accent-ink` brighter per theme so they still read
-  against the dark backdrop, then re-tunes shadows/inputs/toast for contrast —
-  but it keeps the same hue per theme (coral stays coral, periwinkle stays
-  periwinkle). It's a relighting of the two existing palettes, not a third one.
-- There is no in-app theme picker beyond girl/boy + light/dark/auto today;
-  "Recommendations" above is for whoever adds the next one.
+3. **New icons go in the inline sprite in `index.html`'s `<body>` as a
+   `<symbol>`,** sourced from Lucide (ISC license) to match the existing
+   stroke weight and grid.
