@@ -54,10 +54,8 @@ body {
   transition: background .4s ease; position: relative;
 }
 @media (min-width: 520px) { .phone { max-width: 560px; } }
-.statusbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 2px; font-size: 12px; font-weight: 700; color: var(--soft); flex: 0 0 auto; }
-.statusbar .dots { display: flex; gap: 4px; }
-.statusbar .dots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
-.screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 8px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+
+.screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
 .screen::-webkit-scrollbar { display: none; }
 
 .tabbar { flex: 0 0 auto; display: flex; justify-content: space-around; align-items: center; padding: 12px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hair); background: var(--surface); }
