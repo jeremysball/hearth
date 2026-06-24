@@ -2,6 +2,7 @@
 import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
 import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT } from './ui.js';
 import { router } from './app.js';
+import { chime, tick, buzz, confetti } from './fx.js';
 
 // segmented control
 function seg(group, opts, sel) {
@@ -42,6 +43,7 @@ export function openSpinner(id) {
     el.textContent = fmtVal(val);
     el.setAttribute('aria-valuenow', val);
     el.dispatchEvent(new Event('change', { bubbles: true }));
+    if (state().settings.sound !== false) tick();
   }
 
   function trackHTML(center) {
@@ -331,6 +333,8 @@ export function saveLog(type, id) {
   const split = maybeInterruptSleep(type, e.start);
   const added = addEntry(e);
   sheet.close();
+  if (state().settings.sound !== false) { chime(); buzz(15); }
+  confetti();
   toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); undoInterruptSleep(split); router.refresh(); });
   router.refresh();
 }

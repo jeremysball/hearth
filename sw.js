@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-24T21:41'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-24T21:43'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -21,7 +21,8 @@ const SHELL = [
   './js/reminders.js',
   './js/onboarding.js',
   './js/sync.js',
-  './js/join.js'
+  './js/join.js',
+  './js/fx.js'
 ];
 
 self.addEventListener('install', (e) => {
