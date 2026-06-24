@@ -69,7 +69,7 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 		}
 		defaultUnits := `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
 		defaultReminders := `{"naps":true,"bottle":true,"meds":true,"quietStart":"20:00","quietEnd":"07:00"}`
-		defaultCards := `{"sweetspot":true,"bottle":true,"medicine":true}`
+		defaultCards := `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
 		if _, err := tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
 			familyID, defaultUnits, defaultReminders, defaultCards, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
