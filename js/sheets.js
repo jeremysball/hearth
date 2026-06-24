@@ -131,37 +131,41 @@ export function openSpinner(id) {
     if (!dragging || e.pointerId !== pid) return;
     dragging = false; pid = null;
 
-    // velocity from recent samples — px/ms, scaled to momentum
+    // velocity from recent samples (px/ms → momentum mapper)
     let vel = 0;
     if (velSamples.length > 1) {
       const dt = velSamples[velSamples.length - 1].t - velSamples[0].t;
       const dd = velSamples.reduce((s, v) => s + v.dy, 0);
       if (dt > 0) vel = (dd / dt) * 100;
     }
-    let momentum = offsetY + vel;
-    let steps = Math.round(momentum / ITEM_H);
-    let target = val - steps * step;
-    if (target < min) target = min;
-    if (target > max) target = max;
+    const momentum = offsetY + vel;
+    const steps = Math.round(momentum / ITEM_H);
+    const targetOffset = clampOffset(steps * ITEM_H);
 
-    commit(target);
+    // Animate the entire distance so all crossing steps are smooth.
+    const startOffset = offsetY;
+    const distance = targetOffset - startOffset;
+    const duration = Math.min(Math.abs(distance) * 3 + 180, 500);
+    const startTime = performance.now();
 
-    // visual snap animation only if there's a fractional offset to animate
-    const visOffset = offsetY % ITEM_H;
-    if (visOffset !== 0) {
-      items.style.transition = 'transform .25s cubic-bezier(0.22, 0.61, 0.36, 1)';
-      items.style.transform = `translateY(calc(-50% + 0px))`;
-      setTimeout(() => {
-        if (overlay._closed) return;
-        items.style.transition = 'none';
-        items.innerHTML = trackHTML(target);
-        offsetY = 0;
-      }, 280);
-    } else {
-      items.style.transition = 'none';
-      items.innerHTML = trackHTML(target);
-      offsetY = 0;
+    function animate() {
+      if (overlay._closed) return;
+      const t = Math.min(1, (performance.now() - startTime) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic — fast start, settle
+      offsetY = clampOffset(startOffset + distance * eased);
+      render(offsetY);
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Final settle: snap to exact step boundary and commit
+        const final = pxToVal(targetOffset);
+        const snapped = Math.min(max, Math.max(min, Math.round(final / step) * step));
+        offsetY = clampOffset(valToPx(snapped));
+        render(offsetY);
+        commit(snapped);
+      }
     }
+    requestAnimationFrame(animate);
   }
 
   items.addEventListener('pointerdown', onDown);
