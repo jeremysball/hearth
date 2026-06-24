@@ -181,12 +181,13 @@ function bindSwipe(scrim) {
   sheetEl.addEventListener('pointercancel', onUp);
 }
 
-// time input default = now (HH:MM)
-export function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-// combine a HH:MM with today's date → ISO
-export function timeToISO(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date(); d.setHours(h, m, 0, 0);
-  if (d > new Date()) d.setDate(d.getDate() - 1); // assume earlier today
-  return d.toISOString();
+// datetime-local helpers
+export function nowLocalDT() {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+export function dtToISO(local) { return local ? new Date(local).toISOString() : new Date().toISOString(); }
+export function isoToLocalDT(iso) {
+  const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
 }
