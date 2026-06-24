@@ -175,8 +175,8 @@ body {
   --bg: oklch(0.93 0.025 85); --surface: oklch(0.975 0.015 85);
   --ink: oklch(0.22 0.015 70); --soft: oklch(0.38 0.02 70); --muted: oklch(0.52 0.03 70);
   --hair: oklch(0.87 0.03 80);
-  --accent: oklch(0.56 0.12 45); --accent-ink: oklch(0.4 0.1 45);
-  --accent-soft: oklch(0.86 0.06 45); --accent-tint: oklch(0.92 0.04 45);
+  --accent: oklch(0.5 0.15 35); --accent-ink: oklch(0.34 0.12 35);
+  --accent-soft: oklch(0.82 0.08 38); --accent-tint: oklch(0.9 0.05 40);
   --on-accent: oklch(0.985 0.012 85);
   --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
   --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
@@ -186,8 +186,8 @@ body {
   --bg: oklch(0.16 0.015 70); --surface: oklch(0.22 0.015 70);
   --ink: oklch(0.93 0.025 85); --soft: oklch(0.6 0.02 70); --muted: oklch(0.48 0.03 70);
   --hair: oklch(0.25 0.02 80);
-  --accent: oklch(0.6 0.12 45); --accent-ink: oklch(0.92 0.04 45);
-  --accent-soft: oklch(0.38 0.06 45); --accent-tint: oklch(0.25 0.04 45);
+  --accent: oklch(0.64 0.14 35); --accent-ink: oklch(0.9 0.06 38);
+  --accent-soft: oklch(0.36 0.08 35); --accent-tint: oklch(0.24 0.05 35);
   --on-accent: oklch(0.18 0.02 70);
   --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
   --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);

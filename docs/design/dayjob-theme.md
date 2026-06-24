@@ -46,9 +46,9 @@ Additive only; honors Lucide-only icons, Playfair+Archivo, round-everything, one
   --ink: oklch(0.22 0.015 70);
   --soft: oklch(0.38 0.02 70);
   --muted: oklch(0.52 0.03 70);
-  --accent: oklch(0.56 0.12 45);
-  --accent-tint: oklch(0.92 0.04 45);
-  --accent-ink: oklch(0.4 0.1 45);
+  --accent: oklch(0.5 0.15 35);
+  --accent-tint: oklch(0.9 0.05 40);
+  --accent-ink: oklch(0.34 0.12 35);
   --good: oklch(0.52 0.08 135);
   --good-tint: oklch(0.92 0.04 135);
   --good-ink: oklch(0.35 0.06 135);
@@ -64,9 +64,9 @@ Additive only; honors Lucide-only icons, Playfair+Archivo, round-everything, one
   --ink: oklch(0.93 0.025 85);
   --soft: oklch(0.6 0.02 70);
   --muted: oklch(0.48 0.03 70);
-  --accent: oklch(0.6 0.12 45);
-  --accent-tint: oklch(0.25 0.04 45);
-  --accent-ink: oklch(0.92 0.04 45);
+  --accent: oklch(0.64 0.14 35);
+  --accent-tint: oklch(0.24 0.05 35);
+  --accent-ink: oklch(0.9 0.06 38);
   --good: oklch(0.56 0.08 135);
   --good-tint: oklch(0.22 0.04 135);
   --good-ink: oklch(0.92 0.04 135);
