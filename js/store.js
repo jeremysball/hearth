@@ -1,5 +1,6 @@
 // store.js — Hearth state, persistence, derived data, seeding.
 import { enqueue, mergeById } from './sync.js';
+import { log } from './log.js';
 
 const KEY = 'hearth.state.v1';
 
@@ -8,6 +9,7 @@ const DEFAULT = () => ({
   synced: false,
   baby: { name: '', birthdate: '', theme: 'girl', photo: null, caregiver: '' },
   settings: {
+    theme: '',
     bottleIntervalH: 3,
     meds: [
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
@@ -60,12 +62,14 @@ export function addEntry(e) {
   _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
   save();
   enqueue({ url: '/api/entries/' + e.id, method: 'PUT', body: e });
+  log.event('store', 'addEntry', e.type, e.id);
   return e;
 }
 export function removeEntry(id) {
   _state.log = _state.log.filter((e) => e.id !== id);
   save();
   enqueue({ url: '/api/entries/' + id, method: 'DELETE' });
+  log.event('store', 'removeEntry', id);
 }
 export function updateEntry(id, patch) {
   const e = _state.log.find((x) => x.id === id);
@@ -75,6 +79,7 @@ export function updateEntry(id, patch) {
     save();
     enqueue({ url: '/api/entries/' + id, method: 'PUT', body: e });
   }
+  log.event('store', 'updateEntry', id, patch);
   return e;
 }
 
@@ -99,6 +104,7 @@ export function maybeInterruptSleep(type, atISO) {
   if (!ongoing) return null;
   updateEntry(ongoing.id, { end: atISO });
   const resumed = addEntry({ type: 'sleep', start: new Date(at.getTime() + gap * 60000).toISOString() });
+  log.event('store', 'interruptSleep', type, { sleepId: ongoing.id, resumedId: resumed.id });
   return { sleepId: ongoing.id, resumedId: resumed.id };
 }
 export function undoInterruptSleep(split) {

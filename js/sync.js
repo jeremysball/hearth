@@ -1,4 +1,5 @@
 // sync.js — offline outbox queue + server sync merge logic (no DOM dependency, unit-testable).
+import { log } from './log.js';
 const OUTBOX_KEY = 'hearth.outbox.v1';
 const LAST_SYNC_KEY = 'hearth.lastsync.v1';
 
@@ -33,11 +34,13 @@ export async function drainOutbox(fetchImpl) {
       });
       if (!res.ok) throw new Error('sync request failed: ' + res.status);
     } catch (e) {
-      return false; // leave remaining ops queued; caller retries later
+      log.warn('sync', 'drainOutbox failed, remaining', ops.length, e.message);
+      return false;
     }
     ops = ops.slice(1);
     saveOutbox(ops);
   }
+  log.event('sync', 'drainOutbox complete');
   return true;
 }
 
