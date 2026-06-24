@@ -27,7 +27,7 @@ export function openSpinner(id) {
   let val = parseFloat(el.dataset.value) || 0;
 
   const ITEM_H = 52;
-  const OFF = 2;
+  const OFF = 5;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
   const pxToVal = (px) => val - (px / ITEM_H) * step;
   const valToPx = (v) => (val - v) / step * ITEM_H;
@@ -48,8 +48,9 @@ export function openSpinner(id) {
     let html = '';
     for (let i = -OFF; i <= OFF; i++) {
       const v = center + i * step;
+      const inRange = v >= min && v <= max;
       const cls = i === 0 ? 'spinner-item on' : 'spinner-item';
-      html += `<div class="${cls}">${fmtVal(v)}</div>`;
+      html += `<div class="${cls}">${inRange ? fmtVal(v) : ''}</div>`;
     }
     return html;
   }
@@ -72,7 +73,7 @@ export function openSpinner(id) {
       lastCenter = center;
       items.innerHTML = trackHTML(center);
     }
-    items.style.transform = `translateY(${offset % ITEM_H}px)`;
+    items.style.transform = `translateY(calc(-50% + ${offset % ITEM_H}px))`;
     items.style.transition = 'none';
     return center;
   }
@@ -135,7 +136,7 @@ export function openSpinner(id) {
     if (velSamples.length > 1) {
       const dt = velSamples[velSamples.length - 1].t - velSamples[0].t;
       const dd = velSamples.reduce((s, v) => s + v.dy, 0);
-      if (dt > 0) vel = (dd / dt) * 250;
+      if (dt > 0) vel = (dd / dt) * 100;
     }
     let momentum = offsetY + vel;
     let steps = Math.round(momentum / ITEM_H);
@@ -143,18 +144,24 @@ export function openSpinner(id) {
     if (target < min) target = min;
     if (target > max) target = max;
 
-    items.style.transition = 'transform .25s cubic-bezier(0.22, 0.61, 0.36, 1)';
-    items.style.transform = 'translateY(0px)';
+    commit(target);
 
-    const onEnd = () => {
-      items.removeEventListener('transitionend', onEnd);
-      if (overlay._closed) return;
+    // visual snap animation only if there's a fractional offset to animate
+    const visOffset = offsetY % ITEM_H;
+    if (visOffset !== 0) {
+      items.style.transition = 'transform .25s cubic-bezier(0.22, 0.61, 0.36, 1)';
+      items.style.transform = `translateY(calc(-50% + 0px))`;
+      setTimeout(() => {
+        if (overlay._closed) return;
+        items.style.transition = 'none';
+        items.innerHTML = trackHTML(target);
+        offsetY = 0;
+      }, 280);
+    } else {
       items.style.transition = 'none';
       items.innerHTML = trackHTML(target);
-      commit(target);
       offsetY = 0;
-    };
-    items.addEventListener('transitionend', onEnd);
+    }
   }
 
   items.addEventListener('pointerdown', onDown);
@@ -163,6 +170,7 @@ export function openSpinner(id) {
   items.addEventListener('pointercancel', onUp);
 
   document.body.appendChild(overlay);
+  items.style.transform = `translateY(calc(-50% + 0px))`;
   requestAnimationFrame(() => overlay.classList.add('show'));
   el._closeSpinner = close;
 }
