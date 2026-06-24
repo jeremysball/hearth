@@ -1,0 +1,13 @@
+- the little navbar at the top with the three dots and the time has to go
+- I want each of the sections on the home screen to be tappable
+  and I want them to open a new log for their respective section
+  i.e. sweetspot should allow for you to create a new sleep log
+- Whenever you log a feeding in the night it should create a 20
+  minute awake period automatically then back to sleep
+- Same with the diaper -- maybe ten minutes? 
+- Copy link should be replaced with share link and it should 
+  open the native share sheet on the device
+- still can't remove sleep from the sleep tab
+- can't specify the size of diaper when logging a diaper change
+- the navbar on the bottom is twice as tall as it needs to be
+- try to implement theme.txt theme 

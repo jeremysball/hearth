@@ -23,7 +23,6 @@ const TABS = [
 
 function shell() {
   return `<main class="phone app">
-    <div class="statusbar"><span>${fmt.clock(new Date())}</span><span class="dots"><span></span><span></span><span></span></span></div>
     <div id="view" class="screen"></div>
     <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg></button>`).join('')}</nav>
   </main>`;
@@ -261,7 +260,6 @@ document.addEventListener('click', (ev) => {
 
 // ---------- live clock + auto refresh ----------
 function tick() {
-  const sb = $('.statusbar span'); if (sb) sb.textContent = fmt.clock(new Date());
   if (current === 'home' && $('#view') && !$('#scrim.show')) router.refresh();
 }
 setInterval(tick, 60000);
