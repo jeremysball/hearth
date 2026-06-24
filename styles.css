@@ -174,6 +174,30 @@ body {
   --good: oklch(0.70 0.095 150); --good-deep: oklch(0.58 0.085 150); --good-halo: oklch(0.42 0.06 148);
   --good-tint: oklch(0.36 0.05 148 / .5); --ring-track: oklch(0.33 0.016 190);
 }
+
+/* ---- dayjob theme ---- */
+[data-theme="dayjob"] {
+  --page: oklch(0.945 0.025 85); --page-glow: oklch(0.88 0.05 85 / .55);
+  --bg: oklch(0.93 0.025 85); --surface: oklch(0.975 0.015 85);
+  --ink: oklch(0.22 0.015 70); --soft: oklch(0.38 0.02 70); --muted: oklch(0.52 0.03 70);
+  --hair: oklch(0.87 0.03 80);
+  --accent: oklch(0.5 0.15 35); --accent-ink: oklch(0.34 0.12 35);
+  --accent-soft: oklch(0.82 0.08 38); --accent-tint: oklch(0.9 0.05 40);
+  --on-accent: oklch(0.985 0.012 85);
+  --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
+  --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
+}
+[data-mode="dark"][data-theme="dayjob"] {
+  --page: oklch(0.18 0.015 70); --page-glow: oklch(0.28 0.04 70 / .45);
+  --bg: oklch(0.16 0.015 70); --surface: oklch(0.22 0.015 70);
+  --ink: oklch(0.93 0.025 85); --soft: oklch(0.6 0.02 70); --muted: oklch(0.48 0.03 70);
+  --hair: oklch(0.25 0.02 80);
+  --accent: oklch(0.64 0.14 35); --accent-ink: oklch(0.9 0.06 38);
+  --accent-soft: oklch(0.36 0.08 35); --accent-tint: oklch(0.24 0.05 35);
+  --on-accent: oklch(0.18 0.02 70);
+  --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
+  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);
+}
 [data-mode="dark"] {
   --bg: oklch(0.215 0.016 55); --surface: oklch(0.26 0.018 55);
   --ink: oklch(0.93 0.016 65); --soft: oklch(0.78 0.02 58); --muted: oklch(0.62 0.022 56);
@@ -188,6 +212,27 @@ body {
 [data-mode="dark"] .sheet { background: var(--bg); }
 [data-mode="dark"] .toast { background: oklch(0.88 0.01 70); color: oklch(0.2 0.014 50); }
 [data-mode="dark"] .tabbar { background: var(--surface); border-color: var(--hair); }
+
+/* dayjob category tone overrides */
+[data-theme="dayjob"] .diaper, [data-theme="dayjob"] .tone-diaper { --tc: oklch(0.55 0.09 70); --tcb: oklch(0.92 0.05 75); }
+[data-theme="dayjob"] .med, [data-theme="dayjob"] .tone-med { --tc: oklch(0.48 0.09 35); --tcb: oklch(0.91 0.04 40); }
+
+/* dayjob type */
+[data-theme="dayjob"] .baby { font-size: 32px; letter-spacing: -0.03em; }
+[data-theme="dayjob"] .timer { font-size: 56px; letter-spacing: -0.03em; }
+[data-theme="dayjob"] .timer .u { font-size: 28px; }
+[data-theme="dayjob"] .sec-label { letter-spacing: 0.12em; }
+[data-theme="dayjob"] .page-sub { letter-spacing: 0.04em; font-weight: 700; text-transform: uppercase; }
+
+/* dayjob paper grain */
+body[data-theme="dayjob"]::before {
+  content: '';
+  position: fixed; z-index: 0; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.03'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="dayjob"]::before { background-image: none; }
+}
 
 /* ---- trends ---- */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -339,12 +384,13 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .onb-photo { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; }
 .onb-photo .avatar { background: var(--accent-tint); color: var(--accent-ink); font-size: 26px; }
 .onb-photo-l { font-size: 12px; color: var(--accent-ink); font-weight: 700; }
-.theme-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.theme-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; }
 .theme-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); }
 .theme-swatch { width: 22px; height: 22px; border-radius: 50%; }
 .theme-swatch.girl { background: oklch(0.42 0.07 125); }
 .theme-swatch.boy { background: oklch(0.45 0.06 175); }
+.theme-swatch.dayjob { background: oklch(0.56 0.12 45); }
 .onb-go { margin: 0; }
 .onb-foot { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
 

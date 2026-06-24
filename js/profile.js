@@ -1,6 +1,6 @@
 // profile.js — baby details, reminders, units, caregivers, reset.
 import { state } from './store.js';
-import { esc } from './ui.js';
+import { esc, THEMES } from './ui.js';
 import { notifsGranted } from './reminders.js';
 
 function sw(path, on) {
@@ -29,7 +29,9 @@ export function profile() {
 
     <div class="sec-label">Theme</div>
     <div class="card row-card">
-      <div class="set-row"><span>App theme</span>${segBind('baby.theme', [{ v: 'girl', l: 'Girl' }, { v: 'boy', l: 'Boy' }], b.theme)}</div>
+      <div class="set-row"><span>App theme</span>
+        <div class="theme-pick">${THEMES.map((t) => `<button type="button" class="theme-opt ${((state().settings.theme || state().baby.theme) === t.id ? 'on' : '')}" data-action="theme:pick" data-theme="${t.id}"><span class="theme-swatch ${t.swatch}"></span><span>${t.label}</span></button>`).join('')}</div>
+      </div>
     </div>
 
     <div class="sec-label">Appearance</div>
