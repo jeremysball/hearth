@@ -247,7 +247,7 @@ body[data-theme="dayjob"]::before {
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
 .bar-val { font-size: 10px; color: var(--muted); font-weight: 700; }
 .bar-wrap { width: 100%; flex: 1; display: flex; align-items: flex-end; }
-.bar { width: 100%; border-radius: 7px 7px 4px 4px; background: var(--tcb); min-height: 4px; transition: height .4s; }
+.bar { width: 100%; border-radius: 7px 7px 4px 4px; background: var(--tcb); min-height: 4px; transition: height .4s; transform-origin: bottom; }
 .bar-col.today .bar { background: var(--tc); }
 .bar-lbl { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
 
@@ -305,6 +305,7 @@ body[data-theme="dayjob"]::before {
 .growth-stats { grid-template-columns: repeat(2, 1fr); }
 .growth-svg { width: 100%; height: auto; aspect-ratio: 320 / 150; overflow: visible; display: block; }
 .growth-svg .growth-x { font-size: 11px; font-family: "Archivo", sans-serif; font-weight: 700; fill: var(--muted); }
+.growth-svg circle { transform-box: fill-box; transform-origin: center; }
 .delta { font-size: 11px; font-weight: 800; margin-top: 2px; display: block; }
 .delta.up { color: var(--good-deep); }
 .delta.down { color: oklch(0.6 0.12 25); }
