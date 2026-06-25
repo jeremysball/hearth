@@ -501,14 +501,17 @@ document.addEventListener('click', async (e) => {
 
 // ---------- server sync loop ----------
 async function syncOnce() {
+  log.info('sync', 'start');
   const drained = await drainOutbox(fetch);
-  if (!drained) return;
+  if (!drained) { log.warn('sync', 'outbox drain failed — aborting pull'); return; }
   try {
     const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSync()), { credentials: 'include' });
-    if (!res.ok) return;
+    if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
     const data = await res.json();
+    const n = (data.log?.length || 0) + (data.measures?.length || 0);
     applySyncResponse(data);
     setLastSync(data.serverTime);
+    log.info('sync', `OK — ${n} row${n !== 1 ? 's' : ''} from server`);
     if (current !== 'home' || $('#view')) router.refresh();
   } catch (e) {
     log.warn('sync', 'syncOnce failed', e.message);
@@ -518,9 +521,10 @@ async function syncOnce() {
 let eventSource = null;
 function connectEvents() {
   if (eventSource || !('EventSource' in window)) return;
-  log.event('sync', 'SSE connecting');
+  log.info('sync', 'SSE connecting…');
   eventSource = new EventSource('/api/events');
-  eventSource.onmessage = () => syncOnce();
+  eventSource.onopen = () => log.info('sync', 'SSE connected');
+  eventSource.onmessage = () => { log.info('sync', 'SSE push — syncing'); syncOnce(); };
   eventSource.onerror = () => { log.warn('sync', 'SSE error, reconnecting in 5s'); eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
 }
 

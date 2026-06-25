@@ -23,8 +23,11 @@ export function setLastSync(ts) { localStorage.setItem(LAST_SYNC_KEY, ts); }
 // it's a no-op once the queue is empty.
 export async function drainOutbox(fetchImpl) {
   let ops = loadOutbox();
+  if (!ops.length) return true;
+  log.info('outbox', `draining ${ops.length} op${ops.length !== 1 ? 's' : ''}`);
   while (ops.length) {
     const op = ops[0];
+    log.info('outbox', `→ ${op.method} ${op.url}`);
     try {
       const res = await fetchImpl(op.url, {
         method: op.method,
@@ -34,13 +37,13 @@ export async function drainOutbox(fetchImpl) {
       });
       if (!res.ok) throw new Error('sync request failed: ' + res.status);
     } catch (e) {
-      log.warn('sync', 'drainOutbox failed, remaining', ops.length, e.message);
+      log.warn('outbox', `failed (${ops.length} remaining)`, e.message);
       return false;
     }
     ops = ops.slice(1);
     saveOutbox(ops);
   }
-  log.event('sync', 'drainOutbox complete');
+  log.info('outbox', 'drained');
   return true;
 }
 
