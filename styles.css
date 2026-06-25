@@ -117,7 +117,7 @@ body {
 .ic-rel { font-family: "Archivo"; font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
 .ic-edit { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; flex: 0 0 auto; }
 .ic-edit:active { background: var(--hair); }
-.ic-edit.drag { cursor: grab; }
+.ic-edit.drag { cursor: grab; touch-action: none; }
 .info-card.dragging { opacity: .6; cursor: grabbing; }
 
 .hidden-row { display: flex; gap: 8px; flex-wrap: wrap; }

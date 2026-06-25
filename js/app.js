@@ -258,6 +258,7 @@ let dragKey = null;
 document.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('.ic-edit.drag'); if (!handle) return;
   dragKey = handle.dataset.card;
+  handle.setPointerCapture(e.pointerId);
   handle.closest('.info-card').classList.add('dragging');
 });
 document.addEventListener('pointermove', (e) => {
