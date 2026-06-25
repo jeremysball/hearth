@@ -1,4 +1,5 @@
 // fx.js — celebratory confetti, Web Audio sounds, and haptics.
+import { state } from './store.js';
 
 let audioCtx = null;
 
@@ -42,8 +43,27 @@ export function tick() {
   osc.stop(now + 0.08);
 }
 
+function hapticAudio(ms) {
+  if (state().settings.sound === false) return;
+  const ctx = getCtx(); if (!ctx) return;
+  const dur = Math.max(0.004, ms / 1000);
+  const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  src.buffer = buf;
+  gain.gain.setValueAtTime(0.025, ctx.currentTime);
+  src.connect(gain).connect(ctx.destination);
+  src.start();
+}
+
 export function buzz(ms) {
-  if (navigator.vibrate) navigator.vibrate(ms);
+  if (navigator.vibrate) {
+    navigator.vibrate(ms);
+  } else {
+    hapticAudio(ms);
+  }
 }
 
 export function confetti() {
