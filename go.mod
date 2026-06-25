@@ -1,4 +1,4 @@
-module github.com/jeremysball/hearth/server
+module github.com/jeremysball/hearth
 
 go 1.26.4
 
