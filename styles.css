@@ -185,25 +185,48 @@ body {
 }
 
 /* ---- dayjob theme ---- */
-[data-theme="dayjob"] {
+/* 'dayjob' without a gender suffix is a legacy alias → girl palette */
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"]) {
   --page: oklch(0.945 0.025 85); --page-glow: oklch(0.88 0.05 85 / .55);
   --bg: oklch(0.93 0.025 85); --surface: oklch(0.975 0.015 85);
   --ink: oklch(0.22 0.015 70); --soft: oklch(0.38 0.02 70); --muted: oklch(0.52 0.03 70);
   --hair: oklch(0.87 0.03 80);
-  --accent: oklch(0.5 0.15 35); --accent-ink: oklch(0.34 0.12 35);
-  --accent-soft: oklch(0.82 0.08 38); --accent-tint: oklch(0.9 0.05 40);
+  --accent: oklch(0.50 0.13 18); --accent-ink: oklch(0.34 0.11 18);
+  --accent-soft: oklch(0.82 0.07 20); --accent-tint: oklch(0.90 0.045 22);
   --on-accent: oklch(0.985 0.012 85);
   --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
   --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
 }
-[data-mode="dark"][data-theme="dayjob"] {
+[data-theme="dayjob-boy"] {
+  --page: oklch(0.945 0.025 85); --page-glow: oklch(0.88 0.05 85 / .55);
+  --bg: oklch(0.93 0.025 85); --surface: oklch(0.975 0.015 85);
+  --ink: oklch(0.22 0.015 70); --soft: oklch(0.38 0.02 70); --muted: oklch(0.52 0.03 70);
+  --hair: oklch(0.87 0.03 80);
+  --accent: oklch(0.42 0.09 220); --accent-ink: oklch(0.30 0.08 222);
+  --accent-soft: oklch(0.80 0.05 218); --accent-tint: oklch(0.90 0.03 220);
+  --on-accent: oklch(0.985 0.008 220);
+  --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
+  --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
+}
+:is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"]) {
   --page: oklch(0.18 0.015 70); --page-glow: oklch(0.28 0.04 70 / .45);
   --bg: oklch(0.16 0.015 70); --surface: oklch(0.22 0.015 70);
   --ink: oklch(0.93 0.025 85); --soft: oklch(0.6 0.02 70); --muted: oklch(0.48 0.03 70);
   --hair: oklch(0.25 0.02 80);
-  --accent: oklch(0.64 0.14 35); --accent-ink: oklch(0.9 0.06 38);
-  --accent-soft: oklch(0.36 0.08 35); --accent-tint: oklch(0.24 0.05 35);
+  --accent: oklch(0.65 0.13 18); --accent-ink: oklch(0.88 0.06 20);
+  --accent-soft: oklch(0.36 0.08 18); --accent-tint: oklch(0.24 0.05 18);
   --on-accent: oklch(0.18 0.02 70);
+  --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
+  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);
+}
+[data-mode="dark"][data-theme="dayjob-boy"] {
+  --page: oklch(0.18 0.015 70); --page-glow: oklch(0.28 0.04 70 / .45);
+  --bg: oklch(0.16 0.015 70); --surface: oklch(0.22 0.015 70);
+  --ink: oklch(0.93 0.025 85); --soft: oklch(0.6 0.02 70); --muted: oklch(0.48 0.03 70);
+  --hair: oklch(0.25 0.02 80);
+  --accent: oklch(0.62 0.10 220); --accent-ink: oklch(0.82 0.07 220);
+  --accent-soft: oklch(0.34 0.07 218); --accent-tint: oklch(0.24 0.05 220);
+  --on-accent: oklch(0.18 0.015 220);
   --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
   --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);
 }
@@ -223,25 +246,31 @@ body {
 [data-mode="dark"] .tabbar { background: var(--surface); border-color: var(--hair); }
 
 /* dayjob category tone overrides */
-[data-theme="dayjob"] .diaper, [data-theme="dayjob"] .tone-diaper { --tc: oklch(0.55 0.09 70); --tcb: oklch(0.92 0.05 75); }
-[data-theme="dayjob"] .med, [data-theme="dayjob"] .tone-med { --tc: oklch(0.48 0.09 35); --tcb: oklch(0.91 0.04 40); }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .diaper,
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .tone-diaper { --tc: oklch(0.55 0.09 70); --tcb: oklch(0.92 0.05 75); }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .med,
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .tone-med { --tc: oklch(0.48 0.09 35); --tcb: oklch(0.91 0.04 40); }
 
 /* dayjob type */
-[data-theme="dayjob"] .baby { font-size: 32px; letter-spacing: -0.03em; }
-[data-theme="dayjob"] .timer { font-size: 56px; letter-spacing: -0.03em; }
-[data-theme="dayjob"] .timer .u { font-size: 28px; }
-[data-theme="dayjob"] .sec-label { letter-spacing: 0.12em; }
-[data-theme="dayjob"] .page-sub { letter-spacing: 0.04em; font-weight: 700; text-transform: uppercase; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .baby { font-size: 32px; letter-spacing: -0.03em; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .timer { font-size: 56px; letter-spacing: -0.03em; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .timer .u { font-size: 28px; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .sec-label { letter-spacing: 0.12em; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .page-sub { letter-spacing: 0.04em; font-weight: 800; text-transform: uppercase; }
 
 /* dayjob paper grain */
-body[data-theme="dayjob"]::before {
+body:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"])::before {
   content: '';
   position: fixed; z-index: 0; inset: 0; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.03'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
 }
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="dayjob"]::before { background-image: none; }
+  body:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"])::before { background-image: none; }
 }
+
+/* dayjob card geometry — more angular than OG pastel themes */
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .card { border-radius: 18px; }
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .info-card { border-radius: 12px; }
 
 /* ---- trends ---- */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -394,13 +423,14 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .onb-photo { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; }
 .onb-photo .avatar { background: var(--accent-tint); color: var(--accent-ink); font-size: 26px; }
 .onb-photo-l { font-size: 12px; color: var(--accent-ink); font-weight: 700; }
-.theme-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; }
 .theme-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); }
 .theme-swatch { width: 22px; height: 22px; border-radius: 50%; }
 .theme-swatch.girl { background: oklch(0.42 0.07 125); }
 .theme-swatch.boy { background: oklch(0.45 0.06 175); }
-.theme-swatch.dayjob { background: oklch(0.56 0.12 45); }
+.theme-swatch.dayjob-girl { background: oklch(0.50 0.13 18); }
+.theme-swatch.dayjob-boy  { background: oklch(0.42 0.09 220); }
 .onb-go { margin: 0; }
 .onb-foot { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
 

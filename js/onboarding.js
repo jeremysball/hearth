@@ -46,7 +46,7 @@ export function onboardTheme(theme) {
   $$('.theme-opt').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const colors = { girl: '#f5e1dc', boy: '#dce6f5', dayjob: '#f3ead9' };
+    const colors = { girl: '#f5e1dc', boy: '#dce6f5', 'dayjob-girl': '#f3ead9', 'dayjob-boy': '#f3e8d0', dayjob: '#f3ead9' };
     meta.content = colors[theme] || '#f3eee0';
   }
 }
