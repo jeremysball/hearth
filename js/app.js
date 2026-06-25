@@ -329,6 +329,8 @@ document.addEventListener('pointerdown', (e) => {
   if (!screen || screen.scrollTop > 0) return;
   ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
 });
+// Non-passive touchmove blocks the browser's scroll-claim so pointercancel never fires mid-pull.
+document.addEventListener('touchmove', (e) => { if (ptrActive) e.preventDefault(); }, { passive: false });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
