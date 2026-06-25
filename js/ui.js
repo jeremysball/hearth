@@ -73,9 +73,10 @@ export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => (
 
 // ---------- theme ----------
 export const THEMES = [
-  { id: 'girl', label: 'Girl', swatch: 'girl' },
-  { id: 'boy', label: 'Boy', swatch: 'boy' },
-  { id: 'dayjob', label: 'Day Job', swatch: 'dayjob' }
+  { id: 'girl',       label: 'Girl',           swatch: 'girl'       },
+  { id: 'boy',        label: 'Boy',            swatch: 'boy'        },
+  { id: 'dayjob-girl', label: 'Day Job · Girl', swatch: 'dayjob-girl' },
+  { id: 'dayjob-boy',  label: 'Day Job · Boy',  swatch: 'dayjob-boy'  }
 ];
 export function resolveMode() {
   const m = state().settings.darkMode || 'auto';
@@ -91,9 +92,11 @@ export function applyTheme() {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
     const colors = {
-      girl: { light: '#f3eee0', dark: '#211f17' },
-      boy: { light: '#eef0e4', dark: '#1c1f1b' },
-      dayjob: { light: '#f3ead9', dark: '#221d17' }
+      girl:          { light: '#f3eee0', dark: '#211f17' },
+      boy:           { light: '#eef0e4', dark: '#1c1f1b' },
+      'dayjob-girl': { light: '#f3ead9', dark: '#221d17' },
+      'dayjob-boy':  { light: '#f3ead9', dark: '#221d17' },
+      dayjob:        { light: '#f3ead9', dark: '#221d17' }
     };
     const c = colors[t] || colors.girl;
     meta.content = mode === 'dark' ? c.dark : c.light;
