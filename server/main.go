@@ -7,20 +7,27 @@ import (
 
 func main() {
 	cfg := loadConfig()
+
+	log.Printf("Hearth starting up")
+	log.Printf("  db:     %s", cfg.DBPath)
+	log.Printf("  static: %s", cfg.StaticDir)
+
 	db, err := openDB(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("opening database %s: %v", cfg.DBPath, err)
 	}
 	defer db.Close()
+	log.Printf("  db open OK")
 
 	hub := newHub()
 	mux := newRouter(db, hub)
 	addr := cfg.Host + ":" + cfg.Port
 
-	log.Printf("Hearth server listening on %s (db: %s, static: %s)", addr, cfg.DBPath, cfg.StaticDir)
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
+		log.Printf("listening on https://%s (TLS)", addr)
 		log.Fatal(http.ListenAndServeTLS(addr, cfg.CertFile, cfg.KeyFile, mux))
 	} else {
+		log.Printf("listening on http://%s", addr)
 		log.Fatal(http.ListenAndServe(addr, mux))
 	}
 }

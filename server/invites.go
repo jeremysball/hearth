@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 )
@@ -92,6 +93,7 @@ func handleJoinInvite(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		setSessionCookie(w, sessToken)
+		log.Printf("caregiver joined: name=%q family=%s", caregiverName, familyID)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(joinInviteResponse{FamilyID: familyID, CaregiverID: caregiverID})
