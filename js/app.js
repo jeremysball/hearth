@@ -12,6 +12,7 @@ import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboard
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
+import { animateGrow } from './fx.js';
 
 let current = 'home';
 const VIEWS = { home, trends, sleep, growth, profile };
@@ -21,6 +22,44 @@ const TABS = [
   { v: 'trends', icon: 'chart-bar', label: 'Trends' }, { v: 'growth', icon: 'ruler', label: 'Growth' },
   { v: 'profile', icon: 'user', label: 'Profile' }
 ];
+
+function enterTrends() {
+  const bars = [...document.querySelectorAll('#view .bar')];
+  bars.forEach((b, i) => {
+    animateGrow(b, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], i * 35);
+  });
+}
+
+function enterSleep() {
+  const C = 2 * Math.PI * 86;
+  const circles = [...document.querySelectorAll('#view .ringwrap svg circle[stroke-dasharray]')];
+  circles.forEach((c, i) => {
+    const finalDA = c.getAttribute('stroke-dasharray');
+    animateGrow(c, [
+      { strokeDasharray: `0 ${C.toFixed(2)}` },
+      { strokeDasharray: finalDA }
+    ], i * 35);
+  });
+}
+
+function enterGrowth() {
+  const poly = document.querySelector('#view .growth-svg polyline');
+  if (poly) {
+    const len = poly.getTotalLength();
+    animateGrow(poly, [
+      { strokeDasharray: String(len), strokeDashoffset: len },
+      { strokeDasharray: String(len), strokeDashoffset: 0 }
+    ], 0);
+  }
+  const polygon = document.querySelector('#view .growth-svg polygon');
+  if (polygon) {
+    animateGrow(polygon, [{ opacity: 0 }, { opacity: 0.5 }], 200);
+  }
+  const dots = [...document.querySelectorAll('#view .growth-svg circle')];
+  dots.forEach((d, i) => {
+    animateGrow(d, [{ transform: 'scale(0)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], 200 + i * 50);
+  });
+}
 
 function shell() {
   return `<main class="phone app">
@@ -42,6 +81,9 @@ export const router = {
     $('#view').innerHTML = VIEWS[view]();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
+    if (view === 'trends') enterTrends();
+    else if (view === 'sleep') enterSleep();
+    else if (view === 'growth') enterGrowth();
   },
   refresh() { if ($('#view')) $('#view').innerHTML = VIEWS[current]({}); $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current)); }
 };
