@@ -122,6 +122,29 @@ go run .
 
 To serve the frontend with hot-reload during dev, use any static file server (e.g. `python3 -m http.server 8080`) while the Go API runs separately.
 
+### Server logs
+
+The Go server logs to stdout using the standard `log` package. On startup it prints the db path, static dir, and the address it's listening on. Every `/api/` request is logged with method, path, HTTP status, and elapsed time. Static file errors (4xx/5xx) are also logged; successful asset fetches are not.
+
+Key lifecycle events — family created, caregiver joined — are logged by name.
+
+### Client debug logs
+
+The browser client logs nothing by default. To enable verbose sync/outbox tracing in the DevTools console, set the debug flag in one of two ways:
+
+```js
+// in DevTools console — persists across reloads until cleared
+localStorage.setItem('hearth.debug', '1')
+```
+
+or append `?debug` to the URL for a single session. To turn it off:
+
+```js
+localStorage.removeItem('hearth.debug')
+```
+
+Debug output is namespaced and colour-coded: `info` (green), `warn` (amber), `error` (red), `event` (blue).
+
 ## Testing
 
 Browser tests live under `tests/` and run against a self-spawned Hearth server on plain HTTP (no TLS, no Tailscale) so they work in CI:
