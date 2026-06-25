@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -86,6 +87,7 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		setSessionCookie(w, token)
+		log.Printf("family created: baby=%q caregiver=%q family=%s", req.BabyName, caregiverName, familyID)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(createFamilyResponse{FamilyID: familyID, BabyID: babyID, CaregiverID: caregiverID})

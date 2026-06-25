@@ -2,8 +2,35 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
+	"time"
 )
+
+// logMiddleware logs every request: method, path, status, and elapsed time.
+// Static file requests (no /api/ prefix) are logged at a lower signal — only
+// non-200 responses — to avoid noise from the shell assets.
+func logMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rw, r)
+		isAPI := len(r.URL.Path) > 4 && r.URL.Path[:5] == "/api/"
+		if isAPI || rw.status >= 400 {
+			log.Printf("%s %s %d %s", r.Method, r.URL.Path, rw.status, time.Since(start).Round(time.Millisecond))
+		}
+	})
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (sw *statusWriter) WriteHeader(status int) {
+	sw.status = status
+	sw.ResponseWriter.WriteHeader(status)
+}
 
 func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux := http.NewServeMux()
@@ -23,5 +50,5 @@ func newRouter(db *sql.DB, hub *Hub) http.Handler {
 	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub)))
 	mux.HandleFunc("GET /api/caregivers", requireAuth(db, handleListCaregivers(db)))
 	mux.Handle("/", http.FileServer(http.Dir(".")))
-	return mux
+	return logMiddleware(mux)
 }
