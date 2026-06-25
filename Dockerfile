@@ -12,6 +12,7 @@ COPY server/ ./server/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/hearth-server ./server
 
 FROM alpine:3.20
+RUN apk add --no-cache tini
 RUN addgroup -S hearth && adduser -S hearth -G hearth
 WORKDIR /app
 COPY --from=builder /out/hearth-server ./hearth-server
@@ -20,4 +21,4 @@ USER hearth
 ENV DB_PATH=/app/data/hearth.db
 EXPOSE 8443
 VOLUME ["/app/data"]
-ENTRYPOINT ["./hearth-server"]
+ENTRYPOINT ["/sbin/tini", "--", "./hearth-server"]
