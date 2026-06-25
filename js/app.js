@@ -12,7 +12,7 @@ import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboard
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
-import { animateGrow } from './fx.js';
+import { animateGrow, buzz } from './fx.js';
 
 let current = 'home';
 const VIEWS = { home, trends, sleep, growth, profile };
@@ -243,7 +243,7 @@ document.addEventListener('pointerdown', (e) => {
     if (enter()) {
       suppressClickUntil = Date.now() + 400;
       router.refresh();
-      if (navigator.vibrate) navigator.vibrate(12);
+      buzz(12);
     }
   }, 480);
 });
@@ -328,7 +328,7 @@ document.addEventListener('pointermove', (e) => {
   if (spinner) spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
   if (!ptrArmed && dist >= PTR_THRESHOLD) {
     ptrArmed = true;
-    if (navigator.vibrate) navigator.vibrate(12);
+    buzz(12);
   }
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
