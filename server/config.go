@@ -23,7 +23,7 @@ func loadConfig() Config {
 		CertFile:  os.Getenv("CERT_FILE"),
 		KeyFile:   os.Getenv("KEY_FILE"),
 		DBPath:    getenv("DB_PATH", "hearth.db"),
-		StaticDir: getenv("STATIC_DIR", "."),
+		StaticDir: getenv("STATIC_DIR", ""),
 	}
 }
 

@@ -61,4 +61,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.DBPath != "hearth.db" {
 		t.Errorf("DBPath = %q, want hearth.db", cfg.DBPath)
 	}
+	if cfg.StaticDir != "" {
+		t.Errorf("StaticDir = %q, want empty (embedded by default)", cfg.StaticDir)
+	}
 }
