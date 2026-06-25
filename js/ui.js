@@ -138,6 +138,11 @@ export const sheet = {
         ${opts.title ? `<div class="sheet-hd"><h3>${esc(opts.title)}</h3><button class="x" data-action="sheet:close" aria-label="Close"><svg class="icon"><use href="#x"></use></svg></button></div>` : ''}
         <div class="sheet-body">${html}</div>
       </div>`;
+    const sheetEl = scrim.querySelector('.sheet');
+    if (sheetEl) {
+      sheetEl.classList.add('sheet-opening');
+      sheetEl.addEventListener('transitionend', () => sheetEl.classList.remove('sheet-opening'), { once: true });
+    }
     requestAnimationFrame(() => scrim.classList.add('show'));
     scrim.onclick = (e) => { if (e.target === scrim) sheet.close(); };
     bindSwipe(scrim);

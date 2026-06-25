@@ -297,7 +297,14 @@ function ptrReset() {
   if (!ptr) return;
   ptr.classList.remove('ptr-spinning');
   const spinner = ptr.querySelector('.ptr-spinner');
-  if (spinner) spinner.style.transform = '';
+  if (spinner && spinner.style.transform) {
+    ptr.classList.add('ptr-releasing');
+    spinner.style.transform = 'rotate(0deg)';
+    spinner.addEventListener('transitionend', () => {
+      ptr.classList.remove('ptr-releasing');
+      spinner.style.transform = '';
+    }, { once: true });
+  }
   ptr.style.transition = 'height .3s ease-out';
   ptr.style.height = '0';
 }
