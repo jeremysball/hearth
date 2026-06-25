@@ -63,6 +63,7 @@ function enterGrowth() {
 
 function shell() {
   return `<main class="phone app">
+    <div id="ptr" class="ptr-wrap"><svg class="icon ptr-spinner"><use href="#refresh-cw"></use></svg></div>
     <div id="view" class="screen"></div>
     <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg></button>`).join('')}</nav>
   </main>`;
@@ -277,6 +278,71 @@ document.addEventListener('pointermove', (e) => {
   state().settings.cards.order = [...stack.querySelectorAll('.info-card')].map((el) => el.dataset.card);
   save(); enqueueSettingsSync();
   const d = stack.querySelector('.info-card.dragging'); if (d) d.classList.remove('dragging');
+}));
+
+// ---------- pull-to-refresh ----------
+let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
+const PTR_THRESHOLD = 70; // visual px to arm refresh
+const PTR_MAX = 80;       // visual px cap
+
+function ptrDist(raw) {
+  // Two-phase resistance: 1:1 until 40px, then 0.5 damping.
+  // Threshold (70px) reached at raw=100; cap (80px) at raw=120.
+  return raw <= 40 ? raw : 40 + (raw - 40) * 0.5;
+}
+
+function ptrReset() {
+  const ptr = document.getElementById('ptr');
+  if (!ptr) return;
+  ptr.classList.remove('ptr-spinning');
+  const spinner = ptr.querySelector('.ptr-spinner');
+  if (spinner) spinner.style.transform = '';
+  ptr.style.transition = 'height .3s ease-out';
+  ptr.style.height = '0';
+}
+
+function ptrCollapse() {
+  if (!ptrSyncing) return;
+  ptrSyncing = false;
+  clearTimeout(ptrTimeout);
+  ptrReset();
+}
+
+document.addEventListener('pointerdown', (e) => {
+  if (ptrSyncing || e.pointerType === 'mouse') return;
+  const screen = e.target.closest('.screen');
+  if (!screen || screen.scrollTop > 0) return;
+  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
+});
+document.addEventListener('pointermove', (e) => {
+  if (!ptrActive || e.pointerId !== ptrPid) return;
+  const raw = e.clientY - ptrStartY;
+  if (raw < 0) { ptrActive = false; return; }
+  const dist = Math.min(PTR_MAX, ptrDist(raw));
+  const ptr = document.getElementById('ptr');
+  if (!ptr) return;
+  ptr.style.transition = 'none';
+  ptr.style.height = dist + 'px';
+  const spinner = ptr.querySelector('.ptr-spinner');
+  if (spinner) spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
+  if (!ptrArmed && dist >= PTR_THRESHOLD) {
+    ptrArmed = true;
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
+});
+['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
+  if (!ptrActive || e.pointerId !== ptrPid) return;
+  ptrActive = false; ptrPid = null;
+  if (ptrArmed && !ptrSyncing) {
+    ptrArmed = false;
+    ptrSyncing = true;
+    document.getElementById('ptr')?.classList.add('ptr-spinning');
+    ptrTimeout = setTimeout(ptrCollapse, 4000);
+    syncOnce().then(ptrCollapse);
+  } else {
+    ptrArmed = false;
+    ptrReset();
+  }
 }));
 
 // change/input binders
