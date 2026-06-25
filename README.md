@@ -50,20 +50,20 @@ Once running, the app is reachable at `https://hearth.<your-tailnet>.ts.net:8443
 
 ### Without Docker
 
-You need **Go** (version matching the `go` directive in `server/go.mod`).
+You need **Go** (version matching the `go` directive in `go.mod`).
 
 ```bash
 cd server
 go build -o hearth-server .
-cp hearth-server ./../
 ```
 
-Then run it from the repo root (the server serves static files from `STATIC_DIR`, which defaults to the current directory):
+The frontend is embedded into the binary at build time, so `hearth-server` is self-contained — run it from wherever you like:
 
 ```bash
-cd /path/to/hearth
 ./hearth-server
 ```
+
+(`DB_PATH` still defaults to a relative `hearth.db`, so pick a consistent working directory, or set `DB_PATH` to an absolute path.)
 
 The server reads an optional `.env` file for configuration. Without one, it serves on `0.0.0.0:8443` with no TLS.
 
@@ -88,7 +88,7 @@ All server settings come from environment variables (or a `.env` file in the wor
 | `CERT_FILE`   | *(empty)*  | TLS certificate path            |
 | `KEY_FILE`    | *(empty)*  | TLS private key path            |
 | `DB_PATH`     | `hearth.db`| SQLite database path            |
-| `STATIC_DIR`  | `.`        | Directory to serve PWA files from |
+| `STATIC_DIR`  | *(empty)*  | When empty, serves the frontend embedded in the binary. When set to a path, serves frontend files live from that directory instead — set it to `.` for local development so editing `index.html`/`js/*.js` shows up on refresh without rebuilding Go. |
 
 When `CERT_FILE` and `KEY_FILE` are set, the server uses TLS. Leave them empty to serve plain HTTP.
 
@@ -113,11 +113,11 @@ Tailscale serves as the auth layer — only devices on your tailnet can reach th
 
 ## Development
 
-The PWA frontend has no build step — edit the files and refresh. For the Go backend:
+The PWA frontend has no build step — edit the files and refresh, *if* the server is running with `STATIC_DIR` set (e.g. `STATIC_DIR=. go run .` from `server/`). Without it, the server serves the frontend embedded at the last Go build, so frontend-only edits won't show up until you rebuild.
 
 ```bash
 cd server
-go run .
+STATIC_DIR=. go run .
 ```
 
 To serve the frontend with hot-reload during dev, use any static file server (e.g. `python3 -m http.server 8080`) while the Go API runs separately.
