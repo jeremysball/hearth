@@ -75,6 +75,7 @@ export function openSpinner(id) {
     if (center !== lastCenter) {
       lastCenter = center;
       items.innerHTML = trackHTML(center);
+      if (navigator.vibrate) navigator.vibrate(3);
     }
     // Residual must be measured from the rendered `center` (chosen by
     // rounding), not `offset % ITEM_H` — that modulo implicitly floors
