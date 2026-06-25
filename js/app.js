@@ -297,13 +297,20 @@ function ptrReset() {
   if (!ptr) return;
   ptr.classList.remove('ptr-spinning');
   const spinner = ptr.querySelector('.ptr-spinner');
-  if (spinner && spinner.style.transform) {
+  if (spinner && parseFloat(spinner.style.opacity) > 0) {
     ptr.classList.add('ptr-releasing');
-    spinner.style.transform = 'rotate(0deg)';
-    spinner.addEventListener('transitionend', () => {
-      ptr.classList.remove('ptr-releasing');
-      spinner.style.transform = '';
-    }, { once: true });
+    // rAF ensures .ptr-releasing transition is painted before we mutate transform/opacity
+    requestAnimationFrame(() => {
+      spinner.style.transform = 'rotate(0deg)';
+      spinner.style.opacity = '0';
+      const cleanup = () => {
+        ptr.classList.remove('ptr-releasing');
+        spinner.style.transform = '';
+        spinner.style.opacity = '';
+      };
+      spinner.addEventListener('transitionend', cleanup, { once: true });
+      setTimeout(cleanup, 700); // fallback if transitionend doesn't fire
+    });
   }
   ptr.style.transition = 'height .3s ease-out';
   ptr.style.height = '0';
@@ -332,7 +339,10 @@ document.addEventListener('pointermove', (e) => {
   ptr.style.transition = 'none';
   ptr.style.height = dist + 'px';
   const spinner = ptr.querySelector('.ptr-spinner');
-  if (spinner) spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
+  if (spinner) {
+    spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
+    spinner.style.opacity = String(Math.min(1, dist / 28));
+  }
   if (!ptrArmed && dist >= PTR_THRESHOLD) {
     ptrArmed = true;
     buzz(12);
