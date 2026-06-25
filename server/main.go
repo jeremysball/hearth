@@ -10,7 +10,11 @@ func main() {
 
 	log.Printf("Hearth starting up")
 	log.Printf("  db:     %s", cfg.DBPath)
-	log.Printf("  static: %s", cfg.StaticDir)
+	staticLabel := cfg.StaticDir
+	if staticLabel == "" {
+		staticLabel = "embedded"
+	}
+	log.Printf("  static: %s", staticLabel)
 
 	db, err := openDB(cfg.DBPath)
 	if err != nil {
@@ -20,7 +24,7 @@ func main() {
 	log.Printf("  db open OK")
 
 	hub := newHub()
-	mux := newRouter(db, hub)
+	mux := newRouter(db, hub, cfg.StaticDir)
 	addr := cfg.Host + ":" + cfg.Port
 
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
