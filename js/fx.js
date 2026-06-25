@@ -94,7 +94,7 @@ export function confetti() {
   requestAnimationFrame(draw);
 }
 
-export function animateGrow(el, keyframes, delayMs = 0) {
+export function animateGrow(el, keyframes, delayMs = 0, easing = 'cubic-bezier(0.34, 1.56, 0.64, 1)') {
   if (reducedMotion) return;
-  el.animate(keyframes, { duration: 450, delay: delayMs, easing: 'ease-out', fill: 'backwards' });
+  el.animate(keyframes, { duration: 250, delay: delayMs, easing, fill: 'backwards' });
 }

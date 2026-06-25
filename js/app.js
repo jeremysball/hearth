@@ -26,7 +26,7 @@ const TABS = [
 function enterTrends() {
   const bars = [...document.querySelectorAll('#view .bar')];
   bars.forEach((b, i) => {
-    animateGrow(b, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], i * 35);
+    animateGrow(b, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], i * 20);
   });
 }
 
@@ -38,7 +38,7 @@ function enterSleep() {
     animateGrow(c, [
       { strokeDasharray: `0 ${C.toFixed(2)}` },
       { strokeDasharray: finalDA }
-    ], i * 35);
+    ], i * 35, 'ease-out');
   });
 }
 
@@ -49,11 +49,11 @@ function enterGrowth() {
     animateGrow(poly, [
       { strokeDasharray: String(len), strokeDashoffset: len },
       { strokeDasharray: String(len), strokeDashoffset: 0 }
-    ], 0);
+    ], 0, 'ease-out');
   }
   const polygon = document.querySelector('#view .growth-svg polygon');
   if (polygon) {
-    animateGrow(polygon, [{ opacity: 0 }, { opacity: 0.5 }], 200);
+    animateGrow(polygon, [{ opacity: 0 }, { opacity: 0.5 }], 200, 'ease-out');
   }
   const dots = [...document.querySelectorAll('#view .growth-svg circle')];
   dots.forEach((d, i) => {
