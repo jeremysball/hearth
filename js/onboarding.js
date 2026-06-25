@@ -1,6 +1,6 @@
 // onboarding.js — first-run setup (name, birthdate, theme, photo, caregiver).
 import { state, save, seed, markSynced } from './store.js';
-import { $, applyTheme, toast, $$, THEMES } from './ui.js';
+import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
 
@@ -27,8 +27,21 @@ export function onboarding() {
         <input id="onb-bd" type="date" max="${new Date().toISOString().slice(0, 10)}" /></label>
 
       <div class="fld"><span class="fld-l">Theme</span>
-        <div class="theme-pick">
-          ${THEMES.map((th) => `<button type="button" class="theme-opt ${t === th.id ? 'on' : ''}" data-action="onboard:theme" data-theme="${th.id}"><span class="theme-swatch ${th.swatch}"></span><span>${th.label}</span></button>`).join('')}
+        <div class="theme-set">
+          <div class="theme-section">
+            <div class="theme-section-hd">Original</div>
+            <div class="theme-pick">
+              <button type="button" class="theme-opt ${t === 'girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl"><span class="theme-swatch girl"></span><span>Girl</span></button>
+              <button type="button" class="theme-opt ${t === 'boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
+            </div>
+          </div>
+          <div class="theme-section">
+            <div class="theme-section-hd">Day Job</div>
+            <div class="theme-pick">
+              <button type="button" class="theme-opt ${t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-girl"><span class="theme-swatch dayjob-girl"></span><span>Girl</span></button>
+              <button type="button" class="theme-opt ${t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-boy"><span class="theme-swatch dayjob-boy"></span><span>Boy</span></button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 // profile.js — baby details, reminders, units, caregivers, reset.
 import { state } from './store.js';
-import { esc, THEMES } from './ui.js';
+import { esc } from './ui.js';
 import { notifsGranted } from './reminders.js';
 
 function sw(path, on) {
@@ -13,6 +13,8 @@ function segBind(path, opts, val) {
 
 export function profile() {
   const b = state().baby, s = state().settings;
+  const themeActive = s.theme || b.theme || 'girl';
+  const thOpt = (id, sw, lbl) => `<button type="button" class="theme-opt${themeActive === id ? ' on' : ''}" data-action="theme:pick" data-theme="${id}"><span class="theme-swatch ${sw}"></span><span>${lbl}</span></button>`;
   return `
     <div class="page-hd"><h1 class="page-title">Profile</h1></div>
 
@@ -29,8 +31,15 @@ export function profile() {
 
     <div class="sec-label">Theme</div>
     <div class="card row-card">
-      <div class="set-row"><span>App theme</span>
-        <div class="theme-pick">${THEMES.map((t) => `<button type="button" class="theme-opt ${((state().settings.theme || state().baby.theme) === t.id ? 'on' : '')}" data-action="theme:pick" data-theme="${t.id}"><span class="theme-swatch ${t.swatch}"></span><span>${t.label}</span></button>`).join('')}</div>
+      <div class="theme-set">
+        <div class="theme-section">
+          <div class="theme-section-hd">Original</div>
+          <div class="theme-pick">${thOpt('girl', 'girl', 'Girl')}${thOpt('boy', 'boy', 'Boy')}</div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-hd">Day Job</div>
+          <div class="theme-pick">${thOpt('dayjob-girl', 'dayjob-girl', 'Girl')}${thOpt('dayjob-boy', 'dayjob-boy', 'Boy')}</div>
+        </div>
       </div>
     </div>
 
