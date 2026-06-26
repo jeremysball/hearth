@@ -480,8 +480,30 @@ function tick() {
 setInterval(tick, 60000);
 
 // ---------- init ----------
-function init() {
+async function init() {
   applyTheme();
+
+  const launch = new URLSearchParams(location.search).get('launch');
+  if (launch) {
+    history.replaceState(null, '', '/');
+    if (!state().setup) {
+      const res = await fetch('/api/launch/' + launch, { credentials: 'include' });
+      if (!res.ok) {
+        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Install link expired</h1><p class="onb-sub">This install link has expired — ask to be invited again.</p></div></div>`;
+        return;
+      }
+      const syncRes = await fetch('/api/sync', { credentials: 'include' });
+      if (!syncRes.ok) {
+        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Something went wrong</h1><p class="onb-sub">Could not load your data. Please try again.</p></div></div>`;
+        return;
+      }
+      const data = await syncRes.json();
+      applySyncResponse(data);
+      state().setup = true;
+      save();
+    }
+  }
+
   const joinMatch = location.pathname.match(/^\/join\/([^/]+)$/);
   if (joinMatch && !state().setup) {
     $('#app').innerHTML = joinView(joinMatch[1]);
@@ -500,6 +522,14 @@ function init() {
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  let refreshing = false;
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) { hadController = true; return; }
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
