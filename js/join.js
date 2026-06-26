@@ -18,6 +18,28 @@ export function joinView(token) {
   </div>`;
 }
 
+function installGuideView() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const steps = isIOS
+    ? `<ol class="install-steps">
+        <li>Tap the <svg class="icon icon-sm"><use href="#share-2"></use></svg> Share button in Safari</li>
+        <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+        <li>Tap <strong>Add</strong></li>
+      </ol>`
+    : `<p class="onb-sub">Chrome will prompt you to install — tap <strong>Install</strong> when it appears, or use the browser menu → <strong>Add to Home Screen</strong>.</p>`;
+  return `<div class="onboard">
+    <div class="onb-top">
+      <div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div>
+      <h1 class="onb-title">You're in! Now install Hearth</h1>
+      <p class="onb-sub">Follow these steps to add Hearth to your Home Screen.</p>
+    </div>
+    <div class="onb-card">
+      ${steps}
+      <p class="install-note">This install link expires in 10 minutes.</p>
+    </div>
+  </div>`;
+}
+
 export async function joinFinish(token) {
   const nameInput = $('#join-name');
   const name = nameInput.value.trim();
@@ -36,6 +58,19 @@ export async function joinFinish(token) {
     if (!res.ok) throw new Error('join failed: ' + res.status);
   } catch (e) {
     toast('Could not join — check the link or your connection');
+    return;
+  }
+
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    try {
+      const ltRes = await fetch('/api/launch-tokens', { method: 'POST', credentials: 'include' });
+      if (!ltRes.ok) throw new Error('launch token failed');
+      const { token: launchToken } = await ltRes.json();
+      history.replaceState(null, '', '/?launch=' + launchToken);
+    } catch (_) {
+      // best-effort — cookie sharing works on iOS 16.4+ even without token
+    }
+    $('#app').innerHTML = installGuideView();
     return;
   }
 
