@@ -96,18 +96,28 @@ if (!window.matchMedia('(display-mode: standalone)').matches) {
 ```js
 const launch = new URLSearchParams(location.search).get('launch');
 if (launch) {
-  const res = await fetch('/api/launch/' + launch, { credentials: 'include' });
-  history.replaceState(null, '', '/');
-  if (!res.ok) {
-    $('#app').innerHTML = `<div class="onboard"><p class="onb-sub">This install link has expired — ask to be invited again.</p></div>`;
-    return;
+  history.replaceState(null, '', '/'); // always strip — token is one-use and stale on repeat opens
+  if (!state().setup) {
+    const res = await fetch('/api/launch/' + launch, { credentials: 'include' });
+    if (!res.ok) {
+      $('#app').innerHTML = `<div class="onboard"><p class="onb-sub">This install link has expired — ask to be invited again.</p></div>`;
+      return;
+    }
+    // cookie now set — sync and save so state().setup becomes true for future opens
+    const syncRes = await fetch('/api/sync', { credentials: 'include' });
+    const data = await syncRes.json();
+    applySyncResponse(data);
+    state().setup = true;
+    save();
   }
-  // cookie now set — fall through to normal boot
+  // fall through to normal boot whether first open or returning
 }
 // existing join-path check follows
 ```
 
 `init()` must be made `async` if it is not already.
+
+**Stale bookmark behaviour:** the home screen icon permanently points to `/?launch=<token>`. On the first open the token is redeemed and `state().setup` is saved as `true`. On every subsequent open `state().setup` is already `true` so the token redemption is skipped and the app boots normally. If the user clears PWA storage, `setup` resets to `false` and the 410 response correctly blocks boot — they need a new invite since their session is also gone.
 
 ## Token parameters
 
