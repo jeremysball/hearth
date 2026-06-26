@@ -73,6 +73,25 @@ export const $ = (sel, root) => (root || document).querySelector(sel);
 export const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
 export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+export function positionThumb(group) {
+  const thumb = group.querySelector('.seg-thumb');
+  const active = group.querySelector('.seg-opt.on');
+  if (!thumb || !active) return;
+  const firstOpt = group.querySelector('.seg-opt');
+  thumb.style.width = active.offsetWidth + 'px';
+  thumb.style.transform = `translateX(${active.offsetLeft - firstOpt.offsetLeft}px)`;
+}
+
+function initThumbs(container) {
+  $$('.segctl', container).forEach(group => {
+    const thumb = group.querySelector('.seg-thumb');
+    if (!thumb) return;
+    thumb.style.transition = 'none';
+    positionThumb(group);
+    requestAnimationFrame(() => { thumb.style.transition = ''; });
+  });
+}
+
 // ---------- theme ----------
 export const THEMES = [
   { id: 'girl',       label: 'Girl',           swatch: 'girl'       },
@@ -145,7 +164,7 @@ export const sheet = {
       sheetEl.classList.add('sheet-opening');
       sheetEl.addEventListener('transitionend', () => sheetEl.classList.remove('sheet-opening'), { once: true });
     }
-    requestAnimationFrame(() => scrim.classList.add('show'));
+    requestAnimationFrame(() => { scrim.classList.add('show'); initThumbs(scrim); });
     scrim.onclick = (e) => { if (e.target === scrim) sheet.close(); };
     bindSwipe(scrim);
   },

@@ -147,6 +147,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   :root { animation: none; --fire-a: 0.09; --fire-b: 0.06; --fire-c: 0.10; }
   .tok, .card, .info-card, .tabbar { animation: none; }
+  .seg-thumb { transition: transform 0.12s ease, width 0.12s ease; }
 }
 
 .screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
@@ -724,22 +725,40 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
 
 .segctl {
-  display: flex; gap: 4px; border-radius: 13px; padding: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex; gap: 0; border-radius: 13px; padding: 4px;
   background-color: var(--accent-tint);
-  background-image: linear-gradient(180deg, oklch(0.50 0.04 55 / 0.06) 0%, transparent 25%);
-  box-shadow: 0 1px 4px var(--mat-shadow) inset;
+  box-shadow: 0 1px 3px var(--mat-shadow) inset, 0 -1px 0 var(--mat-highlight) inset;
 }
 .segctl.sm { display: inline-flex; }
-.seg-opt { all: unset; cursor: pointer; flex: 1; text-align: center; padding: 9px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--soft); transition: all .15s; white-space: nowrap; }
-.segctl.sm .seg-opt { padding: 7px 14px; flex: 0 0 auto; }
-.seg-opt.on {
+.seg-thumb {
+  position: absolute;
+  top: 4px; bottom: 4px; left: 0;
+  border-radius: 10px;
+  pointer-events: none;
   background-color: var(--surface);
-  background-image: linear-gradient(180deg, oklch(0.97 0.01 80 / 0.55) 0%, var(--surface) 100%);
-  color: var(--accent-ink);
+  background-image:
+    radial-gradient(ellipse 110% 85% at 50% 10%, oklch(0.97 0.012 70 / 0.5) 0%, transparent 45%),
+    radial-gradient(circle at 30% 115%, var(--ember-rim) 0%, transparent 50%);
+  background-size: 100% 100%, 100% 100%;
   box-shadow:
-    0 1px 0 oklch(0.97 0.01 80 / 0.75) inset,
-    0 2px 8px var(--mat-cast);
+    0 1.5px 0 oklch(0.98 0.01 75 / 0.6) inset,
+    0 -2px 3px -1px oklch(0.30 0.06 44 / 0.25) inset,
+    0 2px 6px var(--mat-cast),
+    0 calc(2px + var(--fire-a) * 3px) calc(5px + var(--fire-a) * 3px) -1px var(--ember-rim);
+  transition:
+    transform 0.42s cubic-bezier(0.34, 1.4, 0.5, 1),
+    width 0.42s cubic-bezier(0.34, 1.4, 0.5, 1);
 }
+.seg-opt {
+  all: unset; cursor: pointer; flex: 1; text-align: center; padding: 9px 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; color: var(--soft);
+  position: relative; z-index: 1; white-space: nowrap;
+  transition: color .15s;
+}
+.segctl.sm .seg-opt { padding: 7px 14px; flex: 0 0 auto; }
+.seg-opt.on { color: var(--accent-ink); }
 
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .28s; }
