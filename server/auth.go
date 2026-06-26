@@ -41,6 +41,20 @@ func createSession(db *sql.DB, caregiverID, familyID string) (string, error) {
 	return token, nil
 }
 
+func createSessionTx(tx *sql.Tx, caregiverID, familyID string) (string, error) {
+	token, err := newSessionToken()
+	if err != nil {
+		return "", err
+	}
+	now := nowISO()
+	_, err = tx.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
+		token, caregiverID, familyID, now, now)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
 func setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,

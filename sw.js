@@ -1,10 +1,13 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T00:17'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T15:27'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './manifest.webmanifest',
+  './assets/textures/plaster.webp',
+  './assets/textures/clay.webp',
+  './assets/textures/linen.webp',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
@@ -53,10 +56,10 @@ self.addEventListener('fetch', (e) => {
 
   }
 
-  // Fonts & icons (cross-origin CDN): cache-first runtime cache.
+  // Fonts & icons (cross-origin CDN): cache-first, stored in shell cache.
   if (url.origin !== location.origin) {
     e.respondWith(
-      caches.open('hearth-2026-06-25T21:08runtime').then(async (cache) => {
+      caches.open(VERSION).then(async (cache) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         try {
@@ -70,6 +73,9 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
+
+  // API requests must always hit the network — never serve from cache.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Same-origin assets: cache-first.
   e.respondWith(
