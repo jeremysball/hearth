@@ -95,7 +95,7 @@ async function runSuite(base) {
     !!serverEntry && serverEntry.amount === Number(spunValue),
     serverEntry ? serverEntry.amount : 'not found');
 
-  exitCode = tally() === 0 ? 0 : 1;
+  const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
 }

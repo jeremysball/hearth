@@ -184,7 +184,7 @@ async function runSuite(base) {
   check('#ptr collapses after 4s timeout', ptrAfterTimeout.height === 0, ptrAfterTimeout.height);
   check('ptr-spinning class removed after timeout', !ptrAfterTimeout.spinning);
 
-  exitCode = tally() === 0 ? 0 : 1;
+  const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
 }
