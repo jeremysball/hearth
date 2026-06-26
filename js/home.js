@@ -151,7 +151,8 @@ function hiddenRow() {
 }
 
 const QUICK = [
-  { t: 'sleep', primary: true }, { t: 'feed' }, { t: 'bottle' }, { t: 'diaper' }, { t: 'medicine' }
+  { t: 'sleep', primary: true }, { t: 'feed' }, { t: 'bottle' }, { t: 'diaper' },
+  { t: 'medicine' }, { t: 'play' }, { t: 'bath' }
 ];
 
 export function home() {
