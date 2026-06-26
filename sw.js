@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T14:37'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T14:54'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
