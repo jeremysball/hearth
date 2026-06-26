@@ -13,34 +13,64 @@ function getCtx() {
 
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Cubically-decaying noise burst — simulates the transient snap of a mallet or pick attack.
+function noiseSnap(ctx, dest, t, durSec, peakGain) {
+  const len = Math.ceil(ctx.sampleRate * durSec);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  const src = ctx.createBufferSource();
+  const g = ctx.createGain();
+  src.buffer = buf;
+  g.gain.setValueAtTime(peakGain, t);
+  src.connect(g).connect(dest);
+  src.start(t);
+}
+
 export function chime() {
   const ctx = getCtx(); if (!ctx) return;
   const now = ctx.currentTime;
-  [523.25, 659.25, 783.99].forEach((freq, i) => {
+  [1046.5, 1318.51, 1567.98].forEach((freq, i) => {  // C6 – E6 – G6
+    const t = now + i * 0.065;
+    noiseSnap(ctx, ctx.destination, t, 0.012, 0.14);
+    // Fundamental starts 3% sharp then settles — the pitch "snap" that reads as bounce.
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const env = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.15, now + i * 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.4);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(now + i * 0.08);
-    osc.stop(now + i * 0.08 + 0.45);
+    osc.frequency.setValueAtTime(freq * 1.03, t);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.035);
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.linearRampToValueAtTime(0.14, t + 0.003);
+    env.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+    osc.connect(env).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.56);
+    // Inharmonic partial at 2.756× — characteristic marimba overtone, decays 4× faster than fundamental.
+    const osc2 = ctx.createOscillator();
+    const env2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.value = freq * 2.756;
+    env2.gain.setValueAtTime(0.0001, t);
+    env2.gain.linearRampToValueAtTime(0.055, t + 0.002);
+    env2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc2.connect(env2).connect(ctx.destination);
+    osc2.start(t); osc2.stop(t + 0.13);
   });
 }
 
 export function tick() {
   const ctx = getCtx(); if (!ctx) return;
   const now = ctx.currentTime;
+  noiseSnap(ctx, ctx.destination, now, 0.005, 0.10);
+  // Triangle sweep 1400→900 Hz: downward glide reads as a light spring-detent "boing".
   const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = 880;
-  gain.gain.setValueAtTime(0.08, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(now);
-  osc.stop(now + 0.08);
+  const env = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1400, now);
+  osc.frequency.exponentialRampToValueAtTime(900, now + 0.055);
+  env.gain.setValueAtTime(0.10, now);
+  env.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  osc.connect(env).connect(ctx.destination);
+  osc.start(now); osc.stop(now + 0.08);
 }
 
 function hapticAudio(ms) {

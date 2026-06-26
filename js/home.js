@@ -35,6 +35,7 @@ export function enterTodayEditMode() {
 let cardEditMode = false;
 export function exitCardEditMode() { cardEditMode = false; }
 export function enterCardEditMode() {
+  if (cardEditMode) return false;
   if ((state().settings.cards.order || CARD_KEYS).filter((k) => state().settings.cards[k]).length < 2) return false;
   cardEditMode = true;
   return true;
@@ -172,7 +173,7 @@ export function home() {
     </div>
     ${heroCard()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
-    <div class="info-stack" data-longpress="cards">
+    <div class="info-stack" data-longpress="cards"${cardEditMode ? ' data-card-edit' : ''}>
       ${(cards.order || CARD_KEYS).filter((k) => cards[k]).map((k) => CARD_RENDER[k]()).join('')}
     </div>
     ${hiddenRow()}
