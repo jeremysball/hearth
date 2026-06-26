@@ -4,9 +4,15 @@
   "description": "Hearth baby tracker PWA",
   "scripts": {
     "test": "node tests/run.js",
-    "test:spinner": "node tests/spinner.test.js"
+    "test:spinner": "node tests/spinner.test.js",
+    "lint": "eslint .",
+    "check": "git ls-files '*.js' | xargs -P4 -I{} node --check {} && eslint .",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "globals": "^17.7.0",
     "playwright": "^1.61.1"
   }
 }

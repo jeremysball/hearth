@@ -285,7 +285,7 @@ async function runSuite(base) {
   }
   await closeOverlay();
 
-  exitCode = tally() === 0 ? 0 : 1;
+  const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
 }
