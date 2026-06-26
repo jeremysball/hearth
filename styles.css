@@ -504,12 +504,6 @@ body {
     oklch(0.13 0.012 50) 100%
   );
 }
-[data-mode="dark"] .tabbar,
-[data-mode="dark"] .tok,
-[data-mode="dark"] .card,
-[data-mode="dark"] .info-card {
-  animation-name: fire-a-dark, fire-b-dark, fire-c-dark;
-}
 [data-mode="dark"] .play,   [data-mode="dark"] .tone-play   { --tc: oklch(0.72 0.09 280); --tcb: oklch(0.30 0.05 285); }
 [data-mode="dark"] .bath,   [data-mode="dark"] .tone-bath   { --tc: oklch(0.70 0.085 220); --tcb: oklch(0.28 0.05 215); }
 [data-mode="dark"] .sleep,  [data-mode="dark"] .tone-sleep  { --tc: oklch(0.80 0.12 145); --tcb: oklch(0.22 0.06 143); }
