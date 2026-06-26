@@ -476,6 +476,10 @@ async function init() {
         return;
       }
       const syncRes = await fetch('/api/sync', { credentials: 'include' });
+      if (!syncRes.ok) {
+        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Something went wrong</h1><p class="onb-sub">Could not load your data. Please try again.</p></div></div>`;
+        return;
+      }
       const data = await syncRes.json();
       applySyncResponse(data);
       state().setup = true;
