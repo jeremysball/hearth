@@ -16,7 +16,7 @@ Hearth is a free, private baby tracker — an alternative to Huckleberry.
 - No framework. Vanilla JS PWA + Go backend + SQLite.
 - Lucide icons only (vendored locally as an inline SVG sprite in `index.html`'s `<body>`), Playfair Display for the baby's name and the hero timer, Archivo for everything else.
 - Round everything you touch: pills for controls, big radii for cards, circles for identity.
-- One ambient animation at a time.
+- One ambient animation concept at a time. The fire system is the explicit exception: `fire-a`, `fire-b`, and `fire-c` are three coprime-period keyframes that together constitute a single fire ambient effect — three components is the minimum to avoid obvious periodicity in the flicker.
 - Follow Conventional Commits for git messages.
 - Keep the README current with how to install and run.
 - **Regenerate PNG icons after any change to `icons/hearth-icon.svg`.** Run: `rsvg-convert -w 192 -h 192 icons/hearth-icon.svg -o icons/icon-192.png && rsvg-convert -w 512 -h 512 icons/hearth-icon.svg -o icons/icon-512.png` for the standard icons. For the maskable icon, build a wrapper SVG with `#fbf3f0` background and the icon scaled to 358×358 centered on a 512×512 canvas (77px padding each side), then rasterize to `icons/icon-maskable-512.png`.
