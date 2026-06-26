@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T05:31'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T14:37'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -73,6 +73,9 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
+
+  // API requests must always hit the network — never serve from cache.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Same-origin assets: cache-first.
   e.respondWith(
