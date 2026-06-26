@@ -123,7 +123,7 @@ body {
 
 .tabbar {
   flex: 0 0 auto; display: flex; justify-content: space-around; align-items: center;
-  padding: 6px 0 calc(8px + env(safe-area-inset-bottom));
+  padding: 6px 0 8px;
   background-color: var(--surface);
   background-image:
     linear-gradient(180deg, oklch(0.97 0.01 80 / 0.4) 0%, transparent 15%),
@@ -135,6 +135,7 @@ body {
     0 -6px 24px var(--mat-cast),
     0 -1px 0 oklch(0.97 0.01 80 / 0.4);
 }
+@media (display-mode: standalone) { .tabbar { padding-bottom: max(8px, env(safe-area-inset-bottom)); } }
 .tab { all: unset; cursor: pointer; font-size: 23px; color: var(--muted); padding: 6px 18px; border-radius: 14px; transition: color .15s; }
 .tab.on { color: var(--accent); }
 
@@ -504,6 +505,7 @@ body {
     0 -6px 28px oklch(0 0 0 / 0.55),
     0 -1px 0 oklch(0.58 0.20 46 / 0.28);
 }
+[data-mode="dark"] .theme-opt { box-shadow: 0 2px 6px oklch(0 0 0 / .2), 0 1px 2px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .12), inset 0 0 10px oklch(1 0 0 / .04); }
 
 /* dayjob category tone overrides */
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .diaper,
@@ -643,7 +645,7 @@ input[type="number"] { max-width: 140px; text-align: center; }
 .stepper-btn { all: unset; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, color-mix(in oklch, var(--accent-tint) 60%, white 40%) 0%, var(--accent-tint) 100%); color: var(--accent-ink); font-size: 18px; font-weight: 700; flex-shrink: 0; }
 .stepper-btn:first-of-type { border-radius: 13px 0 0 13px; border: 1.5px solid var(--hair); border-right: 0; box-shadow: inset 0 1px 0 oklch(1 0 0 / .6); }
 .stepper-btn:last-of-type { border-radius: 0 13px 13px 0; border: 1.5px solid var(--hair); border-left: 0; box-shadow: inset 0 1px 0 oklch(1 0 0 / .6); }
-.stepper-btn:first-of-type:active, .stepper-btn:last-of-type:active { background: var(--accent-tint); box-shadow: inset 0 2px 4px oklch(0 0 0 / .1); }
+.stepper-btn.pressing { background: var(--accent-tint); box-shadow: inset 0 2px 4px oklch(0 0 0 / .1); }
 textarea { resize: none; }
 input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
@@ -665,6 +667,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     0 1px 0 oklch(0.97 0.01 80 / 0.75) inset,
     0 2px 8px var(--mat-cast);
 }
+.segctl[data-draggable] { touch-action: none; transform-origin: center; }
 
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .28s; }
@@ -686,7 +689,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sheet-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; touch-action: none; }
 .sheet-hd h3 { font-family: "Archivo"; font-size: 19px; font-weight: 700; margin: 0; }
 .sheet-hd .x { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--hair); display: flex; align-items: center; justify-content: center; color: var(--soft); }
-.sheet-body { display: flex; flex-direction: column; gap: 14px; }
+.sheet-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
 .sheet-form .sheet-body { gap: 13px; }
 .btn-primary {
   all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -801,3 +804,14 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-type { display: flex; align-items: center; gap: 6px; }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
+
+/* ---- glassmorphism ---- */
+@supports (backdrop-filter: blur(1px)) {
+  .phone { background-color: transparent; }
+  .card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .info-card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .sheet { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  [data-mode="dark"] .card,
+  [data-mode="dark"] .info-card,
+  [data-mode="dark"] .sheet { background: oklch(0.24 0.016 55 / 0.70); }
+}
