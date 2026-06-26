@@ -468,3 +468,14 @@ input[type="datetime-local"] { min-width: 0; max-width: 100%; }
 .spinner-type { display: flex; align-items: center; gap: 6px; }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
+
+/* ---- glassmorphism ---- */
+@supports (backdrop-filter: blur(1px)) {
+  .phone { background-color: transparent; }
+  .card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .info-card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .sheet { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  [data-mode="dark"] .card,
+  [data-mode="dark"] .info-card,
+  [data-mode="dark"] .sheet { background: oklch(0.24 0.016 55 / 0.70); }
+}
