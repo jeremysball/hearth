@@ -1,6 +1,6 @@
 // Hearth PWA service worker
 const VERSION = 'hearth-2026-06-26T03:56Z'; // Must match <meta name="version"> in index.html
-const RUNTIME = VERSION + 'runtime';
+const RUNTIME = 'hearth-runtime'; // static — font/icon cache survives deploys
 const SHELL = [
   './',
   './index.html',
