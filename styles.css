@@ -67,10 +67,8 @@ body {
   --pad: 22px; width: 100%; max-width: 432px; height: 100%; flex: 1; min-height: 0;
   background-color: var(--bg);
   background-image:
-    radial-gradient(ellipse 80% 60% at 30% 5%, var(--mat-highlight), transparent 65%),
-    var(--tex-plaster);
-  background-size: 100% 100%, 320px 320px;
-  background-blend-mode: normal, soft-light;
+    radial-gradient(ellipse 80% 60% at 30% 5%, var(--mat-highlight), transparent 65%);
+  background-size: 100% 100%;
   display: flex; flex-direction: column; overflow: hidden;
   transition: background-color .4s ease; position: relative;
 }
@@ -548,10 +546,8 @@ body[data-mode="dark"] {
 [data-mode="dark"] .phone {
   box-shadow: 0 0 0 1px oklch(0.28 0.03 44);
   background-image:
-    radial-gradient(ellipse 85% 60% at 18% 108%, oklch(0.58 0.24 42 / 0.50), transparent 65%),
-    var(--tex-plaster);
-  background-size: 100% 100%, 320px 320px;
-  background-blend-mode: normal, multiply;
+    radial-gradient(ellipse 85% 60% at 18% 108%, oklch(0.58 0.24 42 / 0.18), transparent 60%);
+  background-size: 100% 100%;
 }
 [data-mode="dark"] input, [data-mode="dark"] select, [data-mode="dark"] textarea { background: oklch(0.15 0.012 52); border-color: var(--hair); color: var(--ink); }
 [data-mode="dark"] .scrim { background: oklch(0 0 0 / 0); }
