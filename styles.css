@@ -248,6 +248,7 @@ body {
 [data-mode="dark"] .sheet { background: var(--bg); }
 [data-mode="dark"] .toast { background: oklch(0.88 0.01 70); color: oklch(0.2 0.014 50); }
 [data-mode="dark"] .tabbar { background: var(--surface); border-color: var(--hair); }
+[data-mode="dark"] .theme-opt { box-shadow: 0 2px 6px oklch(0 0 0 / .2), 0 1px 2px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .12), inset 0 0 10px oklch(1 0 0 / .04); }
 
 /* dayjob category tone overrides */
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .diaper,

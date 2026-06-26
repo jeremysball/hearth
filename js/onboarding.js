@@ -27,21 +27,9 @@ export function onboarding() {
         <input id="onb-bd" type="date" max="${new Date().toISOString().slice(0, 10)}" /></label>
 
       <div class="fld"><span class="fld-l">Theme</span>
-        <div class="theme-set">
-          <div class="theme-section">
-            <div class="theme-section-hd">Original</div>
-            <div class="theme-pick">
-              <button type="button" class="theme-opt ${t === 'girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl"><span class="theme-swatch girl"></span><span>Girl</span></button>
-              <button type="button" class="theme-opt ${t === 'boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
-            </div>
-          </div>
-          <div class="theme-section">
-            <div class="theme-section-hd">Day Job</div>
-            <div class="theme-pick">
-              <button type="button" class="theme-opt ${t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-girl"><span class="theme-swatch dayjob-girl"></span><span>Girl</span></button>
-              <button type="button" class="theme-opt ${t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-boy"><span class="theme-swatch dayjob-boy"></span><span>Boy</span></button>
-            </div>
-          </div>
+        <div class="theme-pick" style="padding: 8px 0;">
+          <button type="button" class="theme-opt ${t === 'girl' || t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl"><span class="theme-swatch girl"></span><span>Girl</span></button>
+          <button type="button" class="theme-opt ${t === 'boy' || t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
         </div>
       </div>
 
@@ -59,7 +47,7 @@ export function onboardTheme(theme) {
   $$('.theme-opt').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const colors = { girl: '#f5e1dc', boy: '#dce6f5', 'dayjob-girl': '#f3ead9', 'dayjob-boy': '#f3e8d0', dayjob: '#f3ead9' };
+    const colors = { girl: '#f3eee0', boy: '#eef0e4' };
     meta.content = colors[theme] || '#f3eee0';
   }
 }
