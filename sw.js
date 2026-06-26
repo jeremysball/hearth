@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T00:17'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T02:25'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -22,7 +22,8 @@ const SHELL = [
   './js/onboarding.js',
   './js/sync.js',
   './js/join.js',
-  './js/fx.js'
+  './js/fx.js',
+  './js/log.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -47,7 +48,7 @@ self.addEventListener('fetch', (e) => {
   // App navigations: network-first, fall back to cached shell (offline).
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req).catch(() => caches.match('./index.html'))
+      fetch(req).catch(() => caches.match('/index.html'))
     );
     return;
 
@@ -56,7 +57,7 @@ self.addEventListener('fetch', (e) => {
   // Fonts & icons (cross-origin CDN): cache-first runtime cache.
   if (url.origin !== location.origin) {
     e.respondWith(
-      caches.open('hearth-2026-06-25T21:08runtime').then(async (cache) => {
+      caches.open(VERSION + '-runtime').then(async (cache) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         try {
