@@ -149,7 +149,7 @@ async function runSuite(base) {
   check('no bar animations under prefers-reduced-motion', reducedBarAnims === 0, reducedBarAnims);
   await page2.close();
 
-  exitCode = tally() === 0 ? 0 : 1;
+  const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
 }

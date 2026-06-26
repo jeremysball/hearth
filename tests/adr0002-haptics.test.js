@@ -107,7 +107,7 @@ async function runSuite(base) {
   check('fling haptic count matches row count (within 1)', Math.abs(vibsFling.length - expectedRows) <= 1, `${vibsFling.length} vs ${expectedRows}`);
   await closeOverlay();
 
-  exitCode = tally() === 0 ? 0 : 1;
+  const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
 }
