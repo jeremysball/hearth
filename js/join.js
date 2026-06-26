@@ -18,7 +18,7 @@ export function joinView(token) {
   </div>`;
 }
 
-function installGuideView() {
+function installGuideView(ttlMin = 10) {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const steps = isIOS
     ? `<ol class="install-steps">
@@ -35,7 +35,7 @@ function installGuideView() {
     </div>
     <div class="onb-card">
       ${steps}
-      <p class="install-note">This install link expires in 10 minutes.</p>
+      <p class="install-note">This install link expires in ${ttlMin} minute${ttlMin !== 1 ? 's' : ''}.</p>
     </div>
   </div>`;
 }
@@ -62,15 +62,17 @@ export async function joinFinish(token) {
   }
 
   if (!window.matchMedia('(display-mode: standalone)').matches) {
+    let ttlMin = 10;
     try {
       const ltRes = await fetch('/api/launch-tokens', { method: 'POST', credentials: 'include' });
       if (!ltRes.ok) throw new Error('launch token failed');
-      const { token: launchToken } = await ltRes.json();
-      history.replaceState(null, '', '/?launch=' + launchToken);
+      const lt = await ltRes.json();
+      if (lt.ttlMin) ttlMin = lt.ttlMin;
+      history.replaceState(null, '', '/?launch=' + lt.token);
     } catch (_) {
       // best-effort — cookie sharing works on iOS 16.4+ even without token
     }
-    $('#app').innerHTML = installGuideView();
+    $('#app').innerHTML = installGuideView(ttlMin);
     return;
   }
 
