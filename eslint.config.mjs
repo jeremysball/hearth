@@ -50,4 +50,13 @@ export default [
       globals: { ...globals.node, ...globals.browser },
     },
   },
+
+  // Test files also live under js/ (e.g. js/store.test.js, run via `node:test`).
+  // The js/**/*.js block above only gives them browser globals; layer Node globals
+  // on top for ANY *.test.js regardless of directory. Only contributes globals, so
+  // sourceType (module under js/, commonjs under tests/) is left intact by the merge.
+  {
+    files: ['**/*.test.js'],
+    languageOptions: { globals: { ...globals.node } },
+  },
 ];
