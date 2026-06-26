@@ -346,8 +346,8 @@ document.addEventListener('pointerdown', (e) => {
   if (!screen || screen.scrollTop > 0) return;
   ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
 });
-// Non-passive touchmove blocks the browser's scroll-claim so pointercancel never fires mid-pull.
-document.addEventListener('touchmove', (e) => { if (ptrActive) e.preventDefault(); }, { passive: false });
+// Non-passive touchmove blocks the browser's scroll-claim so pointercancel never fires mid-pull or mid-drag.
+document.addEventListener('touchmove', (e) => { if (ptrActive || dragKey) e.preventDefault(); }, { passive: false });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
@@ -521,7 +521,7 @@ async function init() {
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   let refreshing = false;
   let hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
