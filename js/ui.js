@@ -48,7 +48,7 @@ export const fmt = {
 // type → icon + label + tone class
 export const TYPES = {
   sleep: { icon: 'moon', label: 'Sleep', tone: 'sleep' },
-  feed: { icon: 'droplet', label: 'Nursing', tone: 'feed' },
+  feed: { icon: 'baby', label: 'Nursing', tone: 'feed' },
   bottle: { icon: 'baby-bottle', label: 'Bottle', tone: 'feed' },
   diaper: { icon: 'droplet', label: 'Diaper', tone: 'diaper' },
   medicine: { icon: 'pill', label: 'Medicine', tone: 'med' },
