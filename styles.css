@@ -7,7 +7,7 @@ input, select, textarea, button { font-family: inherit; }
 input, textarea, [contenteditable] { user-select: text; }
 
 body {
-  font-family: "Archivo", system-ui, sans-serif;
+  font-family: var(--font-sans);
   background: radial-gradient(120% 80% at 50% 0%, var(--page-glow), transparent 70%), var(--page);
   display: flex; align-items: center; justify-content: center;
   height: 100dvh; overflow: hidden; color: var(--ink);
@@ -19,11 +19,11 @@ body {
 /* ---- themes ---- */
 :root, [data-theme="girl"] {
   --page:    oklch(0.828 0.125 40); --page-glow: oklch(0.78 0.17 42 / .75);
-  --bg:      oklch(0.882 0.100 42); --surface: oklch(0.922 0.070 46);
+  --bg:          oklch(0.882 0.120 42); --surface: oklch(0.918 0.092 46);
   --ink: oklch(0.28 0.045 48); --soft: oklch(0.44 0.042 50); --muted: oklch(0.58 0.034 53);
-  --hair:    oklch(0.820 0.048 48);
+  --hair:        oklch(0.820 0.062 48);
   --accent: oklch(0.56 0.12 45); --accent-ink: oklch(0.46 0.115 43);
-  --accent-soft: oklch(0.86 0.06 50); --accent-tint: oklch(0.91 0.038 54);
+  --accent-soft: oklch(0.86 0.082 50); --accent-tint: oklch(0.905 0.055 54);
   --on-accent: oklch(0.985 0.012 70);
   --good: oklch(0.60 0.10 145); --good-deep: oklch(0.46 0.085 145); --good-halo: oklch(0.87 0.06 142);
   --good-tint: oklch(0.91 0.05 142 / .5); --ring-track: oklch(0.88 0.028 62);
@@ -40,17 +40,34 @@ body {
   --ember-mid:  oklch(0.74 0.19 42);
   --ember-cool: oklch(0.58 0.16 33);
   --ember-rim:  oklch(0.70 0.175 44 / 0.55);
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --card-bg: var(--surface);
+  --light-x: 30%; --light-y: 6%;
 }
 [data-theme="boy"] {
   --page: oklch(0.940 0.058 175); --page-glow: oklch(0.88 0.095 185 / .65);
-  --bg: oklch(0.956 0.048 172); --surface: oklch(0.978 0.032 172);
+  --bg:          oklch(0.950 0.066 172); --surface: oklch(0.968 0.050 172);
   --ink: oklch(0.30 0.035 195); --soft: oklch(0.45 0.032 192); --muted: oklch(0.59 0.028 188);
-  --hair: oklch(0.88 0.02 178);
+  --hair:        oklch(0.88 0.034 178);
   --accent: oklch(0.52 0.085 185); --accent-ink: oklch(0.42 0.08 187);
-  --accent-soft: oklch(0.85 0.05 180); --accent-tint: oklch(0.93 0.028 178);
+  --accent-soft: oklch(0.85 0.070 180); --accent-tint: oklch(0.922 0.044 178);
   --on-accent: oklch(0.985 0.01 175);
   --good: oklch(0.60 0.095 150); --good-deep: oklch(0.46 0.08 150); --good-halo: oklch(0.87 0.055 148);
   --good-tint: oklch(0.91 0.048 148 / .5); --ring-track: oklch(0.89 0.018 178);
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+}
+
+:is([data-theme="girl"], [data-theme="boy"]):not([data-mode="dark"]) {
+  --card-bg: color-mix(in oklch, var(--surface) 80%, transparent);
+}
+
+:is([data-theme="girl"], [data-theme="boy"]):not([data-mode="dark"]) :is(.card, .info-card) {
+  backdrop-filter: blur(7px) saturate(1.15);
+  -webkit-backdrop-filter: blur(7px) saturate(1.15);
+  background-image:
+    radial-gradient(ellipse at 12% 8%, var(--mat-highlight), transparent 52%);
+  background-size: 100% 100%;
+  background-blend-mode: normal;
 }
 
 /* category tones */
@@ -196,11 +213,12 @@ body {
     radial-gradient(circle at 30% 20%, oklch(0.97 0.01 80 / 0.5) 0%, transparent 45%),
     radial-gradient(circle at 35% 30%, var(--accent-soft), var(--accent));
   color: var(--on-accent); display: flex; align-items: center; justify-content: center;
-  font-family: "Archivo", sans-serif; font-size: 20px; font-weight: 700;
+  font-family: var(--font-sans); font-size: 20px; font-weight: 700;
   background-size: cover; background-position: center;
   box-shadow:
     0 2px 0 oklch(0.97 0.01 80 / 0.4) inset,
-    0 4px 14px var(--mat-cast);
+    0 4px 14px var(--mat-cast),
+    inset 0 1px 0 oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4));
   transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .avatar.lg { width: 84px; height: 84px; font-size: 32px; }
@@ -211,7 +229,7 @@ body {
 .photo-view .avatar.lg { width: 220px; height: 220px; font-size: 64px; border-radius: 28px; }
 
 .card {
-  background-color: var(--surface);
+  background-color: var(--card-bg);
   background-image:
     radial-gradient(ellipse at 12% 8%, var(--mat-highlight), transparent 52%),
     var(--tex-clay);
@@ -233,6 +251,15 @@ body {
 
 /* ---- hero ---- */
 .hero { padding: 22px; }
+.card.hero {
+  background-image:
+    radial-gradient(ellipse 60% 40% at var(--light-x) var(--light-y),
+      oklch(0.99 0.01 70 / calc(0.12 + var(--fire-c, 0.10) * 1.2)) 0%, transparent 60%),
+    radial-gradient(ellipse at 12% 8%, var(--mat-highlight), transparent 52%),
+    var(--tex-clay);
+  background-size: 100% 100%, 100% 100%, 180px 180px;
+  background-blend-mode: normal, normal, soft-light;
+}
 .state { display: flex; align-items: center; gap: 9px; }
 .livedot {
   width: 9px; height: 9px; border-radius: 50%;
@@ -300,7 +327,7 @@ body {
 /* ---- info cards ---- */
 .info-stack { display: flex; flex-direction: column; gap: 10px; }
 .info-card {
-  background-color: var(--surface);
+  background-color: var(--card-bg);
   background-image:
     radial-gradient(ellipse at 8% 12%, var(--mat-highlight), transparent 48%),
     var(--tex-clay);
@@ -330,8 +357,8 @@ body {
 .ic-txt { flex: 1; min-width: 0; }
 .ic-lbl { font-size: 10px; color: var(--muted); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .ic-lbl2 { font-size: 11px; color: var(--soft); font-weight: 600; margin-top: 1px; }
-.ic-val { font-family: "Archivo", sans-serif; font-size: 18px; font-weight: 700; margin-top: 2px; }
-.ic-rel { font-family: "Archivo"; font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+.ic-val { font-family: var(--font-sans); font-size: 18px; font-weight: 700; margin-top: 2px; }
+.ic-rel { font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
 .ic-edit { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; flex: 0 0 auto; }
 .ic-edit:active { background: var(--hair); }
 .ic-edit.drag { cursor: grab; touch-action: none; }
@@ -351,7 +378,7 @@ body {
   color: var(--tc, var(--accent-ink));
   background-color: var(--tcb, var(--accent-soft));
   background-image:
-    radial-gradient(ellipse 120% 90% at 50% 8%, oklch(0.97 0.012 70 / 0.45) 0%, transparent 42%),
+    radial-gradient(ellipse 120% 90% at 50% 8%, oklch(0.99 0.012 70 / calc(0.30 + var(--fire-a, 0.08) * 1.8)) 0%, transparent 42%),
     radial-gradient(circle at 32% 118%, var(--ember-core) 0%, transparent 50%),
     var(--tex-clay);
   background-size: 100% 100%, 100% 100%, 128px 128px;
@@ -386,11 +413,11 @@ body {
 /* ---- today / log ---- */
 .today-block { display: flex; flex-direction: column; }
 .today-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
-.today-hd h2 { font-family: "Archivo"; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
+.today-hd h2 { font-family: var(--font-sans); font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .today-hd a { font-size: 12px; color: var(--accent-ink); font-weight: 800; cursor: pointer; }
 .cards-hd { display: flex; justify-content: flex-end; margin-bottom: 6px; }
 .cards-hd a { font-size: 12px; color: var(--accent-ink); font-weight: 800; cursor: pointer; }
-.today-add { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); flex: 0 0 auto; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .28); }
+.today-add { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); flex: 0 0 auto; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .28), inset 0 1px 0 oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4)); }
 .today-add:active { transform: scale(.92); box-shadow: 0 1px 2px oklch(0 0 0 / .1), inset 0 2px 3px oklch(0 0 0 / .14); }
 .log { overflow: hidden; }
 .row { display: flex; align-items: center; gap: 13px; padding: 12px 16px; cursor: pointer; transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -409,7 +436,7 @@ body {
 
 /* ---- page headers ---- */
 .page-hd { padding-top: 6px; }
-.page-title { font-family: "Archivo"; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
+.page-title { font-family: var(--font-sans); font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
 .page-sub { font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px; }
 
 /* ---- dark mode ---- */
@@ -448,6 +475,7 @@ body {
   --on-accent: oklch(0.985 0.012 85);
   --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
   --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
+  --font-sans: "Archivo", system-ui, sans-serif;
 }
 [data-theme="dayjob-boy"] {
   --page: oklch(0.940 0.042 85); --page-glow: oklch(0.88 0.072 85 / .60);
@@ -459,6 +487,7 @@ body {
   --on-accent: oklch(0.985 0.008 220);
   --good: oklch(0.52 0.08 135); --good-deep: oklch(0.42 0.075 135); --good-halo: oklch(0.87 0.06 135);
   --good-tint: oklch(0.92 0.04 135 / .5); --ring-track: oklch(0.89 0.022 80);
+  --font-sans: "Archivo", system-ui, sans-serif;
 }
 :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"]) {
   --page: oklch(0.18 0.034 70); --page-glow: oklch(0.28 0.068 70 / .52);
@@ -601,10 +630,10 @@ body[data-mode="dark"] {
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat { padding: 14px 16px; }
 .stat-k { font-size: 11px; color: var(--muted); font-weight: 700; }
-.stat-v { font-family: "Archivo"; font-size: 24px; font-weight: 700; margin-top: 3px; }
+.stat-v { font-family: var(--font-sans); font-size: 24px; font-weight: 700; margin-top: 3px; }
 .chart-card { padding: 16px 16px 12px; }
 .chart-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
-.chart-hd h2 { font-family: "Archivo"; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
+.chart-hd h2 { font-family: var(--font-sans); font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .chart-note { font-size: 11px; color: var(--muted); font-weight: 600; }
 .chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
@@ -620,7 +649,7 @@ body[data-mode="dark"] {
 .ringwrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-lbl { font-size: 11px; color: var(--muted); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.ring-big { font-family: "Archivo"; font-size: 38px; font-weight: 700; letter-spacing: -.02em; }
+.ring-big { font-family: var(--font-sans); font-size: 38px; font-weight: 700; letter-spacing: -.02em; }
 .ring-big .u { font-size: 19px; color: var(--muted); }
 .night-strip { margin-top: 8px; font-size: 12px; color: var(--good-deep); font-weight: 700; display: flex; align-items: center; gap: 6px; }
 .sched-card { padding: 16px; }
@@ -629,7 +658,7 @@ body[data-mode="dark"] {
 .sched-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: 0 0 auto; }
 .sched-item.past { opacity: .45; }
 .sched-item.past .sched-dot { background: var(--muted); }
-.sched-win { font-family: "Archivo"; font-weight: 700; font-size: 15px; }
+.sched-win { font-family: var(--font-sans); font-weight: 700; font-size: 15px; }
 .sched-tag { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
 
 /* ---- profile ---- */
@@ -684,7 +713,7 @@ body[data-mode="dark"] {
 /* growth */
 .growth-stats { grid-template-columns: repeat(2, 1fr); }
 .growth-svg { width: 100%; height: auto; aspect-ratio: 320 / 150; overflow: visible; display: block; }
-.growth-svg .growth-x { font-size: 11px; font-family: "Archivo", sans-serif; font-weight: 700; fill: var(--muted); }
+.growth-svg .growth-x { font-size: 11px; font-family: var(--font-sans); font-weight: 700; fill: var(--muted); }
 .growth-svg circle { transform-box: fill-box; transform-origin: center; }
 .delta { font-size: 11px; font-weight: 800; margin-top: 2px; display: block; }
 .delta.up { color: var(--good-deep); }
@@ -783,7 +812,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .scrim.show .sheet { transform: translateY(0); }
 .sheet-grab { width: 40px; height: 4px; border-radius: 999px; background: var(--hair); margin: 4px auto 10px; cursor: grab; touch-action: none; }
 .sheet-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; touch-action: none; }
-.sheet-hd h3 { font-family: "Archivo"; font-size: 19px; font-weight: 700; margin: 0; }
+.sheet-hd h3 { font-family: var(--font-sans); font-size: 19px; font-weight: 700; margin: 0; }
 .sheet-hd .x { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--hair); display: flex; align-items: center; justify-content: center; color: var(--soft); }
 .sheet-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
 .sheet-form .sheet-body { gap: 13px; }
@@ -847,7 +876,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* entry view */
 .entry-view { display: flex; align-items: center; gap: 13px; }
 .entry-view .ic-ring { width: 48px; height: 48px; font-size: 22px; }
-.entry-title { font-family: "Archivo"; font-size: 18px; font-weight: 700; }
+.entry-title { font-family: var(--font-sans); font-size: 18px; font-weight: 700; }
 .entry-sub { font-size: 13px; color: var(--muted); font-weight: 600; }
 .entry-note { background: var(--surface); border-radius: 14px; padding: 13px; font-size: 14px; font-weight: 600; color: var(--soft); }
 
