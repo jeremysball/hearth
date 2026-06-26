@@ -120,6 +120,9 @@ body {
 .ic-edit:active { background: var(--hair); }
 .ic-edit.drag { cursor: grab; touch-action: none; }
 .info-card.dragging { opacity: .6; cursor: grabbing; }
+.info-stack[data-card-edit] { touch-action: none; }
+.info-stack[data-card-edit] .info-card { cursor: default; }
+.info-stack[data-card-edit] .info-card:active { background: var(--surface); transform: none; transition: none; }
 
 .hidden-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 7px 13px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }

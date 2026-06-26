@@ -137,6 +137,7 @@ function openBabyPhoto() {
 // ---------- click delegation ----------
 document.addEventListener('click', (ev) => {
   if (Date.now() < suppressClickUntil) { ev.preventDefault(); ev.stopPropagation(); return; }
+  if (ev.target.closest('.info-stack[data-card-edit]')) { ev.preventDefault(); return; }
   // segmented visual toggle (+persist if bound)
   const opt = ev.target.closest('.seg-opt');
   if (opt) {
