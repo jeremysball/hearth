@@ -5,10 +5,72 @@ import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 
 // segmented control
-function seg(group, opts, sel) {
-  return `<div class="segctl" data-seg="${group}">` +
+function seg(group, opts, sel, draggable = false) {
+  return `<div class="segctl" data-seg="${group}"${draggable ? ' data-draggable' : ''}>` +
     opts.map((o) => `<button type="button" class="seg-opt ${o === sel ? 'on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`).join('') +
     `</div>`;
+}
+
+function bindDragSeg(el) {
+  const LONG_PRESS_MS = 350;
+  const MOVE_THRESHOLD = 4;
+  let timer = null, dragging = false, startX = 0;
+
+  function optionAt(x) {
+    let nearest = null, bestDist = Infinity;
+    el.querySelectorAll('.seg-opt').forEach((o) => {
+      const r = o.getBoundingClientRect();
+      const dist = Math.abs(x - (r.left + r.width / 2));
+      if (dist < bestDist) { bestDist = dist; nearest = o; }
+    });
+    return nearest;
+  }
+
+  function highlight(active) {
+    el.querySelectorAll('.seg-opt').forEach((o) => {
+      o.classList.toggle('on', o === active);
+      o.style.opacity = (active && o !== active) ? '0.6' : '';
+    });
+  }
+
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    startX = e.clientX; dragging = false;
+    timer = setTimeout(() => {
+      dragging = true;
+      el.setPointerCapture(e.pointerId);
+      el.style.transform = 'scale(1.06)';
+      el.style.transition = 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+      buzz(8);
+      highlight(optionAt(e.clientX));
+    }, LONG_PRESS_MS);
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) {
+      if (Math.abs(e.clientX - startX) > MOVE_THRESHOLD && timer) { clearTimeout(timer); timer = null; }
+      return;
+    }
+    e.stopPropagation();
+    highlight(optionAt(e.clientX));
+  });
+
+  function release() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!dragging) return;
+    dragging = false;
+    el.style.transform = '';
+    el.querySelectorAll('.seg-opt').forEach((o) => { o.style.opacity = ''; });
+    tick();
+  }
+
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    dragging = false;
+    el.style.transform = '';
+    el.querySelectorAll('.seg-opt').forEach((o) => { o.style.opacity = ''; });
+  });
 }
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
@@ -253,8 +315,8 @@ const FORMS = {
     ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 120)}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
-    ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
-    ${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}
+    ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet', true))}
+    ${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium', true))}
     ${timeRow()} ${noteRow()}`,
   medicine: () => {
     const meds = state().settings.meds;
@@ -305,6 +367,7 @@ export function openLog(type, entry) {
     { title: (editing ? 'Edit ' : 'Log ') + cfg.label.toLowerCase(), size: 'sheet-form' }
   );
   if (editing) prefill(type, entry);
+  $$('[data-draggable]').forEach(bindDragSeg);
 }
 
 function setSeg(group, val) {
