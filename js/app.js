@@ -483,6 +483,12 @@ function init() {
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {

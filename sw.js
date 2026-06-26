@@ -1,5 +1,6 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T01:38'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T03:56Z'; // Must match <meta name="version"> in index.html
+const RUNTIME = VERSION + 'runtime';
 const SHELL = [
   './',
   './index.html',
@@ -37,7 +38,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== VERSION && k !== RUNTIME).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -59,7 +60,7 @@ self.addEventListener('fetch', (e) => {
   // Fonts & icons (cross-origin CDN): cache-first runtime cache.
   if (url.origin !== location.origin) {
     e.respondWith(
-      caches.open('hearth-2026-06-25T21:08runtime').then(async (cache) => {
+      caches.open(RUNTIME).then(async (cache) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         try {
