@@ -33,14 +33,23 @@ function bindDragSeg(el) {
     });
   }
 
+  function bouncePill(pill) {
+    if (!pill) return;
+    pill.style.transition = 'none';
+    pill.style.transform = 'scale(1.14)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      pill.style.transition = 'transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+      pill.style.transform = '';
+    }));
+  }
+
   el.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     startX = e.clientX; dragging = false;
     timer = setTimeout(() => {
       dragging = true;
       el.setPointerCapture(e.pointerId);
-      el.style.transform = 'scale(1.06)';
-      el.style.transition = 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+      bouncePill(el.querySelector('.seg-opt.on'));
       buzz(8);
       highlight(optionAt(e.clientX));
     }, LONG_PRESS_MS);
@@ -55,12 +64,19 @@ function bindDragSeg(el) {
     highlight(optionAt(e.clientX));
   });
 
+  function resetOpts() {
+    el.querySelectorAll('.seg-opt').forEach((o) => {
+      o.style.opacity = '';
+      o.style.transform = '';
+      o.style.transition = '';
+    });
+  }
+
   function release() {
     if (timer) { clearTimeout(timer); timer = null; }
     if (!dragging) return;
     dragging = false;
-    el.style.transform = '';
-    el.querySelectorAll('.seg-opt').forEach((o) => { o.style.opacity = ''; });
+    resetOpts();
     tick();
   }
 
@@ -68,8 +84,7 @@ function bindDragSeg(el) {
   el.addEventListener('pointercancel', () => {
     if (timer) { clearTimeout(timer); timer = null; }
     dragging = false;
-    el.style.transform = '';
-    el.querySelectorAll('.seg-opt').forEach((o) => { o.style.opacity = ''; });
+    resetOpts();
   });
 }
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
