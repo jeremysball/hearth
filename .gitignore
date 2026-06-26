@@ -8,3 +8,4 @@ screenshots/
 node_modules/
 hearth-server
 test-results/
+.superpowers/

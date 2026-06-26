@@ -6,7 +6,7 @@ import { notifsGranted } from './reminders.js';
 function buildStamp() {
   const v = document.querySelector('meta[name="version"]')?.content;
   if (!v) return '';
-  try { return new Date(v + 'Z').toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
+  try { return new Date(v.replace(/Z?$/, ':00Z')).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
   catch { return v; }
 }
 

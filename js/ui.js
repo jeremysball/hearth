@@ -47,13 +47,15 @@ export const fmt = {
 
 // type → icon + label + tone class
 export const TYPES = {
-  sleep: { icon: 'moon', label: 'Sleep', tone: 'sleep' },
-  feed: { icon: 'baby', label: 'Nursing', tone: 'feed' },
-  bottle: { icon: 'baby-bottle', label: 'Bottle', tone: 'feed' },
-  diaper: { icon: 'droplet', label: 'Diaper', tone: 'diaper' },
-  medicine: { icon: 'pill', label: 'Medicine', tone: 'med' },
-  pump: { icon: 'drop-half', label: 'Pump', tone: 'feed' },
-  note: { icon: 'note-pencil', label: 'Note', tone: 'note' }
+  sleep:    { icon: 'icon-sleep',    label: 'Sleep',    tone: 'sleep'  },
+  feed:     { icon: 'icon-feed',     label: 'Nursing',  tone: 'feed'   },
+  bottle:   { icon: 'icon-bottle',   label: 'Bottle',   tone: 'feed'   },
+  diaper:   { icon: 'icon-diaper',   label: 'Diaper',   tone: 'diaper' },
+  medicine: { icon: 'icon-medicine', label: 'Medicine', tone: 'med'    },
+  pump:     { icon: 'drop-half',     label: 'Pump',     tone: 'feed'   },
+  note:     { icon: 'note-pencil',   label: 'Note',     tone: 'note'   },
+  play:     { icon: 'icon-play',     label: 'Play',     tone: 'play'   },
+  bath:     { icon: 'icon-bath',     label: 'Bath',     tone: 'bath'   },
 };
 // Phosphor fallback for icons that may not exist
 export function icon(name) {
@@ -63,7 +65,7 @@ export function icon(name) {
 export function diaperIcon(kind) {
   if (kind === 'Dirty') return 'turtle';
   if (kind === 'Mixed') return 'layers';
-  return 'droplet'; // Wet or default
+  return 'icon-diaper';
 }
 
 // ---------- DOM helper ----------
