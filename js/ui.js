@@ -80,9 +80,12 @@ export function positionThumb(group) {
   const firstOpt = group.querySelector('.seg-opt');
   thumb.style.width = active.offsetWidth + 'px';
   thumb.style.transform = `translateX(${active.offsetLeft - firstOpt.offsetLeft}px)`;
+  const opts = $$('.seg-opt', group);
+  const idx = opts.indexOf(active);
+  thumb.style.setProperty('--glare', opts.length > 1 ? idx / (opts.length - 1) : 0.5);
 }
 
-function initThumbs(container) {
+export function initThumbs(container) {
   $$('.segctl', container).forEach(group => {
     const thumb = group.querySelector('.seg-thumb');
     if (!thumb) return;
