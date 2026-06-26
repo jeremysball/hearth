@@ -35,6 +35,7 @@ export function enterTodayEditMode() {
 let cardEditMode = false;
 export function exitCardEditMode() { cardEditMode = false; }
 export function enterCardEditMode() {
+  if (cardEditMode) return false;
   if ((state().settings.cards.order || CARD_KEYS).filter((k) => state().settings.cards[k]).length < 2) return false;
   cardEditMode = true;
   return true;

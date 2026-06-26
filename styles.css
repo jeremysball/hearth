@@ -101,7 +101,7 @@ body {
 .hero-sub { font-size: 13px; color: var(--soft); font-weight: 600; }
 .track { height: 9px; border-radius: 6px; background: var(--accent-soft); margin-top: 18px; overflow: hidden; }
 .track.sleep { background: var(--good-tint); }
-.track i { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .4s; }
+.track i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
 .track.sleep i { background: var(--good); }
 .track-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
 
