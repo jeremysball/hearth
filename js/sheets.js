@@ -7,6 +7,7 @@ import { chime, tick, buzz, confetti } from './fx.js';
 // segmented control
 function seg(group, opts, sel, draggable = false) {
   return `<div class="segctl" data-seg="${group}"${draggable ? ' data-draggable' : ''}>` +
+    `<div class="seg-thumb"></div>` +
     opts.map((o) => `<button type="button" class="seg-opt ${o === sel ? 'on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`).join('') +
     `</div>`;
 }
