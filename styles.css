@@ -79,7 +79,7 @@ body {
 /* ---- fire custom properties — animated at :root, inherited by all elements ---- */
 @property --fire-a { syntax: '<number>'; inherits: true; initial-value: 0.06; }
 @property --fire-b { syntax: '<number>'; inherits: true; initial-value: 0.04; }
-@property --fire-c { syntax: '<number>'; inherits: true; initial-value: 0.10; }
+@property --fire-c { syntax: '<number>'; inherits: true; initial-value: 0.08; }
 
 /* ---- hearth fire — three coprime periods, ~140s true repeat ---- */
 @keyframes fire-a {
