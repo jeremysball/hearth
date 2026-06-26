@@ -11,7 +11,8 @@ import (
 const launchTokenTTL = 10 * time.Minute
 
 type createLaunchTokenResponse struct {
-	Token string `json:"token"`
+	Token  string `json:"token"`
+	TTLMin int    `json:"ttlMin"`
 }
 
 func handleCreateLaunchToken(db *sql.DB) http.HandlerFunc {
@@ -30,7 +31,7 @@ func handleCreateLaunchToken(db *sql.DB) http.HandlerFunc {
 		log.Printf("launch token created: caregiver=%s family=%s", session.CaregiverID, session.FamilyID)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(createLaunchTokenResponse{Token: token})
+		json.NewEncoder(w).Encode(createLaunchTokenResponse{Token: token, TTLMin: int(launchTokenTTL.Minutes())})
 	}
 }
 
