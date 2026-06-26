@@ -56,8 +56,15 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Atomically claim the token — prevents concurrent redemption of the same token.
-		res, err := db.Exec(`UPDATE launch_tokens SET used_at = ? WHERE token = ? AND used_at IS NULL`, nowISO(), token)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		// Atomically claim the token and create the session in one transaction.
+		res, err := tx.Exec(`UPDATE launch_tokens SET used_at = ? WHERE token = ? AND used_at IS NULL`, nowISO(), token)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
@@ -67,8 +74,12 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		sessToken, err := createSession(db, caregiverID, familyID)
+		sessToken, err := createSessionTx(tx, caregiverID, familyID)
 		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if err := tx.Commit(); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
