@@ -23,6 +23,14 @@ const TABS = [
   { v: 'profile', icon: 'user', label: 'Profile' }
 ];
 
+let homeEntered = false;
+function enterHome() {
+  homeEntered = true;
+  document.querySelectorAll('#view .track i').forEach((el) => {
+    animateGrow(el, [{ width: '0%' }, { width: el.style.width }], 0, 'ease-out');
+  });
+}
+
 function enterTrends() {
   const bars = [...document.querySelectorAll('#view .bar')];
   bars.forEach((b, i) => {
@@ -82,7 +90,8 @@ export const router = {
     $('#view').innerHTML = VIEWS[view]();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
-    if (view === 'trends') enterTrends();
+    if (view === 'home' && !homeEntered) enterHome();
+    else if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
   },
@@ -128,6 +137,7 @@ function openBabyPhoto() {
 // ---------- click delegation ----------
 document.addEventListener('click', (ev) => {
   if (Date.now() < suppressClickUntil) { ev.preventDefault(); ev.stopPropagation(); return; }
+  if (ev.target.closest('.info-stack[data-card-edit]')) { ev.preventDefault(); return; }
   // segmented visual toggle (+persist if bound)
   const opt = ev.target.closest('.seg-opt');
   if (opt) {
@@ -257,6 +267,8 @@ document.addEventListener('pointermove', (e) => {
 let dragKey = null;
 document.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('.ic-edit.drag'); if (!handle) return;
+  // Cancel any pending long-press so holding a drag handle doesn't re-trigger edit mode mid-drag.
+  lpActive = false; clearTimeout(lpTimer);
   dragKey = handle.dataset.card;
   handle.setPointerCapture(e.pointerId);
   handle.closest('.info-card').classList.add('dragging');
@@ -265,12 +277,17 @@ document.addEventListener('pointermove', (e) => {
   if (!dragKey) return;
   const stack = $('.info-stack'); if (!stack) return;
   const dragging = stack.querySelector('.info-card.dragging'); if (!dragging) return;
-  const over = [...stack.querySelectorAll('.info-card')].filter((el) => el !== dragging)
-    .find((el) => { const r = el.getBoundingClientRect(); return e.clientY > r.top && e.clientY < r.bottom; });
-  if (over) {
-    const r = over.getBoundingClientRect();
-    stack.insertBefore(dragging, e.clientY < r.top + r.height / 2 ? over : over.nextSibling);
-  }
+  const cards = [...stack.querySelectorAll('.info-card')];
+  const dragIdx = cards.indexOf(dragging);
+  const over = cards.find((el) => {
+    if (el === dragging) return false;
+    const r = el.getBoundingClientRect();
+    return e.clientY > r.top && e.clientY < r.bottom;
+  });
+  if (!over) return;
+  // Direction-based insertion: dragging down → place after over; dragging up → place before.
+  // No midpoint threshold — avoids the dead zone that trapped the first card.
+  stack.insertBefore(dragging, dragIdx < cards.indexOf(over) ? over.nextSibling : over);
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
   if (!dragKey) return;

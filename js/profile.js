@@ -3,6 +3,13 @@ import { state } from './store.js';
 import { esc } from './ui.js';
 import { notifsGranted } from './reminders.js';
 
+function buildStamp() {
+  const v = document.querySelector('meta[name="version"]')?.content;
+  if (!v) return '';
+  try { return new Date(v + 'Z').toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
+  catch { return v; }
+}
+
 function sw(path, on) {
   return `<button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-action="toggle" data-path="${path}"><span class="knob"></span></button>`;
 }
@@ -74,7 +81,7 @@ export function profile() {
     </div>
 
     <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="#undo-2"></use></svg> Reset app & start over</button>
-    <div class="foot-note">Hearth · prototype · data stored on this device · ${document.querySelector('meta[name="version"]')?.content || ''}</div>`;
+    <div class="foot-note">Hearth · prototype · data stored on this device · ${buildStamp()}</div>`;
 }
 
 let cachedCaregivers = [];
