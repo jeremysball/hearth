@@ -344,7 +344,9 @@ const FORMS = {
     ${field('Side', seg('side', ['Left', 'Right', 'Both'], 'Both'))}
     ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 90)}
     ${timeRow()} ${noteRow()}`,
-  note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`
+  note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`,
+  play: () => `${timeRow()} ${noteRow()}`,
+  bath: () => `${timeRow()} ${noteRow()}`,
 };
 
 function gather(type) {
@@ -419,7 +421,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];

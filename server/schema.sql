@@ -61,6 +61,14 @@ CREATE TABLE IF NOT EXISTS log_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_id, updated_at);
 
+CREATE TABLE IF NOT EXISTS launch_tokens (
+  token        TEXT PRIMARY KEY,
+  caregiver_id TEXT NOT NULL,
+  family_id    TEXT NOT NULL,
+  expires_at   TEXT NOT NULL,
+  used_at      TEXT
+);
+
 CREATE TABLE IF NOT EXISTS growth_entries (
   id TEXT PRIMARY KEY,
   family_id TEXT NOT NULL REFERENCES families(id),
