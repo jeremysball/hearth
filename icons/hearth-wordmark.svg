@@ -1,26 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="208" height="56" viewBox="0 0 208 56" fill="none" role="img" aria-labelledby="hearth-wordmark-title">
   <title id="hearth-wordmark-title">Hearth</title>
-  <!-- Icon mark, scaled to ~40px tall, vertically centered -->
   <g transform="translate(8 8)">
-    <rect x="0.83" y="0.83" width="38.33" height="38.33" rx="9.17" fill="#f3eee0"/>
-    <g transform="scale(0.20833)" fill="none" stroke="currentColor" color="#5a6b3a"
-       stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M48 138 V92 a48 48 0 0 1 96 0 v46"/>
-      <path d="M40 138 H152"/>
-      <path d="M96 122
-               c-13 -7 -16 -19 -8 -29
-               c2 5 5 7 9 8
-               c-4 -10 0 -20 9 -26
-               c-2 9 3 14 8 19
-               c5 5 6 13 1 19
-               c-2 -4 -5 -6 -9 -6
-               c4 6 2 12 -3 15
-               c2 -5 0 -9 -7 -13 Z"/>
+    <rect x="0" y="0" width="40" height="40" rx="10" fill="#f3eee0"/>
+    <g transform="translate(9 2) scale(0.9)">
+      <path d="M 13 40 C 3 32 1 18 6 10 C 9 4 11 0 13 0 C 15 0 19 7 21 14 C 24 23 23 34 13 40 Z" fill="#5a6b3a"/>
+      <path d="M 13 34 C 8 27 7 17 11 11 C 12 8 12.5 5.5 13 5 C 13.5 5.5 14 8 15 11 C 17 17 17 27 13 34 Z" fill="rgba(255,255,255,0.22)"/>
     </g>
   </g>
-  <!-- Wordmark: Playfair Display, the proud serif voice, in forest olive -->
   <text x="60" y="28" dominant-baseline="central"
-        font-family="'Playfair Display', Georgia, serif"
-        font-size="34" font-weight="600" fill="#5a6b3a"
+        font-family="'Playfair Display', Garamond, Georgia, 'Times New Roman', serif"
+        font-size="34" font-weight="700" font-style="italic" fill="#5a6b3a"
         letter-spacing="0.5">Hearth</text>
 </svg>

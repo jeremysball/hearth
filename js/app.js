@@ -205,8 +205,8 @@ document.addEventListener('click', (ev) => {
       router.refresh();
     },
     'app:reset': () => resetConfirm(),
-    'stepper:up': () => stepValue(d.target, 1),
-    'stepper:down': () => stepValue(d.target, -1),
+    'stepper:up': () => { if (!_stepperPointerActive) stepValue(d.target, 1); },
+    'stepper:down': () => { if (!_stepperPointerActive) stepValue(d.target, -1); },
     'stepper:open': () => openSpinner(el.id)
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
@@ -234,6 +234,36 @@ function stepValue(id, dir) {
   el.setAttribute('aria-valuenow', val);
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+// ---------- stepper long-press repeat ----------
+let _stepperTimer = null;
+let _stepperBtn = null;
+let _stepperPointerActive = false;
+
+document.addEventListener('pointerdown', (ev) => {
+  const btn = ev.target.closest('.stepper-btn');
+  if (!btn) return;
+  const a = btn.dataset.action;
+  if (a !== 'stepper:up' && a !== 'stepper:down') return;
+  ev.preventDefault();
+  const dir = a === 'stepper:up' ? 1 : -1;
+  const target = btn.dataset.target;
+  _stepperBtn = btn;
+  _stepperPointerActive = true;
+  btn.classList.add('pressing');
+  stepValue(target, dir);
+  const repeat = () => { stepValue(target, dir); _stepperTimer = setTimeout(repeat, 75); };
+  _stepperTimer = setTimeout(repeat, 450);
+}, { passive: false });
+
+function _cancelStepperRepeat() {
+  if (_stepperTimer) { clearTimeout(_stepperTimer); _stepperTimer = null; }
+  if (_stepperBtn) { _stepperBtn.classList.remove('pressing'); _stepperBtn = null; }
+  // Defer clearing pointer flag so the click handler can check it synchronously
+  requestAnimationFrame(() => { _stepperPointerActive = false; });
+}
+document.addEventListener('pointerup', _cancelStepperRepeat);
+document.addEventListener('pointercancel', _cancelStepperRepeat);
 
 // ---------- long-press to enter edit modes ----------
 let suppressClickUntil = 0;

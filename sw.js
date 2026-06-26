@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-06-26T15:50Z'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-06-26T15:56Z'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (e) => {
   // Fonts & icons (cross-origin CDN): cache-first, stored in shell cache.
   if (url.origin !== location.origin) {
     e.respondWith(
-const VERSION = 'hearth-2026-06-26T15:50Z'; // Must match <meta name="version"> in index.html
+      caches.open(VERSION).then(async (cache) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         try {
