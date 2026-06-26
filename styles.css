@@ -70,7 +70,7 @@ body {
     radial-gradient(ellipse 80% 60% at 30% 5%, var(--mat-highlight), transparent 65%),
     var(--tex-plaster);
   background-size: 100% 100%, 320px 320px;
-  background-blend-mode: normal, overlay;
+  background-blend-mode: normal, soft-light;
   display: flex; flex-direction: column; overflow: hidden;
   transition: background-color .4s ease; position: relative;
 }
@@ -497,7 +497,7 @@ body {
     fire-b-dark 3.1s ease-in-out infinite,
     fire-c-dark 8.7s ease-in-out infinite;
 }
-[data-mode="dark"] body {
+body[data-mode="dark"] {
   background: linear-gradient(
     0deg,
     oklch(0.26 0.05 46) 0%,
