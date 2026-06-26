@@ -14,7 +14,7 @@ function sw(path, on) {
   return `<button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-action="toggle" data-path="${path}"><span class="knob"></span></button>`;
 }
 function segBind(path, opts, val) {
-  return `<div class="segctl sm" data-bind-seg="${path}">` +
+  return `<div class="segctl sm" data-bind-seg="${path}"><div class="seg-thumb"></div>` +
     opts.map((o) => `<button type="button" class="seg-opt ${o.v === val ? 'on' : ''}" data-val="${o.v}">${esc(o.l)}</button>`).join('') + `</div>`;
 }
 
