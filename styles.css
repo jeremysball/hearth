@@ -65,7 +65,7 @@ body {
 /* ---- phone shell ---- */
 .phone {
   --pad: 22px; width: 100%; max-width: 432px; height: 100%; flex: 1; min-height: 0;
-  background-color: var(--bg);
+  background-color: var(--page);
   background-image:
     radial-gradient(ellipse 80% 60% at 30% 5%, var(--mat-highlight), transparent 65%),
     var(--tex-plaster);
