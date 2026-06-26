@@ -146,6 +146,7 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   :root { animation: none; --fire-a: 0.09; --fire-b: 0.06; --fire-c: 0.10; }
+  body { animation: none; }
   .tok, .card, .info-card, .tabbar { animation: none; }
   .seg-thumb { transition: transform 0.12s ease, width 0.12s ease; }
 }
