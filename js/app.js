@@ -1,7 +1,7 @@
 // app.js — shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
-import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet } from './ui.js';
+import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet, positionThumb } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
 import { trends } from './trends.js';
@@ -145,6 +145,7 @@ document.addEventListener('click', (ev) => {
     if (group) {
       $$('.seg-opt', group).forEach((b) => b.classList.remove('on'));
       opt.classList.add('on');
+      positionThumb(group);
       const bind = group.dataset.bindSeg;
       if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
     }

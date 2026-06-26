@@ -19,3 +19,4 @@ Hearth is a free, private baby tracker — an alternative to Huckleberry.
 - One ambient animation at a time.
 - Follow Conventional Commits for git messages.
 - Keep the README current with how to install and run.
+- **Regenerate PNG icons after any change to `icons/hearth-icon.svg`.** Run: `rsvg-convert -w 192 -h 192 icons/hearth-icon.svg -o icons/icon-192.png && rsvg-convert -w 512 -h 512 icons/hearth-icon.svg -o icons/icon-512.png` for the standard icons. For the maskable icon, build a wrapper SVG with `#fbf3f0` background and the icon scaled to 358×358 centered on a 512×512 canvas (77px padding each side), then rasterize to `icons/icon-maskable-512.png`.
