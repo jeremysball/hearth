@@ -97,7 +97,7 @@ body {
   0%   { --fire-c: 0.08; } 30%  { --fire-c: 0.14; } 60%  { --fire-c: 0.07; }
   80%  { --fire-c: 0.12; } 100% { --fire-c: 0.08; }
 }
-:root {
+body {
   animation:
     fire-a 5.3s ease-in-out infinite,
     fire-b 3.1s ease-in-out infinite,
@@ -145,8 +145,8 @@ body {
   opacity: var(--fire-b);
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { animation: none; --fire-a: 0.09; --fire-b: 0.06; --fire-c: 0.10; }
-  body { animation: none; }
+  :root { --fire-a: 0.09; --fire-b: 0.06; --fire-c: 0.10; }
+  body, [data-mode="dark"] { animation: none !important; }
   .tok, .card, .info-card, .tabbar { animation: none; }
   .seg-thumb { transition: transform 0.12s ease, width 0.12s ease; }
 }
