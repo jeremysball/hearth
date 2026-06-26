@@ -18,23 +18,28 @@ body {
 
 /* ---- themes ---- */
 :root, [data-theme="girl"] {
-  --page: oklch(0.875 0.052 50); --page-glow: oklch(0.80 0.10 46 / .65);
-  --bg: oklch(0.925 0.040 52); --surface: oklch(0.952 0.026 58);
+  --page:    oklch(0.845 0.068 44); --page-glow: oklch(0.80 0.10 46 / .65);
+  --bg:      oklch(0.895 0.055 46); --surface: oklch(0.930 0.038 50);
   --ink: oklch(0.28 0.045 48); --soft: oklch(0.44 0.042 50); --muted: oklch(0.58 0.034 53);
-  --hair: oklch(0.845 0.038 56);
+  --hair:    oklch(0.820 0.048 48);
   --accent: oklch(0.56 0.12 45); --accent-ink: oklch(0.46 0.115 43);
   --accent-soft: oklch(0.86 0.06 50); --accent-tint: oklch(0.91 0.038 54);
   --on-accent: oklch(0.985 0.012 70);
   --good: oklch(0.60 0.10 145); --good-deep: oklch(0.46 0.085 145); --good-halo: oklch(0.87 0.06 142);
   --good-tint: oklch(0.91 0.05 142 / .5); --ring-track: oklch(0.88 0.028 62);
   /* material system — raking amber light, fired clay */
-  --mat-highlight: oklch(0.84 0.09 58 / 0.38);
-  --mat-shadow:    oklch(0.30 0.08 44 / 0.28);
-  --mat-cast:      oklch(0.32 0.09 46 / 0.24);
-  --mat-glow:      oklch(0.78 0.12 52 / 0.50);
+  --mat-highlight: oklch(0.86 0.10 58 / 0.40);
+  --mat-shadow:    oklch(0.28 0.09 40 / 0.32);
+  --mat-cast:      oklch(0.32 0.03 300 / 0.22);
+  --mat-glow:      oklch(0.80 0.14 52 / 0.50);
   --tex-plaster:   url('assets/textures/plaster.webp');
   --tex-clay:      url('assets/textures/clay.webp');
   --tex-linen:     url('assets/textures/linen.webp');
+  /* fire ember palette */
+  --ember-core: oklch(0.86 0.20 56);
+  --ember-mid:  oklch(0.74 0.19 42);
+  --ember-cool: oklch(0.58 0.16 33);
+  --ember-rim:  oklch(0.70 0.175 44 / 0.55);
 }
 [data-theme="boy"] {
   --page: oklch(0.95 0.022 175); --page-glow: oklch(0.89 0.05 185 / .55);
@@ -65,7 +70,7 @@ body {
     radial-gradient(ellipse 80% 60% at 30% 5%, var(--mat-highlight), transparent 65%),
     var(--tex-plaster);
   background-size: 100% 100%, 320px 320px;
-  background-blend-mode: normal, soft-light;
+  background-blend-mode: normal, overlay;
   display: flex; flex-direction: column; overflow: hidden;
   transition: background-color .4s ease; position: relative;
 }
