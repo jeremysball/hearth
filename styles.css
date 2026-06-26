@@ -130,7 +130,7 @@ body {
 /* ---- quick actions ---- */
 .actions { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
 .act { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; }
-.tok { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: radial-gradient(circle at 33% 28%, oklch(1 0 0 / .42) 0%, transparent 55%), var(--tcb, var(--accent-soft)); color: var(--tc, var(--accent-ink)); transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s, color .2s, box-shadow .1s; box-shadow: 0 3px 7px oklch(0 0 0 / .12), 0 1px 3px oklch(0 0 0 / .08), inset 0 -1px 0 oklch(0 0 0 / .08); }
+.tok { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: radial-gradient(circle at 40% 22%, oklch(1 0 0 / .28) 0%, transparent 65%), var(--tcb, var(--accent-soft)); color: var(--tc, var(--accent-ink)); transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s, color .2s, box-shadow .1s; box-shadow: 0 3px 7px oklch(0 0 0 / .12), 0 1px 3px oklch(0 0 0 / .08), inset 0 -1px 0 oklch(0 0 0 / .08); }
 .act:active .tok { transform: scale(.88); transition: transform 0.06s, box-shadow 0.06s; box-shadow: 0 1px 2px oklch(0 0 0 / .08), inset 0 2px 4px oklch(0 0 0 / .14); }
 .act.primary .tok { background: radial-gradient(circle at 33% 28%, oklch(1 0 0 / .3) 0%, transparent 58%), var(--tc, var(--accent)); color: var(--on-accent); }
 .act-lbl { font-size: 10px; color: var(--soft); font-weight: 700; }
@@ -388,8 +388,9 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sheet-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; touch-action: none; }
 .sheet-hd h3 { font-family: "Archivo"; font-size: 19px; font-weight: 700; margin: 0; }
 .sheet-hd .x { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--hair); display: flex; align-items: center; justify-content: center; color: var(--soft); }
-.sheet-body { display: flex; flex-direction: column; gap: 14px; }
+.sheet-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
 .sheet-form .sheet-body { gap: 13px; }
+input[type="datetime-local"] { min-width: 0; max-width: 100%; }
 .btn-primary { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 55%, color-mix(in oklch, var(--accent) 88%, black 12%) 100%); color: var(--on-accent); font-weight: 800; font-size: 15px; padding: 15px; border-radius: 16px; margin-top: 4px; transition: transform .1s, box-shadow .1s; box-shadow: 0 4px 10px oklch(0 0 0 / .18), 0 2px 4px oklch(0 0 0 / .10), inset 0 1.5px 0 oklch(1 0 0 / .28), inset 0 -1.5px 0 oklch(0 0 0 / .12); }
 .btn-primary:active { transform: scale(.98) translateY(1px); box-shadow: 0 1px 3px oklch(0 0 0 / .10), inset 0 2px 5px oklch(0 0 0 / .16); }
 .btn-primary.danger-btn { background: linear-gradient(180deg, color-mix(in oklch, oklch(0.58 0.16 25) 80%, white 20%) 0%, oklch(0.58 0.16 25) 55%, color-mix(in oklch, oklch(0.58 0.16 25) 88%, black 12%) 100%); }
