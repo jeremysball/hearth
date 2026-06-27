@@ -972,9 +972,9 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sh-sub { font-size: 13px; color: var(--soft); font-weight: 600; }
 /* Cue 3 — sweetspot label */
 .sh-sweet-lbl { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-top: 14px; color: var(--muted); transition: color 0.6s; }
-.info-card.sleep-hero[data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
-.info-card.sleep-hero[data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
-.info-card.sleep-hero[data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
+[data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
+[data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
+[data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
 /* Rail */
 .sh-rail-wrap { margin-top: 8px; }
 .sh-rail { position: relative; height: 9px; border-radius: 6px; background: var(--accent-soft); overflow: visible; box-shadow: 0 1px 5px var(--mat-shadow) inset, 0 1px 0 oklch(0.97 0.01 80 / 0.3); }
@@ -982,66 +982,133 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sh-rail-fill { height: 100%; border-radius: 6px; background: var(--accent); box-shadow: 0 1px 0 oklch(0.97 0.01 80 / 0.3) inset; transition: background 0.6s; }
 .sh-rail-sleep .sh-rail-fill { background: var(--good); }
 /* Cue 1 — fill turns moonlit blue in sweetspot window */
-.info-card.sleep-hero[data-sweet="entering"] .sh-rail-fill { background: oklch(0.62 0.12 280); }
-.info-card.sleep-hero[data-sweet="now"] .sh-rail-fill { background: oklch(0.56 0.15 280); }
-.info-card.sleep-hero[data-sweet="passing"] .sh-rail-fill { background: oklch(0.60 0.10 280); }
-/* Sweetspot band */
-.sh-sweet-band { position: absolute; top: -3px; bottom: -3px; border-radius: 5px; background: oklch(0.78 0.09 280 / 0.22); border: 1.5px solid oklch(0.70 0.10 280 / 0.40); display: flex; align-items: center; justify-content: center; pointer-events: none; transition: background 0.5s, border-color 0.5s, box-shadow 0.5s; }
-.info-card.sleep-hero[data-sweet="now"] .sh-sweet-band { background: oklch(0.74 0.11 280 / 0.38); border-color: oklch(0.62 0.14 280 / 0.72); box-shadow: 0 0 10px oklch(0.66 0.13 280 / 0.32); }
-/* Cue 3 — moon icon sits above band center, fills + glows in sweetspot */
-.sh-moon { width: 12px; height: 12px; color: oklch(0.58 0.10 280); position: absolute; top: -15px; left: 50%; transform: translateX(-50%); stroke-width: 2.5; transition: color 0.5s, filter 0.5s; }
-.info-card.sleep-hero[data-sweet="now"] .sh-moon { color: oklch(0.44 0.16 280); filter: drop-shadow(0 0 4px oklch(0.68 0.14 280 / 0.70)); }
+[data-sweet="entering"] .sh-rail-fill { background: oklch(0.62 0.12 280); }
+[data-sweet="now"] .sh-rail-fill { background: oklch(0.56 0.15 280); }
+[data-sweet="passing"] .sh-rail-fill { background: oklch(0.60 0.10 280); }
+/* Sweetspot "moon gate" — glass capsule carved into the rail */
+.sh-sweet-band {
+  position: absolute; top: -2px; bottom: -2px;
+  border-radius: 5px; pointer-events: none;
+  background: oklch(0.82 0.07 280 / 0.18);
+  box-shadow:
+    inset 0 1px 3px oklch(0.50 0.10 280 / 0.26),
+    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.18),
+    0 0 0 1px oklch(0.68 0.10 280 / 0.32);
+  transition: background 0.5s, box-shadow 0.5s;
+}
+/* Gate marker — small orb floating above band center */
+.sh-sweet-band::before {
+  content: '';
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, oklch(0.88 0.07 280), oklch(0.66 0.10 280));
+  box-shadow: 0 0 0 1px oklch(0.60 0.10 280 / 0.45), 0 1px 3px oklch(0 0 0 / 0.14);
+  transition: background 0.5s, box-shadow 0.5s, transform 0.5s;
+}
+/* Approaching — slightly brighter band */
+[data-sweet="entering"] .sh-sweet-band {
+  background: oklch(0.80 0.09 280 / 0.26);
+  box-shadow:
+    inset 0 1px 3px oklch(0.50 0.12 280 / 0.32),
+    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.20),
+    0 0 0 1px oklch(0.66 0.12 280 / 0.50);
+}
+/* Now — bright, glowing, marker breathes */
+[data-sweet="now"] .sh-sweet-band {
+  background: oklch(0.76 0.11 280 / 0.38);
+  box-shadow:
+    inset 0 1px 3px oklch(0.48 0.14 280 / 0.38),
+    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.24),
+    0 0 0 1.5px oklch(0.62 0.14 280 / 0.72),
+    0 0 12px oklch(0.64 0.13 280 / 0.32);
+}
+[data-sweet="now"] .sh-sweet-band::before {
+  background: radial-gradient(circle at 38% 32%, oklch(0.92 0.08 280), oklch(0.52 0.17 280));
+  box-shadow: 0 0 0 1.5px oklch(0.56 0.16 280 / 0.65), 0 0 8px oklch(0.60 0.15 280 / 0.50);
+  animation: sweet-breathe 2.4s ease-in-out infinite;
+}
+@keyframes sweet-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) { [data-sweet="now"] .sh-sweet-band::before { animation: none; } }
+/* Passing — fading */
+[data-sweet="passing"] .sh-sweet-band {
+  background: oklch(0.80 0.08 280 / 0.24);
+  box-shadow:
+    inset 0 1px 3px oklch(0.50 0.10 280 / 0.28),
+    0 0 0 1px oklch(0.64 0.10 280 / 0.45),
+    0 0 6px oklch(0.64 0.12 280 / 0.16);
+}
+[data-sweet="passing"] .sh-sweet-band::before {
+  background: radial-gradient(circle at 38% 32%, oklch(0.86 0.07 280), oklch(0.60 0.12 280));
+  box-shadow: 0 0 0 1px oklch(0.60 0.11 280 / 0.50), 0 0 5px oklch(0.62 0.12 280 / 0.28);
+}
+/* Passed — quiet, desaturated */
+[data-sweet="passed"] .sh-sweet-band {
+  background: oklch(0.78 0.03 280 / 0.12);
+  box-shadow: 0 0 0 1px oklch(0.65 0.03 280 / 0.28);
+}
+[data-sweet="passed"] .sh-sweet-band::before {
+  background: radial-gradient(circle at 38% 32%, oklch(0.82 0.03 280), oklch(0.62 0.03 280));
+  box-shadow: 0 0 0 1px oklch(0.62 0.03 280 / 0.35);
+}
 /* Now dot */
-.sh-now-dot { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--accent); box-shadow: 0 0 0 2.5px var(--card-bg), 0 1px 4px oklch(0 0 0 / 0.28); transition: background 0.5s, box-shadow 0.5s; }
-.info-card.sleep-hero[data-state="asleep"] .sh-now-dot { background: var(--good); }
-.info-card.sleep-hero[data-sweet="entering"] .sh-now-dot,
-.info-card.sleep-hero[data-sweet="now"] .sh-now-dot { background: oklch(0.54 0.15 280); box-shadow: 0 0 0 2.5px var(--card-bg), 0 0 9px oklch(0.62 0.15 280 / 0.55); }
+.sh-now-dot { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--accent); box-shadow: 0 0 0 2.5px var(--surface), 0 1px 4px oklch(0 0 0 / 0.28); transition: background 0.5s, box-shadow 0.5s; }
+[data-state="asleep"] .sh-now-dot { background: var(--good); }
+[data-sweet="entering"] .sh-now-dot,
+[data-sweet="now"] .sh-now-dot { background: oklch(0.54 0.15 280); box-shadow: 0 0 0 2.5px var(--surface), 0 0 9px oklch(0.62 0.15 280 / 0.55); }
 .sh-rail-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
-/* Cue 2 — card border + glow blooms during sweetspot */
-.info-card.sleep-hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16), 0 1px 4px var(--mat-cast); }
-.info-card.sleep-hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28), 0 1px 4px var(--mat-cast); }
-.info-card.sleep-hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12), 0 1px 4px var(--mat-cast); }
-/* ---- sleep hero card — moon glow + star field graphics ---- */
-.info-card.sleep-hero::before {
+/* Past-window "nap overdue" flag next to timer */
+.overtired-flag { font-family: var(--font-sans); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: oklch(0.55 0.18 25); background: oklch(0.96 0.06 25 / 0.30); border: 1px solid oklch(0.70 0.14 25 / 0.35); border-radius: 8px; padding: 3px 8px; vertical-align: middle; margin-left: 10px; }
+[data-mode="dark"] .overtired-flag { color: oklch(0.82 0.14 25); background: oklch(0.38 0.10 25 / 0.30); border-color: oklch(0.60 0.12 25 / 0.40); }
+/* Hero card pulses red border when overtired */
+.card.hero[data-overtired] { animation: overtired-pulse 3s ease-in-out infinite; }
+@keyframes overtired-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.18 25 / 0); }
+  50% { box-shadow: 0 0 0 2px oklch(0.65 0.18 25 / 0.45), 0 4px 20px oklch(0.60 0.15 25 / 0.18); }
+}
+@media (prefers-reduced-motion: reduce) { .card.hero[data-overtired] { animation: none; } }
+/* Cue 2 — hero card border + glow blooms during sweetspot */
+.card.hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16); }
+.card.hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28); }
+.card.hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12); }
+/* ---- hero card — moon glow + 5 sparse stars ---- */
+.card.hero { position: relative; }
+.card.hero::before {
   content: '';
   position: absolute; inset: 0; z-index: 0;
   pointer-events: none; border-radius: inherit;
   background:
-    radial-gradient(ellipse 52% 58% at 91% 18%, oklch(0.90 0.07 292 / 0.40), transparent 62%),
-    radial-gradient(ellipse 28% 72% at 98% 62%, oklch(0.76 0.10 270 / 0.22), transparent 66%),
-    radial-gradient(circle at 82% 14%, white 0, white 1px, transparent 2px),
-    radial-gradient(circle at 90% 48%, white 0, white 0.9px, transparent 2px),
-    radial-gradient(circle at 76% 27%, white 0, white 0.7px, transparent 1.5px),
-    radial-gradient(circle at 93% 34%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 86% 64%, white 0, white 0.8px, transparent 1.8px),
-    radial-gradient(circle at 96% 10%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 80% 52%, white 0, white 0.7px, transparent 1.6px),
-    radial-gradient(circle at 72% 38%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 94% 74%, white 0, white 0.7px, transparent 1.6px),
-    radial-gradient(circle at 68% 20%, white 0, white 0.5px, transparent 1.2px),
-    radial-gradient(circle at 88% 82%, white 0, white 0.6px, transparent 1.4px);
+    radial-gradient(ellipse 55% 60% at 92% 20%, oklch(0.90 0.07 292 / 0.38), transparent 62%),
+    radial-gradient(ellipse 30% 75% at 99% 65%, oklch(0.76 0.10 270 / 0.20), transparent 66%),
+    radial-gradient(circle at 87% 14%, white 0, white 1.5px, transparent 3px),
+    radial-gradient(circle at 93% 42%, white 0, white 1.0px, transparent 2.2px),
+    radial-gradient(circle at 78% 28%, white 0, white 0.8px, transparent 1.8px),
+    radial-gradient(circle at 96%  8%, white 0, white 0.7px, transparent 1.6px),
+    radial-gradient(circle at 83% 55%, white 0, white 0.9px, transparent 2px);
   mix-blend-mode: soft-light;
-  opacity: 0.55; transition: opacity 1s ease;
+  opacity: 0.6; transition: opacity 1s ease;
 }
-[data-mode="dark"] .info-card.sleep-hero::before { mix-blend-mode: screen; opacity: 0.72; }
-.info-card.sleep-hero[data-state="asleep"]::before { opacity: 0.68; }
-.info-card.sleep-hero[data-sweet="entering"]::before { opacity: 0.72; }
-.info-card.sleep-hero[data-sweet="now"]::before { opacity: 1; }
-.info-card.sleep-hero[data-sweet="passing"]::before { opacity: 0.82; }
-[data-mode="dark"] .info-card.sleep-hero[data-sweet="now"]::before { opacity: 1; }
-/* keep all content above the pseudo layer */
-.info-card.sleep-hero > * { position: relative; z-index: 1; }
+[data-mode="dark"] .card.hero::before { mix-blend-mode: screen; opacity: 0.78; }
+[data-sweet="entering"] .card.hero::before,
+.card.hero[data-sweet="entering"]::before { opacity: 0.78; }
+.card.hero[data-sweet="now"]::before { opacity: 1; }
+.card.hero[data-sweet="passing"]::before { opacity: 0.85; }
+[data-mode="dark"] .card.hero[data-sweet="now"]::before { opacity: 1; }
+.card.hero > * { position: relative; z-index: 1; }
+.card.hero::before { z-index: 0; }
 
 /* ---- glassmorphism ---- */
 @supports (backdrop-filter: blur(1px)) {
   .phone { background-color: transparent; }
-  .card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-  .info-card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-  .sheet { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .card { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .info-card { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .sheet { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
   [data-mode="dark"] .card,
   [data-mode="dark"] .info-card,
   [data-mode="dark"] .sheet {
-    background: oklch(0.22 0.018 50 / 0.42);
+    background: oklch(0.22 0.018 50 / 0.62);
     backdrop-filter: blur(18px) saturate(1.25);
     -webkit-backdrop-filter: blur(18px) saturate(1.25);
   }
@@ -1049,7 +1116,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .info-card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .sheet {
-    background: oklch(0.32 0.012 80 / 0.52);
+    background: oklch(0.32 0.012 80 / 0.70);
     backdrop-filter: blur(18px) saturate(1.15);
     -webkit-backdrop-filter: blur(18px) saturate(1.15);
   }
