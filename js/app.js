@@ -87,7 +87,10 @@ export const router = {
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
   },
-  refresh() { if ($('#view')) $('#view').innerHTML = VIEWS[current]({}); $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current)); }
+  refresh() {
+    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); }
+    $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
+  }
 };
 
 // ---------- path helpers ----------
