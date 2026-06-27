@@ -39,10 +39,19 @@ function load() {
         delete s.cards.sweetspot;
         if (Array.isArray(s.cards.order)) s.cards.order = s.cards.order.filter((k) => k !== 'sweetspot');
       }
+      normalizeSettings(s.settings);
       return s;
     }
   } catch (e) {}
   return DEFAULT();
+}
+
+export function normalizeSettings(s) {
+  if (!s) return s;
+  if (s.clock24 === true) s.clock24 = '24h';
+  else if (s.clock24 === false) s.clock24 = '12h';
+  else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
+  return s;
 }
 
 export function normalizeLog(log) {
