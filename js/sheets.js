@@ -309,6 +309,7 @@ export function openLog(type, entry) {
     { title: (editing ? 'Edit ' : 'Log ') + cfg.label.toLowerCase(), size: 'sheet-form' }
   );
   if (editing) prefill(type, entry);
+  else if ($('#f-time')) $('#f-time').value = nowLocalDT();
   $$('.segctl').forEach(bindDragSeg);
 }
 
