@@ -22,6 +22,8 @@ export function summary(e) {
     label = 'Pump · ' + (e.side || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'note') {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
+  } else if (e.type === 'bath' || e.type === 'play') {
+    detail = fmt.clock(e.start); meta = e.note || '';
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
@@ -223,7 +225,7 @@ export function bathDaysSinceLabel(iso) {
   if (!iso) return 'Never';
   const midnight = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const days = Math.round((midnight(Date.now()) - midnight(iso)) / 86400000);
-  if (days <= 0) return 'Today';
+  if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
   return days + ' days ago';
 }

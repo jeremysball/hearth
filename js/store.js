@@ -317,8 +317,9 @@ export function seed() {
 
 export function applySyncResponse(resp) {
   if (resp.baby) Object.assign(_state.baby, resp.baby);
-  if (resp.settings) Object.assign(_state.settings, resp.settings);
+  if (resp.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
   _state.log = mergeById(_state.log, resp.entries || []);
+  _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
   _state.growth = mergeById(_state.growth, resp.growth || []);
   save();
 }
