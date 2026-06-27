@@ -61,6 +61,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub)))
 	mux.HandleFunc("GET /api/caregivers", requireAuth(db, handleListCaregivers(db)))
 	mux.HandleFunc("GET /api/auth/{provider}", handleAuthBegin(cfg))
+	mux.HandleFunc("GET /api/auth/{provider}/callback", handleAuthCallback(db, cfg))
 	mux.Handle("/", http.FileServerFS(staticFS))
 	return logMiddleware(mux)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -62,4 +63,87 @@ func handleAuthBegin(cfg Config) http.HandlerFunc {
 		})
 		http.Redirect(w, r, url, http.StatusFound)
 	}
+}
+
+func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("provider")
+		if !cfg.OAuthConfigured(name) {
+			http.Error(w, "provider not configured", http.StatusNotFound)
+			return
+		}
+		provider, err := goth.GetProvider(name)
+		if err != nil {
+			http.Error(w, "unknown provider", http.StatusNotFound)
+			return
+		}
+		cookie, err := r.Cookie(oauthStateCookie)
+		if err != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		// cookie value is "name|marshaledSession"
+		marshaled := cookie.Value
+		if i := indexByte(marshaled, '|'); i >= 0 {
+			marshaled = marshaled[i+1:]
+		}
+		sess, err := provider.UnmarshalSession(marshaled)
+		if err != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		if _, err = sess.Authorize(provider, r.URL.Query()); err != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		gu, err := provider.FetchUser(sess)
+		if err != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		// clear the state cookie
+		http.SetCookie(w, &http.Cookie{Name: oauthStateCookie, Path: "/", MaxAge: -1})
+
+		var cur *SessionInfo
+		if sc, err := r.Cookie(sessionCookieName); err == nil {
+			var fam, cg string
+			if e := db.QueryRow(`SELECT family_id, caregiver_id FROM sessions WHERE token = ?`, sc.Value).Scan(&fam, &cg); e == nil {
+				cur = &SessionInfo{FamilyID: fam, CaregiverID: cg}
+			}
+		}
+
+		res, err := reconcile(db, name, gu.UserID, gu.Email, cur)
+		if err != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		switch res.Kind {
+		case "linked", "restored", "signedup":
+			token, e := createSession(db, res.CaregiverID, res.FamilyID)
+			if e != nil {
+				http.Redirect(w, r, "/?auth=error", http.StatusFound)
+				return
+			}
+			setSessionCookie(w, token)
+			http.Redirect(w, r, "/?auth=ok", http.StatusFound)
+		case "conflict":
+			pending := newID()
+			if _, e := db.Exec(`INSERT INTO pending_auth (token, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,
+				pending, name, gu.UserID, gu.Email, res.TargetFamily, res.CurrentFamily, res.CurrentCaregiver, nowISO()); e != nil {
+				http.Redirect(w, r, "/?auth=error", http.StatusFound)
+				return
+			}
+			http.Redirect(w, r, "/?auth=conflict&pending="+pending, http.StatusFound)
+		}
+	}
+}
+
+// indexByte avoids importing strings just for one lookup.
+func indexByte(s string, b byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return i
+		}
+	}
+	return -1
 }
