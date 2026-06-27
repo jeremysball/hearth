@@ -27,3 +27,54 @@ export function groupByDay(entries, now = Date.now()) {
     return { key: k, label, items };
   });
 }
+
+// Session-only filter (not persisted). Empty set = show all types.
+let selectedTypes = new Set();
+export function toggleFilter(type) {
+  if (selectedTypes.has(type)) selectedTypes.delete(type);
+  else selectedTypes.add(type);
+}
+
+const FILTER_TYPES = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath'];
+
+function rowHTML(e) {
+  const s = summary(e);
+  const detail = [s.detail, s.meta].filter(Boolean).join(' · ');
+  return `<div class="tl-row" data-action="entry:edit" data-id="${e.id}">
+    <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
+    <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(detail)}</span></span>
+    <span class="meta">${esc(fmt.rel(e.start))}</span>
+  </div>`;
+}
+
+export function timeline() {
+  const all = state().log; // already excludes soft-deleted (mergeById tombstones them)
+  const active = selectedTypes;
+  const filtered = active.size ? all.filter((e) => active.has(e.type)) : all;
+  const groups = groupByDay(filtered);
+  const chips = FILTER_TYPES.map((t) => {
+    const on = active.has(t);
+    return `<button class="tl-chip${on ? ' on' : ''}" data-action="timeline:toggle" data-type="${t}">
+      <svg class="icon"><use href="#${icon(TYPES[t].icon)}"></use></svg>${esc(TYPES[t].label)}</button>`;
+  }).join('');
+
+  let body;
+  if (!all.length) {
+    body = `<div class="tl-empty">No entries yet. Log an activity from Home and it'll show up here.</div>`;
+  } else if (!filtered.length) {
+    body = `<div class="tl-empty">Nothing matches these filters.</div>`;
+  } else {
+    body = groups.map((g) => `
+      <div class="tl-day"><h2 class="tl-day-hd">${esc(g.label)}</h2>
+        <div class="card log">${g.items.map(rowHTML).join('')}</div>
+      </div>`).join('');
+  }
+
+  return `
+    <div class="page-hd tl-hd">
+      <button class="tl-back" data-action="nav:home" aria-label="Back to Home"><svg class="icon"><use href="#chevron-left"></use></svg></button>
+      <h1 class="page-title">Timeline</h1>
+    </div>
+    <div class="tl-chipbar">${chips}</div>
+    ${body}`;
+}

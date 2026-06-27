@@ -1114,4 +1114,16 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     backdrop-filter: blur(18px) saturate(1.15);
     -webkit-backdrop-filter: blur(18px) saturate(1.15);
   }
+
+/* ---- timeline ---- */
+.tl-hd { display: flex; align-items: center; gap: 10px; }
+.tl-back { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--hair); color: var(--soft); }
+.tl-chipbar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; -webkit-overflow-scrolling: touch; }
+.tl-chip { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--soft); background: color-mix(in oklch, var(--accent-tint) 60%, transparent); }
+.tl-chip .icon { width: 15px; height: 15px; }
+.tl-chip.on { color: var(--accent-ink); background: var(--surface); box-shadow: 0 1px 3px var(--mat-cast); }
+.tl-day { margin-bottom: 18px; }
+.tl-day-hd { font-family: var(--font-sans); font-size: 14px; font-weight: 800; color: var(--soft); margin: 6px 2px 8px; }
+.tl-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; cursor: pointer; }
+.tl-empty { color: var(--soft); text-align: center; padding: 48px 16px; }
 }
