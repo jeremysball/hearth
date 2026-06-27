@@ -371,6 +371,11 @@ export function editCard(which) {
       { title: 'Bottle reminder' });
   } else if (which === 'medicine') {
     sheet.open(medForm(), { title: 'Medicines', size: 'sheet-form' });
+  } else if (which === 'bath') {
+    sheet.open(`
+      <p class="empty-note">The bath card shows how long since the last bath. There's no reminder interval to set.</p>
+      <button class="btn-ghost danger" data-action="card:remove" data-card="bath"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
+      { title: 'Bath card' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
@@ -399,8 +404,18 @@ export function openCardPicker() {
 }
 
 export function pickCard(type) {
-  // Re-adding a hidden default just unhides it; generic types need an interval.
-  if (type === 'bottle' || type === 'medicine') { showCard(type); return; }
+  // Re-adding a hidden default just unhides it; bath is a no-interval days-since card; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine' || type === 'bath') {
+    if (type === 'bath') {
+      const cards = state().settings.cards;
+      cards.order = cards.order || ['bottle', 'medicine'];
+      if (!cards.order.includes('bath')) cards.order.push('bath');
+      cards.bath = true;
+      save(); enqueueSettingsSync(); sheet.close(); toast('Bath card added'); router.refresh();
+      return;
+    }
+    showCard(type); return;
+  }
   const c = TYPES[type] || { label: type };
   sheet.open(`
     ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, 3)}
