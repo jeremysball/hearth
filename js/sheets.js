@@ -359,6 +359,33 @@ export function openTypeChooser() {
   );
 }
 
+// ---------- medicine card dosing ----------
+export function logMedDose(medId) {
+  const m = state().settings.meds.find((x) => x.id === medId);
+  if (!m) return;
+  const e = { type: 'medicine', start: new Date().toISOString(), medId: m.id, name: m.name, dose: m.dose + m.unit };
+  const added = addEntry(e);
+  sheet.close();
+  if (state().settings.sound !== false) { chime(); buzz(15); }
+  confetti();
+  toast(m.name + ' logged', () => { removeEntry(added.id); router.refresh(); });
+  router.refresh();
+}
+
+export function openMedCard() {
+  const meds = state().settings.meds;
+  if (!meds.length) { editCard('medicine'); return; }
+  if (meds.length === 1) { logMedDose(meds[0].id); return; }
+  sheet.open(
+    `<div class="chooser">` + meds.map((m) => `
+      <button class="chooser-item" data-action="med:dose" data-mid="${m.id}">
+        <span class="chooser-ic tone-med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></span>
+        <span>${esc(m.name)} · ${esc(m.dose)}${esc(m.unit)}</span>
+      </button>`).join('') + `</div>`,
+    { title: 'Log a dose' }
+  );
+}
+
 // ---------- card config ----------
 export function editCard(which) {
   const s = state().settings;

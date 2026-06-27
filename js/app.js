@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 
@@ -171,6 +171,8 @@ document.addEventListener('click', (ev) => {
     'card:save-bottle': () => saveBottle(),
     'card:save-meds': () => saveMeds(),
     'med:add': () => addMed(),
+    'med:card': () => openMedCard(),
+    'med:dose': () => logMedDose(d.mid),
     'med:remove': () => { const r = $(`.med-edit[data-mid="${d.mid}"]`); if (r) r.remove(); },
     'entry:open': () => openEntry(d.id),
     'entry:edit': () => { const e = state().log.find((x) => x.id === d.id); if (e) openLog(e.type, e); },
