@@ -1112,6 +1112,31 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     backdrop-filter: blur(18px) saturate(1.25);
     -webkit-backdrop-filter: blur(18px) saturate(1.25);
   }
+  /* hero card: restore warm fire gradients over glass base */
+  .card.hero {
+    background-color: oklch(0.95 0.022 66 / 0.74);
+    background-image:
+      radial-gradient(ellipse 60% 40% at var(--light-x, 72%) var(--light-y, 50%),
+        oklch(0.99 0.01 70 / calc(0.14 + var(--fire-c, 0.10) * 1.2)) 0%, transparent 60%),
+      radial-gradient(ellipse at 12% 8%, var(--mat-highlight), transparent 52%),
+      var(--tex-clay);
+    background-size: 100% 100%, 100% 100%, 180px 180px;
+    background-blend-mode: screen, soft-light, normal;
+    backdrop-filter: blur(18px) saturate(1.30);
+    -webkit-backdrop-filter: blur(18px) saturate(1.30);
+  }
+  [data-mode="dark"] .card.hero {
+    background-color: oklch(0.20 0.030 48 / 0.68);
+    background-image:
+      radial-gradient(ellipse 80% 55% at var(--light-x, 20%) var(--light-y, 110%),
+        oklch(0.65 0.26 40 / calc(0.12 + var(--fire-a, 0.06) * 1.4)), transparent 65%),
+      radial-gradient(ellipse at 12% 90%, oklch(0.52 0.18 42 / 0.24), transparent 55%),
+      var(--tex-clay);
+    background-size: 100% 100%, 100% 100%, 180px 180px;
+    background-blend-mode: screen, normal, multiply;
+    backdrop-filter: blur(18px) saturate(1.45);
+    -webkit-backdrop-filter: blur(18px) saturate(1.45);
+  }
   /* dayjob dark: lighter, cooler glass — no warm amber cast */
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .info-card,
