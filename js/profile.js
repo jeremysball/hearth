@@ -2,6 +2,7 @@
 import { state } from './store.js';
 import { esc } from './ui.js';
 import { notifsGranted } from './reminders.js';
+import { accountSection } from './account.js';
 
 function buildStamp() {
   const v = document.querySelector('meta[name="version"]')?.content;
@@ -72,6 +73,11 @@ export function profile() {
       <div class="set-row"><span>Length</span>${segBind('settings.units.length', [{ v: 'cm', l: 'cm' }, { v: 'in', l: 'in' }], s.units.length)}</div>
       <div class="set-row"><span>Clock</span>${segBind('settings.clock24', [{ v: '12h', l: '12h' }, { v: '24h', l: '24h' }], s.clock24)}</div>
       <div class="set-row"><span>Sound & haptics</span>${sw('settings.sound', s.sound !== false)}</div>
+    </div>
+
+    <div class="sec-label">Account</div>
+    <div class="card row-card" id="account-sec">
+      ${accountSection()}
     </div>
 
     <div class="sec-label">Caregivers & sharing</div>

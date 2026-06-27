@@ -14,6 +14,7 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter } from './timeline.js';
+import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
 
 let current = 'home';
 const VIEWS = { home, trends, sleep, growth, profile, timeline };
@@ -156,7 +157,10 @@ document.addEventListener('click', (ev) => {
     'nav:trends': () => router.go('trends'),
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
-    'nav:profile': () => { router.go('profile'); loadCaregivers().then(() => { if (current === 'profile') router.refresh(); }); },
+    'nav:profile': () => {
+      router.go('profile');
+      Promise.all([loadCaregivers(), loadMe()]).then(() => { if (current === 'profile') router.refresh(); });
+    },
     'nav:timeline': () => router.go('timeline'),
     'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
@@ -213,7 +217,10 @@ document.addEventListener('click', (ev) => {
     'app:reset': () => resetConfirm(),
     'stepper:up': () => { if (!_stepperPointerActive) stepValue(d.target, 1); },
     'stepper:down': () => { if (!_stepperPointerActive) stepValue(d.target, -1); },
-    'stepper:open': () => openSpinner(el.id)
+    'stepper:open': () => openSpinner(el.id),
+    'auth:signin': () => beginSignIn(d.provider),
+    'auth:signout': () => signOut(() => router.refresh()),
+    'auth:resolve': () => resolveConflict(d.choice, d.pending, () => { syncOnce(); router.go('home'); }),
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
 });
@@ -547,9 +554,21 @@ async function init() {
   }
   if (!state().setup) {
     $('#app').innerHTML = onboarding();
+    handleAuthRedirect(null, async () => {
+      // signedup on a fresh device: pull the new family down and boot.
+      try {
+        const syncRes = await fetch('/api/sync', { credentials: 'include' });
+        if (syncRes.ok) applySyncResponse(await syncRes.json());
+        state().setup = true; save();
+      } catch (e) { /* offline — proceed with empty state */ }
+      router.boot(); router.go('home');
+      syncOnce(); connectEvents();
+      toast('Signed in');
+    });
   } else {
     router.boot();
     router.go('home');
+    handleAuthRedirect(() => router.refresh());
     syncOnce();
     connectEvents();
   }

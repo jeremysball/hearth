@@ -3,6 +3,7 @@ import { state, save, seed, markSynced } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
+import { signInButtons } from './account.js';
 
 let _onbPhoto = null;
 
@@ -38,6 +39,8 @@ export function onboarding() {
     </div>
 
     <button class="btn-primary onb-go" data-action="onboard:finish"><svg class="icon"><use href="#heart"></use></svg> Create Hearth</button>
+    <div class="onb-or">or</div>
+    ${signInButtons()}
     <div class="onb-foot">You can change any of this later in Profile.</div>
   </div>`;
 }
