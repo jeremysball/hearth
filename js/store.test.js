@@ -145,6 +145,33 @@ test('normalizeLog swaps reversed sleep timestamps', () => {
   assert.ok(new Date(out[0].end) >= new Date(out[0].start));
 });
 
+test('nextForType anchors on the last entry end + interval', () => {
+  const end = '2026-06-27T10:30:00.000Z';
+  addEntry({ type: 'play', start: '2026-06-27T10:00:00.000Z', end });
+  const r = derive.nextForType('play', 4);
+  assert.equal(r.last.end, end);
+  assert.equal(r.due.toISOString(), new Date(new Date(end).getTime() + 4 * 3600000).toISOString());
+});
+
+test('nextForType anchors on start when the last entry has no end', () => {
+  const start = '2026-06-27T12:00:00.000Z';
+  addEntry({ type: 'bath', start });
+  const r = derive.nextForType('bath', 2);
+  assert.equal(r.due.toISOString(), new Date(new Date(start).getTime() + 2 * 3600000).toISOString());
+});
+
+test('nextForType with no prior entry is due ~now', () => {
+  const r = derive.nextForType('pump', 3);
+  assert.equal(r.last, null);
+  assert.ok(Math.abs(r.due.getTime() - Date.now()) < 5000);
+});
+
+test('nextForType reads the interval from settings.cards.intervals by default', () => {
+  state().settings.cards.intervals = { play: 6 };
+  const r = derive.nextForType('play');
+  assert.equal(r.intervalH, 6);
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');
