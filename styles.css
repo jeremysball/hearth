@@ -154,6 +154,7 @@ body {
   opacity: var(--fire-b);
 }
 [data-mode="dark"] .phone::before {
+  mix-blend-mode: screen; /* additive in dark — fire glows ADD light instead of overlay-darkening */
   background: radial-gradient(ellipse 78% 72% at 12% 104%, oklch(0.65 0.24 38), transparent 65%);
   opacity: var(--fire-a);
 }
@@ -566,23 +567,28 @@ body[data-mode="dark"] {
     0 6px 22px oklch(0 0 0 / 0.50);
 }
 [data-mode="dark"] .tok {
+  animation-name: fire-a-dark, fire-b-dark, fire-c-dark;
   background-image:
-    linear-gradient(155deg, oklch(0.22 0.05 38 / 0.20) 0%, oklch(0.52 0.16 46 / 0.25) 100%),
+    radial-gradient(ellipse 120% 90% at 50% 8%, oklch(0.97 0.012 70 / calc(0.10 + var(--fire-a) * 1.0)) 0%, transparent 42%),
+    radial-gradient(circle at 32% 118%, var(--ember-core) 0%, transparent 50%),
     var(--tex-clay);
-  background-size: 100% 100%, 128px 128px;
-  background-blend-mode: normal, multiply;
+  background-size: 100% 100%, 100% 100%, 128px 128px;
+  background-blend-mode: normal, screen, soft-light;
   box-shadow:
-    0 -2px 0 oklch(0.60 0.18 48 / 0.40) inset,
-    0 1px 0 oklch(0.05 0.02 38 / 0.40) inset,
-    0 4px 14px oklch(0 0 0 / 0.50);
+    0 -2px 0 oklch(0.62 0.18 48 / calc(0.18 + var(--fire-a) * 0.9)) inset,
+    0 1px 0 oklch(0.04 0.02 38 / 0.50) inset,
+    0 2px calc(4px + var(--fire-a) * 4px) -1px var(--ember-rim),
+    2px 4px 10px oklch(0 0 0 / 0.50);
 }
 [data-mode="dark"] .phone {
+  background-color: var(--page); /* override glassmorphism transparent so blend has a dark base */
   box-shadow: 0 0 0 1px oklch(0.28 0.03 44);
   background-image:
-    radial-gradient(ellipse 85% 60% at 18% 108%, oklch(0.58 0.24 42 / 0.18), transparent 60%),
+    radial-gradient(ellipse 90% 55% at 12% 108%, oklch(0.65 0.26 40 / calc(0.10 + var(--fire-a) * 1.4)), transparent 65%),
+    radial-gradient(ellipse 55% 38% at 30% 106%, oklch(0.75 0.22 52 / calc(0.05 + var(--fire-b) * 0.9)), transparent 55%),
     var(--tex-plaster);
-  background-size: 100% 100%, 80px 80px;
-  background-blend-mode: normal, multiply;
+  background-size: 100% 100%, 100% 100%, 80px 80px;
+  background-blend-mode: screen, screen, soft-light;
 }
 [data-mode="dark"] input, [data-mode="dark"] select, [data-mode="dark"] textarea { background: oklch(0.15 0.012 52); border-color: var(--hair); color: var(--ink); }
 [data-mode="dark"] .scrim { background: oklch(0 0 0 / 0); }
@@ -938,5 +944,9 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   .sheet { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
   [data-mode="dark"] .card,
   [data-mode="dark"] .info-card,
-  [data-mode="dark"] .sheet { background: oklch(0.24 0.016 55 / 0.70); }
+  [data-mode="dark"] .sheet {
+    background: oklch(0.22 0.018 50 / 0.42);
+    backdrop-filter: blur(18px) saturate(1.25);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  }
 }
