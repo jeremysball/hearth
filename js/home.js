@@ -182,15 +182,22 @@ function bottleCard() {
 function medicineCard() {
   const meds = derive.nextMeds();
   const next = meds.find((m) => m.due) || meds[0];
+  const action = cardEditMode ? '' : 'data-action="med:card"';
+  if (!next) {
+    return `<div class="info-card" ${action} data-card="medicine">
+      <div class="ic-ring med"><svg class="icon"><use href="#plus"></use></svg></div>
+      <div class="ic-txt"><div class="ic-lbl">Medicine</div><div class="ic-val">Add a medicine</div></div>
+      ${icEdit('medicine')}
+    </div>`;
+  }
   let val, lbl;
-  if (!next) { lbl = 'No medicines'; val = 'Tap to add'; }
-  else if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
+  if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
   else {
     const overdue = next.due < new Date();
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
   }
-  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="medicine" data-card="medicine">
+  return `<div class="info-card" ${action} data-card="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
     <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
     ${icEdit('medicine')}
