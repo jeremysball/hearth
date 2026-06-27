@@ -13,6 +13,14 @@ type Config struct {
 	KeyFile   string
 	DBPath    string
 	StaticDir string
+
+	PublicBaseURL      string
+	GoogleClientID     string
+	GoogleClientSecret string
+	AppleClientID      string
+	AppleClientSecret  string
+	AppleTeamID        string
+	AppleKeyID         string
 }
 
 func loadConfig() Config {
@@ -24,7 +32,25 @@ func loadConfig() Config {
 		KeyFile:   os.Getenv("KEY_FILE"),
 		DBPath:    getenv("DB_PATH", "hearth.db"),
 		StaticDir: getenv("STATIC_DIR", ""),
+
+		PublicBaseURL:      os.Getenv("PUBLIC_BASE_URL"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		AppleClientID:      os.Getenv("APPLE_CLIENT_ID"),
+		AppleClientSecret:  os.Getenv("APPLE_CLIENT_SECRET"),
+		AppleTeamID:        os.Getenv("APPLE_TEAM_ID"),
+		AppleKeyID:         os.Getenv("APPLE_KEY_ID"),
 	}
+}
+
+func (c Config) OAuthConfigured(provider string) bool {
+	switch provider {
+	case "google":
+		return c.PublicBaseURL != "" && c.GoogleClientID != "" && c.GoogleClientSecret != ""
+	case "apple":
+		return c.PublicBaseURL != "" && c.AppleClientID != "" && c.AppleClientSecret != "" && c.AppleTeamID != "" && c.AppleKeyID != ""
+	}
+	return false
 }
 
 func getenv(key, fallback string) string {
