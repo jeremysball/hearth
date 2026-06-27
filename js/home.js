@@ -37,7 +37,10 @@ let cardEditMode = false;
 export function exitCardEditMode() { cardEditMode = false; }
 export function enterCardEditMode() {
   if (cardEditMode) return false;
-  if ((state().settings.cards.order || CARD_KEYS).filter((k) => state().settings.cards[k]).length < 2) return false;
+  // Count only cards that would actually render, mirroring home()'s filter, so a
+  // legacy non-renderable key can't let edit mode engage on a single visible card.
+  const cards = state().settings.cards;
+  if ((cards.order || CARD_KEYS).filter((k) => renderable(k) && cards[k] !== false).length < 2) return false;
   cardEditMode = true;
   return true;
 }
@@ -212,7 +215,7 @@ function genericCard(type) {
 const CARD_KEYS = ['bottle', 'medicine'];
 const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard };
 // Activity types eligible as timer cards (everything loggable except notes).
-export const CARD_TYPES = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
+export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
 
 // A generic (non-default) card only renders once it has an interval configured,
 // so legacy saved state never resurrects a card the user didn't add.

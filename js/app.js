@@ -23,14 +23,6 @@ const TABS = [
   { v: 'profile', icon: 'user', label: 'Profile' }
 ];
 
-let homeEntered = false;
-function enterHome() {
-  homeEntered = true;
-  document.querySelectorAll('#view .track i').forEach((el) => {
-    animateGrow(el, [{ width: '0%' }, { width: el.style.width }], 0, 'ease-out');
-  });
-}
-
 function enterTrends() {
   const bars = [...document.querySelectorAll('#view .bar')];
   bars.forEach((b, i) => {
@@ -91,8 +83,7 @@ export const router = {
     initThumbs($('#view'));
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
-    if (view === 'home' && !homeEntered) enterHome();
-    else if (view === 'trends') enterTrends();
+    if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
   },

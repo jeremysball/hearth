@@ -1,5 +1,5 @@
 // sheets.js — logging bottom sheet (detailed) + card config sheets.
-import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
+import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
@@ -370,11 +370,6 @@ export function editCard(which) {
       { title: 'Bottle reminder' });
   } else if (which === 'medicine') {
     sheet.open(medForm(), { title: 'Medicines', size: 'sheet-form' });
-  } else if (which === 'sweetspot') {
-    sheet.open(`
-      <p class="empty-note">SweetSpot predicts the next ideal nap from ${state().baby.name || 'your baby'}'s age (${ageLabel()}) and current awake time.</p>
-      <button class="btn-ghost" data-action="card:hide" data-card="sweetspot">Hide this card</button>`,
-      { title: 'SweetSpot' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
