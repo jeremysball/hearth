@@ -1,7 +1,7 @@
 // app.js — shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
-import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
+import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
 import { trends } from './trends.js';
@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 
@@ -22,14 +22,6 @@ const TABS = [
   { v: 'trends', icon: 'chart-bar', label: 'Trends' }, { v: 'growth', icon: 'ruler', label: 'Growth' },
   { v: 'profile', icon: 'user', label: 'Profile' }
 ];
-
-let homeEntered = false;
-function enterHome() {
-  homeEntered = true;
-  document.querySelectorAll('#view .track i').forEach((el) => {
-    animateGrow(el, [{ width: '0%' }, { width: el.style.width }], 0, 'ease-out');
-  });
-}
 
 function enterTrends() {
   const bars = [...document.querySelectorAll('#view .bar')];
@@ -91,8 +83,7 @@ export const router = {
     initThumbs($('#view'));
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
-    if (view === 'home' && !homeEntered) enterHome();
-    else if (view === 'trends') enterTrends();
+    if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
   },
@@ -169,6 +160,11 @@ document.addEventListener('click', (ev) => {
     'card:edit': () => editCard(d.card),
     'card:show': () => showCard(d.card),
     'card:hide': () => hideCard(d.card),
+    'card:add': () => openCardPicker(),
+    'card:pick': () => pickCard(d.type),
+    'card:save-new': () => saveNewCard(d.card),
+    'card:save-interval': () => saveCardInterval(d.card),
+    'card:remove': () => removeCard(d.card),
     'card:save-bottle': () => saveBottle(),
     'card:save-meds': () => saveMeds(),
     'med:add': () => addMed(),

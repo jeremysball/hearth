@@ -6,7 +6,7 @@
 <title>Hearth — baby tracker</title>
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#f3eee0" />
-<meta name="version" content="2026-06-27T00:41Z" /><!-- Must match VERSION in sw.js -->
+<meta name="version" content="2026-06-27T11:48Z" /><!-- Must match VERSION in sw.js -->
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -16,6 +16,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<!-- Open Graph / social sharing -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Hearth — baby tracker" />
+<meta property="og:description" content="A calm, private tracker for your baby's sleep, feeds and day. Free and local-first." />
+<meta property="og:image" content="/icons/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Hearth — baby tracker" />
+<meta name="twitter:description" content="A calm, private tracker for your baby's sleep, feeds and day. Free and local-first." />
+<meta name="twitter:image" content="/icons/og-image.png" />
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body data-theme="girl">
@@ -23,6 +34,9 @@
 <!-- Lucide icons, ISC license: https://lucide.dev -->
 <symbol id="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+</symbol>
+<symbol id="moon-filled" viewBox="0 0 24 24">
+  <path fill="currentColor" d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
 </symbol>
 <symbol id="moon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M18 5h4" />
@@ -173,18 +187,25 @@
   <path fill="white" fill-opacity="0.35" d="M10.5 10a6.3 6.3 0 0 0-1.8 4 7 7 0 0 1-.2-2c0-1.4.5-2.7 1.4-3.7a9 9 0 0 0 .6-.3z"/>
 </symbol>
 <symbol id="icon-bottle" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M8 2h8v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 14 10.212V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-9.788a4 4 0 0 1 .672-2.22l.656-.983A4 4 0 0 0 8 4.788V2z"/>
-  <path fill="white" fill-opacity="0.28" d="M9 2h2.5v.6H9z"/>
-  <line x1="9" y1="15.5" x2="14" y2="15.5" stroke="white" stroke-opacity="0.40" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- teat + collar -->
+  <path fill="currentColor" d="M10.6 2.4a1.4 1.4 0 0 1 2.8 0V4h-2.8z"/>
+  <rect fill="currentColor" x="9.4" y="4.2" width="5.2" height="2.2" rx="0.7"/>
+  <!-- body: collar shoulders taper into a rounded bottle -->
+  <path fill="currentColor" d="M9.6 6.6h4.8a3.2 3.2 0 0 1 .9 1.9l.2 1.5A2.6 2.6 0 0 1 17 12.4V19a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6.6a2.6 2.6 0 0 1 .6-2.4l.2-1.5a3.2 3.2 0 0 1 .8-1.9z"/>
+  <!-- measurement marks -->
+  <path stroke="white" stroke-opacity="0.5" stroke-width="1.3" stroke-linecap="round" d="M9 13h2.2M9 16h3.2"/>
 </symbol>
 <symbol id="icon-diaper" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M3 5c-.5 0-1 .5-1 1v3l4 3-4 3v3c0 .5.5 1 1 1h18c.5 0 1-.5 1-1v-3l-4-3 4-3V6c0-.5-.5-1-1-1H3z"/>
-  <path fill="white" fill-opacity="0.28" d="M3 5h18c.5 0 1 .5 1 1v2l-4 3H6L2 8V6c0-.5.5-1 1-1z"/>
+  <!-- diaper brief: waistband with two leg openings and a center crotch -->
+  <path fill="currentColor" d="M3 6.5h18v3.5c0 4-2 6-5 6-2.6 0-3.6-1.6-4-4-.4 2.4-1.4 4-4 4-3 0-5-2-5-6z"/>
+  <!-- waistband highlight -->
+  <path fill="white" fill-opacity="0.30" d="M3 6.5h18v1.9c-2.9 1.1-5.6 1.5-9 1.5s-6.1-.4-9-1.5z"/>
 </symbol>
 <symbol id="icon-medicine" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M10.5 3.5a7 7 0 0 1 9.9 9.9l-10 10a7 7 0 1 1-9.9-9.9l10-10z"/>
-  <path fill="white" fill-opacity="0.28" d="M10.5 3.5a7 7 0 0 0-4.95 11.95l11.95-11.95A7 7 0 0 0 10.5 3.5z"/>
-  <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke="white" stroke-opacity="0.35" stroke-width="1.2"/>
+  <!-- diagonal capsule, lighter top-right end + clear seam -->
+  <path fill="currentColor" d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7z"/>
+  <path fill="white" fill-opacity="0.32" d="M8.5 8.5 13.5 3.5A4.95 4.95 0 0 1 20.5 10.5L15.5 15.5z"/>
+  <path stroke="white" stroke-opacity="0.55" stroke-width="1.4" stroke-linecap="round" d="m8.5 8.5 7 7"/>
 </symbol>
 <symbol id="icon-play" viewBox="0 0 24 24">
   <circle fill="currentColor" cx="12" cy="12" r="4.5"/>
