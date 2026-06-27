@@ -309,6 +309,7 @@ export function openLog(type, entry) {
     { title: (editing ? 'Edit ' : 'Log ') + cfg.label.toLowerCase(), size: 'sheet-form' }
   );
   if (editing) prefill(type, entry);
+  else if ($('#f-time')) $('#f-time').value = nowLocalDT();
   $$('.segctl').forEach(bindDragSeg);
 }
 
@@ -358,6 +359,33 @@ export function openTypeChooser() {
   );
 }
 
+// ---------- medicine card dosing ----------
+export function logMedDose(medId) {
+  const m = state().settings.meds.find((x) => x.id === medId);
+  if (!m) return;
+  const e = { type: 'medicine', start: new Date().toISOString(), medId: m.id, name: m.name, dose: m.dose + m.unit };
+  const added = addEntry(e);
+  sheet.close();
+  if (state().settings.sound !== false) { chime(); buzz(15); }
+  confetti();
+  toast(m.name + ' logged', () => { removeEntry(added.id); router.refresh(); });
+  router.refresh();
+}
+
+export function openMedCard() {
+  const meds = state().settings.meds;
+  if (!meds.length) { editCard('medicine'); return; }
+  if (meds.length === 1) { logMedDose(meds[0].id); return; }
+  sheet.open(
+    `<div class="chooser">` + meds.map((m) => `
+      <button class="chooser-item" data-action="med:dose" data-mid="${m.id}">
+        <span class="chooser-ic tone-med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></span>
+        <span>${esc(m.name)} · ${esc(m.dose)}${esc(m.unit)}</span>
+      </button>`).join('') + `</div>`,
+    { title: 'Log a dose' }
+  );
+}
+
 // ---------- card config ----------
 export function editCard(which) {
   const s = state().settings;
@@ -370,6 +398,11 @@ export function editCard(which) {
       { title: 'Bottle reminder' });
   } else if (which === 'medicine') {
     sheet.open(medForm(), { title: 'Medicines', size: 'sheet-form' });
+  } else if (which === 'bath') {
+    sheet.open(`
+      <p class="empty-note">The bath card shows how long since the last bath. There's no reminder interval to set.</p>
+      <button class="btn-ghost danger" data-action="card:remove" data-card="bath"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
+      { title: 'Bath card' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
@@ -398,8 +431,18 @@ export function openCardPicker() {
 }
 
 export function pickCard(type) {
-  // Re-adding a hidden default just unhides it; generic types need an interval.
-  if (type === 'bottle' || type === 'medicine') { showCard(type); return; }
+  // Re-adding a hidden default just unhides it; bath is a no-interval days-since card; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine' || type === 'bath') {
+    if (type === 'bath') {
+      const cards = state().settings.cards;
+      cards.order = cards.order || ['bottle', 'medicine'];
+      if (!cards.order.includes('bath')) cards.order.push('bath');
+      cards.bath = true;
+      save(); enqueueSettingsSync(); sheet.close(); toast('Bath card added'); router.refresh();
+      return;
+    }
+    showCard(type); return;
+  }
   const c = TYPES[type] || { label: type };
   sheet.open(`
     ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, 3)}

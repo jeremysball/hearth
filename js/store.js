@@ -39,10 +39,19 @@ function load() {
         delete s.cards.sweetspot;
         if (Array.isArray(s.cards.order)) s.cards.order = s.cards.order.filter((k) => k !== 'sweetspot');
       }
+      normalizeSettings(s.settings);
       return s;
     }
   } catch (e) {}
   return DEFAULT();
+}
+
+export function normalizeSettings(s) {
+  if (!s) return s;
+  if (s.clock24 === true) s.clock24 = '24h';
+  else if (s.clock24 === false) s.clock24 = '12h';
+  else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
+  return s;
 }
 
 export function normalizeLog(log) {
@@ -308,8 +317,9 @@ export function seed() {
 
 export function applySyncResponse(resp) {
   if (resp.baby) Object.assign(_state.baby, resp.baby);
-  if (resp.settings) Object.assign(_state.settings, resp.settings);
+  if (resp.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
   _state.log = mergeById(_state.log, resp.entries || []);
+  _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
   _state.growth = mergeById(_state.growth, resp.growth || []);
   save();
 }

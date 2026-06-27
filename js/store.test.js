@@ -172,6 +172,15 @@ test('nextForType reads the interval from settings.cards.intervals by default', 
   assert.equal(r.intervalH, 6);
 });
 
+test('normalizeSettings coerces legacy boolean clock24 to a string option value', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  assert.equal(normalizeSettings({ clock24: true }).clock24, '24h');
+  assert.equal(normalizeSettings({ clock24: false }).clock24, '12h');
+  assert.equal(normalizeSettings({ clock24: '24h' }).clock24, '24h');
+  assert.equal(normalizeSettings({ clock24: '12h' }).clock24, '12h');
+  assert.equal(normalizeSettings({}).clock24, '12h');
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');

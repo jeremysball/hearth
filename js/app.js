@@ -10,12 +10,13 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
+import { timeline, toggleFilter } from './timeline.js';
 
 let current = 'home';
-const VIEWS = { home, trends, sleep, growth, profile };
+const VIEWS = { home, trends, sleep, growth, profile, timeline };
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
@@ -87,7 +88,10 @@ export const router = {
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
   },
-  refresh() { if ($('#view')) $('#view').innerHTML = VIEWS[current]({}); $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current)); }
+  refresh() {
+    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); }
+    $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
+  }
 };
 
 // ---------- path helpers ----------
@@ -153,6 +157,8 @@ document.addEventListener('click', (ev) => {
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
     'nav:profile': () => { router.go('profile'); loadCaregivers().then(() => { if (current === 'profile') router.refresh(); }); },
+    'nav:timeline': () => router.go('timeline'),
+    'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
     'log:more': () => openTypeChooser(),
     'log:save': () => saveLog(d.type, d.id),
@@ -168,6 +174,8 @@ document.addEventListener('click', (ev) => {
     'card:save-bottle': () => saveBottle(),
     'card:save-meds': () => saveMeds(),
     'med:add': () => addMed(),
+    'med:card': () => openMedCard(),
+    'med:dose': () => logMedDose(d.mid),
     'med:remove': () => { const r = $(`.med-edit[data-mid="${d.mid}"]`); if (r) r.remove(); },
     'entry:open': () => openEntry(d.id),
     'entry:edit': () => { const e = state().log.find((x) => x.id === d.id); if (e) openLog(e.type, e); },
