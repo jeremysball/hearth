@@ -762,8 +762,11 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   position: relative;
   overflow: hidden;
   display: flex; gap: 0; border-radius: 13px; padding: 4px;
-  background-color: var(--accent-tint);
+  background: color-mix(in oklch, var(--accent-tint) 72%, transparent);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
   box-shadow: 0 1px 3px var(--mat-shadow) inset, 0 -1px 0 var(--mat-highlight) inset;
+  touch-action: none;
 }
 .segctl.sm { display: inline-flex; }
 .seg-thumb {
@@ -790,15 +793,27 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     width 0.42s cubic-bezier(0.34, 1.4, 0.5, 1),
     --glare 0.42s cubic-bezier(0.34, 1.4, 0.5, 1);
 }
-.segctl[data-draggable] { touch-action: none; transform-origin: center; }
 .seg-opt {
   all: unset; cursor: pointer; flex: 1; text-align: center; padding: 9px 12px; border-radius: 10px;
   font-size: 13px; font-weight: 700; color: var(--soft);
   position: relative; z-index: 1; white-space: nowrap;
-  transition: color .15s;
+  transition: color .15s, opacity .15s;
 }
 .segctl.sm .seg-opt { padding: 7px 14px; flex: 0 0 auto; }
 .seg-opt.on { color: var(--accent-ink); }
+[data-mode="dark"] .segctl {
+  background: oklch(0.26 0.022 48 / 0.58);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.50) inset, 0 -1px 0 oklch(0.60 0.18 46 / 0.18) inset;
+}
+[data-mode="dark"] .seg-thumb {
+  background-color: oklch(0.30 0.030 48);
+  box-shadow:
+    0 1.5px 0 oklch(0.62 0.18 48 / calc(0.20 + var(--fire-a) * 0.6)) inset,
+    0 -2px 3px -1px oklch(0.06 0.02 38 / 0.40) inset,
+    0 2px 8px oklch(0 0 0 / 0.55),
+    0 calc(2px + var(--fire-a) * 4px) calc(6px + var(--fire-a) * 4px) -1px var(--ember-rim);
+}
+[data-mode="dark"] .seg-opt.on { color: var(--accent); }
 
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .28s; }
@@ -923,15 +938,15 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-highlight { position: absolute; top: 50%; left: 12px; right: 12px; height: 52px; transform: translateY(-50%); background: var(--accent-tint); border-radius: 13px; pointer-events: none; z-index: 0; }
 .spinner-items { position: absolute; top: 50%; left: 0; right: 0; z-index: 1; will-change: transform; }
 .spinner-item { height: 52px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--muted); }
-.spinner-item.on { font-size: 26px; font-weight: 800; color: var(--ink); }
-.spinner-item.pos-1 { opacity: .85; font-size: 18px; }
-.spinner-item.pos-2 { opacity: .68; font-size: 17px; }
-.spinner-item.pos-3 { opacity: .50; font-size: 15px; }
-.spinner-item.pos-4 { opacity: .35; font-size: 14px; }
-.spinner-item.pos-5 { opacity: .22; font-size: 13px; }
-.spinner-item.pos-6 { opacity: .12; font-size: 12px; }
-.spinner-item.pos-7 { opacity: .06; font-size: 11px; }
-.spinner-item.pos-8 { opacity: .03; font-size: 10px; }
+.spinner-item.on { font-size: 28px; font-weight: 800; color: var(--ink); }
+.spinner-item.pos-1 { opacity: .62; font-size: 17px; }
+.spinner-item.pos-2 { opacity: .34; font-size: 14px; }
+.spinner-item.pos-3 { opacity: .16; font-size: 12px; }
+.spinner-item.pos-4 { opacity: .07; font-size: 11px; }
+.spinner-item.pos-5 { opacity: .03; font-size: 10px; }
+.spinner-item.pos-6 { opacity: .01; font-size: 10px; }
+.spinner-item.pos-7 { opacity: .005; font-size: 10px; }
+.spinner-item.pos-8 { opacity: .002; font-size: 10px; }
 .spinner-type { display: flex; align-items: center; gap: 6px; }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
