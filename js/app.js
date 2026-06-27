@@ -1,7 +1,7 @@
 // app.js — shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
-import { $, $$, esc, fmt, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
+import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
 import { trends } from './trends.js';

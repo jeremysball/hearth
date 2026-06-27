@@ -1,6 +1,6 @@
 // sheets.js — logging bottom sheet (detailed) + card config sheets.
 import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep } from './store.js';
-import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
+import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes } from './home.js';
