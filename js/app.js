@@ -13,9 +13,10 @@ import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
+import { timeline, toggleFilter } from './timeline.js';
 
 let current = 'home';
-const VIEWS = { home, trends, sleep, growth, profile };
+const VIEWS = { home, trends, sleep, growth, profile, timeline };
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
@@ -156,6 +157,8 @@ document.addEventListener('click', (ev) => {
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
     'nav:profile': () => { router.go('profile'); loadCaregivers().then(() => { if (current === 'profile') router.refresh(); }); },
+    'nav:timeline': () => router.go('timeline'),
+    'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
     'log:more': () => openTypeChooser(),
     'log:save': () => saveLog(d.type, d.id),
