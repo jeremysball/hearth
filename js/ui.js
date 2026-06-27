@@ -85,6 +85,79 @@ export function positionThumb(group) {
   thumb.style.setProperty('--glare', opts.length > 1 ? idx / (opts.length - 1) : 0.5);
 }
 
+export function bindDragSeg(el) {
+  if (el._dragBound) return;
+  el._dragBound = true;
+  const LONG_PRESS_MS = 280;
+  const MOVE_THRESHOLD = 4;
+  let timer = null, dragging = false, startX = 0;
+
+  function optionAt(x) {
+    let nearest = null, bestDist = Infinity;
+    el.querySelectorAll('.seg-opt').forEach((o) => {
+      const r = o.getBoundingClientRect();
+      const dist = Math.abs(x - (r.left + r.width / 2));
+      if (dist < bestDist) { bestDist = dist; nearest = o; }
+    });
+    return nearest;
+  }
+
+  function highlight(active) {
+    el.querySelectorAll('.seg-opt').forEach((o) => {
+      o.classList.toggle('on', o === active);
+      o.style.opacity = (active && o !== active) ? '0.55' : '';
+    });
+  }
+
+  function bouncePill(pill) {
+    if (!pill) return;
+    pill.style.transition = 'none';
+    pill.style.transform = 'scale(1.14)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      pill.style.transition = 'transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+      pill.style.transform = '';
+    }));
+  }
+
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    startX = e.clientX; dragging = false;
+    timer = setTimeout(() => {
+      dragging = true;
+      el.setPointerCapture(e.pointerId);
+      bouncePill(el.querySelector('.seg-thumb'));
+      highlight(optionAt(e.clientX));
+    }, LONG_PRESS_MS);
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) {
+      if (Math.abs(e.clientX - startX) > MOVE_THRESHOLD && timer) { clearTimeout(timer); timer = null; }
+      return;
+    }
+    e.stopPropagation();
+    highlight(optionAt(e.clientX));
+  });
+
+  function resetOpts() {
+    el.querySelectorAll('.seg-opt').forEach((o) => { o.style.opacity = ''; o.style.transform = ''; o.style.transition = ''; });
+  }
+
+  function release() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!dragging) return;
+    dragging = false;
+    resetOpts();
+    // Fire a synthetic click on the settled option so data-bind-seg paths update
+    const active = el.querySelector('.seg-opt.on');
+    if (active) active.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    positionThumb(el);
+  }
+
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', () => { if (timer) { clearTimeout(timer); timer = null; } dragging = false; resetOpts(); });
+}
+
 export function initThumbs(container) {
   $$('.segctl', container).forEach(group => {
     const thumb = group.querySelector('.seg-thumb');
@@ -92,6 +165,7 @@ export function initThumbs(container) {
     thumb.style.transition = 'none';
     positionThumb(group);
     requestAnimationFrame(() => { thumb.style.transition = ''; });
+    bindDragSeg(group);
   });
 }
 
