@@ -1,5 +1,6 @@
 // home.js — home view + entry summary helper.
 import { state, derive, ageLabel, awakeWindowMin } from './store.js';
+const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 
 export function summary(e) {
@@ -66,30 +67,79 @@ function avatar() {
   return `<button class="avatar-btn" data-action="baby:photo" aria-label="View ${esc(b.name || 'baby')}'s photo">${inner}</button>`;
 }
 
-function heroCard() {
+function sleepCard() {
   const st = derive.status();
-  const elapsed = (Date.now() - st.since) / 60000;
-  if (st.state === 'asleep') {
-    const t = fmt.durBig(elapsed);
-    const pct = Math.min(100, (elapsed / 70) * 100);
-    return `<div class="card hero asleep">
-      <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
-      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Resting peacefully. 💤</div>
-      <div class="track sleep"><i style="width:${pct}%"></i></div>
-      <div class="track-cap"><span>asleep</span><span>~70m typical nap</span></div>
-    </div>`;
-  }
+  const sp = derive.sweetSpot();
   const win = awakeWindowMin();
+  const now = Date.now();
+  const since = new Date(st.since).getTime();
+  const elapsed = (now - since) / MIN;
   const t = fmt.durBig(elapsed);
-  const pct = Math.min(100, (elapsed / win) * 100);
-  const healthy = elapsed < win * 0.85 ? 'Awake window looking healthy.' : (elapsed < win ? 'Getting close to nap time.' : 'Past the ideal awake window.');
-  return `<div class="card hero">
-    <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-    <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-    <div class="hero-sub">${healthy}</div>
-    <div class="track"><i style="width:${pct}%"></i></div>
-    <div class="track-cap"><span>0h</span><span>typical ${fmt.dur(win)}</span></div>
+  const asleep = st.state === 'asleep';
+
+  // Rail geometry
+  const TYPICAL_NAP = 70; // minutes
+  const railSpan = asleep ? TYPICAL_NAP * MIN : win * MIN;
+  const nowPct = Math.min(98, (now - since) / railSpan * 100);
+
+  let sweetState = 'before';
+  let sweetFromPct = 0, bandWidth = 0;
+  let sweetLabel = '';
+
+  if (!asleep) {
+    const sf = sp.from.getTime(), st2 = sp.to.getTime();
+    sweetFromPct = Math.max(0, Math.min(98, (sf - since) / railSpan * 100));
+    const sweetToPct = Math.max(0, Math.min(100, (st2 - since) / railSpan * 100));
+    bandWidth = Math.max(0, sweetToPct - sweetFromPct);
+
+    if (now < sf - 15 * MIN) sweetState = 'before';
+    else if (now < sf) sweetState = 'entering';
+    else if (now <= st2) sweetState = 'now';
+    else if (now < st2 + 15 * MIN) sweetState = 'passing';
+    else sweetState = 'passed';
+
+    const timeRange = `${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}`;
+    sweetLabel = {
+      before:   `Sweetspot · ${timeRange}`,
+      entering: 'Sweetspot approaching',
+      now:      'Sweetspot now',
+      passing:  'Sweetspot passing',
+      passed:   `Sweetspot · ${timeRange}`,
+    }[sweetState];
+  }
+
+  const awakeMsg = elapsed < win * 0.85
+    ? 'Awake window looking healthy.'
+    : elapsed < win ? 'Getting close to nap time.'
+    : 'Past the ideal awake window.';
+
+  const rail = asleep
+    ? `<div class="sh-rail sh-rail-sleep">
+        <div class="sh-rail-fill" style="width:${nowPct.toFixed(1)}%"></div>
+        <div class="sh-now-dot" style="left:${nowPct.toFixed(1)}%"></div>
+      </div>
+      <div class="sh-rail-cap"><span>asleep</span><span>~70m typical nap</span></div>`
+    : `<div class="sh-rail">
+        <div class="sh-rail-fill" style="width:${nowPct.toFixed(1)}%"></div>
+        <div class="sh-sweet-band" style="left:${sweetFromPct.toFixed(1)}%;width:${bandWidth.toFixed(1)}%">
+          <svg class="icon sh-moon"><use href="#moon-star"></use></svg>
+        </div>
+        <div class="sh-now-dot" style="left:${nowPct.toFixed(1)}%"></div>
+      </div>
+      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>typical ${fmt.dur(win)}</span></div>`;
+
+  return `<div class="info-card sleep-hero" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="sleep" data-card="sleep" data-sweet="${sweetState}" data-state="${st.state}">
+    <div class="sh-top">
+      <div class="sh-eye">
+        <span class="livedot${asleep ? ' sleeping' : ''}"></span>
+        <span class="sh-state-lbl">${asleep ? 'Asleep' : 'Awake'} since ${fmt.clock(st.since)}</span>
+      </div>
+      ${icEdit('sleep')}
+    </div>
+    <div class="sh-timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
+    <div class="sh-sub">${asleep ? 'Resting peacefully.' : awakeMsg}</div>
+    ${sweetLabel ? `<div class="sh-sweet-lbl">${sweetLabel}</div>` : ''}
+    <div class="sh-rail-wrap">${rail}</div>
   </div>`;
 }
 
@@ -99,17 +149,6 @@ function icEdit(key) {
     : `<button class="ic-edit" data-action="card:edit" data-card="${key}" aria-label="Edit"><svg class="icon"><use href="#sliders-horizontal"></use></svg></button>`;
 }
 
-function sweetCard() {
-  const sp = derive.sweetSpot();
-  return `<div class="info-card sweet" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="sleep" data-card="sweetspot">
-    <div class="ic-ring sleep"><svg class="icon"><use href="#moon-star"></use></svg></div>
-    <div class="ic-txt">
-      <div class="ic-lbl">SweetSpot · ${sp.napping ? 'after this nap' : 'next nap'}</div>
-      <div class="ic-val">${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}</div>
-    </div>
-    ${icEdit('sweetspot')}
-  </div>`;
-}
 function bottleCard() {
   const nb = derive.nextBottle();
   const overdue = nb.due < new Date();
@@ -140,14 +179,14 @@ function medicineCard() {
   </div>`;
 }
 
-const CARD_KEYS = ['sweetspot', 'bottle', 'medicine'];
-const CARD_RENDER = { sweetspot: sweetCard, bottle: bottleCard, medicine: medicineCard };
+const CARD_KEYS = ['sleep', 'bottle', 'medicine'];
+const CARD_RENDER = { sleep: sleepCard, bottle: bottleCard, medicine: medicineCard };
 
 function hiddenRow() {
   const c = state().settings.cards;
-  const hidden = CARD_KEYS.filter((k) => !c[k]);
+  const hidden = CARD_KEYS.filter((k) => c[k] === false);
   if (!hidden.length) return '';
-  const names = { sweetspot: 'SweetSpot', bottle: 'Bottle', medicine: 'Medicine' };
+  const names = { sleep: 'Sleep', bottle: 'Bottle', medicine: 'Medicine' };
   return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
 }
 
@@ -162,6 +201,10 @@ export function home() {
   const greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   const cards = state().settings.cards;
   const today = derive.today();
+  // Migrate old order (may contain 'sweetspot') — drop unknown keys, prepend any new CARD_KEYS
+  const isVisible = (k) => cards[k] !== false;
+  const rawOrder = (cards.order || CARD_KEYS).filter((k) => CARD_RENDER[k]);
+  const order = [...new Set([...rawOrder, ...CARD_KEYS])].filter(isVisible);
   return `
     <div class="hd">
       <div>
@@ -171,10 +214,9 @@ export function home() {
       </div>
       ${avatar()}
     </div>
-    ${heroCard()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
     <div class="info-stack" data-longpress="cards"${cardEditMode ? ' data-card-edit' : ''}>
-      ${(cards.order || CARD_KEYS).filter((k) => cards[k]).map((k) => CARD_RENDER[k]()).join('')}
+      ${order.map((k) => CARD_RENDER[k]()).join('')}
     </div>
     ${hiddenRow()}
     <div class="actions">
