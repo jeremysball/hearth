@@ -3,6 +3,7 @@ import { state, save, ageLabel, addEntry, removeEntry, updateEntry, addMeasure, 
 import { $, $$, esc, icon, TYPES, fmt, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
+import { addableCardTypes } from './home.js';
 
 // segmented control
 function seg(group, opts, sel) {
@@ -374,7 +375,67 @@ export function editCard(which) {
       <p class="empty-note">SweetSpot predicts the next ideal nap from ${state().baby.name || 'your baby'}'s age (${ageLabel()}) and current awake time.</p>
       <button class="btn-ghost" data-action="card:hide" data-card="sweetspot">Hide this card</button>`,
       { title: 'SweetSpot' });
+  } else {
+    const c = TYPES[which] || { label: which };
+    const cur = (s.cards.intervals || {})[which] ?? 3;
+    sheet.open(`
+      ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, cur)}
+      <p class="empty-note">Next ${esc(c.label.toLowerCase())} is predicted from the last entry plus this interval.</p>
+      <button class="btn-primary" data-action="card:save-interval" data-card="${which}"><svg class="icon"><use href="#check"></use></svg> Save</button>
+      <button class="btn-ghost danger" data-action="card:remove" data-card="${which}"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
+      { title: c.label + ' reminder' });
   }
+}
+
+// ---------- add-card picker + generic card config ----------
+export function openCardPicker() {
+  const types = addableCardTypes();
+  if (!types.length) { toast('All cards are already shown'); return; }
+  sheet.open(
+    `<div class="chooser">` + types.map((t) => {
+      const c = TYPES[t];
+      return `<button class="chooser-item" data-action="card:pick" data-type="${t}">
+        <span class="chooser-ic tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span>
+        <span>${c.label}</span></button>`;
+    }).join('') + `</div>`,
+    { title: 'Add a card' }
+  );
+}
+
+export function pickCard(type) {
+  // Re-adding a hidden default just unhides it; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine') { showCard(type); return; }
+  const c = TYPES[type] || { label: type };
+  sheet.open(`
+    ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, 3)}
+    <p class="empty-note">Next ${esc(c.label.toLowerCase())} is predicted from the last entry plus this interval.</p>
+    <button class="btn-primary" data-action="card:save-new" data-card="${type}"><svg class="icon"><use href="#check"></use></svg> Add card</button>`,
+    { title: 'Add ' + c.label });
+}
+
+export function saveNewCard(type) {
+  const cards = state().settings.cards;
+  cards.intervals = cards.intervals || {};
+  cards.intervals[type] = Number($('#c-int').dataset.value) || 3;
+  cards[type] = true;
+  cards.order = cards.order || ['bottle', 'medicine'];
+  if (!cards.order.includes(type)) cards.order.push(type);
+  save(); enqueueSettingsSync(); sheet.close(); toast((TYPES[type] || {}).label + ' card added'); router.refresh();
+}
+
+export function saveCardInterval(type) {
+  const cards = state().settings.cards;
+  cards.intervals = cards.intervals || {};
+  cards.intervals[type] = Number($('#c-int').dataset.value) || 3;
+  save(); enqueueSettingsSync(); sheet.close(); toast('Card updated'); router.refresh();
+}
+
+export function removeCard(type) {
+  const cards = state().settings.cards;
+  if (cards.order) cards.order = cards.order.filter((k) => k !== type);
+  if (cards.intervals) delete cards.intervals[type];
+  delete cards[type];
+  save(); enqueueSettingsSync(); sheet.close(); toast('Card removed'); router.refresh();
 }
 
 function medForm() {

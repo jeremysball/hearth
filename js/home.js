@@ -87,6 +87,7 @@ function heroCard() {
       coals += `<i class="coal ${c <= pct ? 'banked' : ''}"></i>`;
     }
     return `<div class="card hero" data-state="asleep">
+      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
       <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
       <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
       <div class="hero-sub">Resting peacefully.</div>
@@ -145,6 +146,7 @@ function heroCard() {
   }
 
   return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
+    <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
     <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">nap overdue</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
@@ -192,15 +194,44 @@ function medicineCard() {
   </div>`;
 }
 
+// Generic timer card for any activity type configured with an interval.
+function genericCard(type) {
+  const c = TYPES[type] || { label: type, tone: 'note', icon: 'note-pencil' };
+  const n = derive.nextForType(type);
+  const overdue = n.due < new Date();
+  return `<div class="info-card ${overdue ? 'due' : ''}" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="${type}" data-card="${type}">
+    <div class="ic-ring tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></div>
+    <div class="ic-txt">
+      <div class="ic-lbl">Next ${esc(c.label.toLowerCase())} · every ${n.intervalH}h</div>
+      <div class="ic-val">${fmt.clock(n.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(n.due)}</span></div>
+    </div>
+    ${icEdit(type)}
+  </div>`;
+}
+
 const CARD_KEYS = ['bottle', 'medicine'];
 const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard };
+// Activity types eligible as timer cards (everything loggable except notes).
+export const CARD_TYPES = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
 
-function hiddenRow() {
-  const c = state().settings.cards;
-  const hidden = CARD_KEYS.filter((k) => c[k] === false);
-  if (!hidden.length) return '';
-  const names = { bottle: 'Bottle', medicine: 'Medicine' };
-  return `<div class="hidden-row">${hidden.map((k) => `<button class="chip" data-action="card:show" data-card="${k}"><svg class="icon"><use href="#plus"></use></svg> ${names[k]}</button>`).join('')}</div>`;
+// A generic (non-default) card only renders once it has an interval configured,
+// so legacy saved state never resurrects a card the user didn't add.
+function renderable(k) {
+  if (CARD_RENDER[k]) return true;
+  return (state().settings.cards.intervals || {})[k] != null;
+}
+function cardHTML(k) { return CARD_RENDER[k] ? CARD_RENDER[k]() : genericCard(k); }
+
+// Types not currently shown as a card — offered in the "Add card" picker.
+export function addableCardTypes() {
+  const cards = state().settings.cards;
+  const shown = (k) => cards[k] !== false && (CARD_RENDER[k] || (cards.intervals || {})[k] != null) && (cards.order || CARD_KEYS).includes(k);
+  return CARD_TYPES.filter((k) => !shown(k));
+}
+
+function addCardBtn() {
+  if (cardEditMode) return '';
+  return `<button class="add-card" data-action="card:add"><svg class="icon"><use href="#plus"></use></svg> Add card</button>`;
 }
 
 const QUICK = [
@@ -215,7 +246,7 @@ export function home() {
   const cards = state().settings.cards;
   const today = derive.today();
   const isVisible = (k) => cards[k] !== false;
-  const order = (cards.order || CARD_KEYS).filter((k) => CARD_RENDER[k] && isVisible(k));
+  const order = (cards.order || CARD_KEYS).filter((k) => renderable(k) && isVisible(k));
   return `
     <div class="hd">
       <div>
@@ -228,9 +259,9 @@ export function home() {
     ${heroCard()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
     <div class="info-stack" data-longpress="cards"${cardEditMode ? ' data-card-edit' : ''}>
-      ${order.map((k) => CARD_RENDER[k]()).join('')}
+      ${order.map(cardHTML).join('')}
     </div>
-    ${hiddenRow()}
+    ${addCardBtn()}
     <div class="actions">
       ${QUICK.map((q) => {
         const c = TYPES[q.t];

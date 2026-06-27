@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 
@@ -169,6 +169,11 @@ document.addEventListener('click', (ev) => {
     'card:edit': () => editCard(d.card),
     'card:show': () => showCard(d.card),
     'card:hide': () => hideCard(d.card),
+    'card:add': () => openCardPicker(),
+    'card:pick': () => pickCard(d.type),
+    'card:save-new': () => saveNewCard(d.card),
+    'card:save-interval': () => saveCardInterval(d.card),
+    'card:remove': () => removeCard(d.card),
     'card:save-bottle': () => saveBottle(),
     'card:save-meds': () => saveMeds(),
     'med:add': () => addMed(),
