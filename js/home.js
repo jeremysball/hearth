@@ -22,6 +22,8 @@ export function summary(e) {
     label = 'Pump · ' + (e.side || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'note') {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
+  } else if (e.type === 'bath' || e.type === 'play') {
+    detail = fmt.clock(e.start); meta = e.note || '';
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
@@ -182,15 +184,22 @@ function bottleCard() {
 function medicineCard() {
   const meds = derive.nextMeds();
   const next = meds.find((m) => m.due) || meds[0];
+  const action = cardEditMode ? '' : 'data-action="med:card"';
+  if (!next) {
+    return `<div class="info-card" ${action} data-card="medicine">
+      <div class="ic-ring med"><svg class="icon"><use href="#plus"></use></svg></div>
+      <div class="ic-txt"><div class="ic-lbl">Medicine</div><div class="ic-val">Add a medicine</div></div>
+      ${icEdit('medicine')}
+    </div>`;
+  }
   let val, lbl;
-  if (!next) { lbl = 'No medicines'; val = 'Tap to add'; }
-  else if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
+  if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
   else {
     const overdue = next.due < new Date();
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
   }
-  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="medicine" data-card="medicine">
+  return `<div class="info-card" ${action} data-card="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
     <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
     ${icEdit('medicine')}
@@ -212,8 +221,31 @@ function genericCard(type) {
   </div>`;
 }
 
+export function bathDaysSinceLabel(iso) {
+  if (!iso) return 'Never';
+  const midnight = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const days = Math.round((midnight(Date.now()) - midnight(iso)) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return days + ' days ago';
+}
+
+function bathCard() {
+  const items = state().log.filter((e) => e.type === 'bath');
+  const last = items.length ? items[0] : null;
+  const label = bathDaysSinceLabel(last ? last.start : null);
+  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="bath" data-card="bath">
+    <div class="ic-ring tone-${TYPES.bath.tone}"><svg class="icon"><use href="#${icon(TYPES.bath.icon)}"></use></svg></div>
+    <div class="ic-txt">
+      <div class="ic-lbl">Last bath</div>
+      <div class="ic-val">${esc(label)}</div>
+    </div>
+    ${icEdit('bath')}
+  </div>`;
+}
+
 const CARD_KEYS = ['bottle', 'medicine'];
-const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard };
+const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard };
 // Activity types eligible as timer cards (everything loggable except notes).
 export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
 
@@ -274,7 +306,7 @@ export function home() {
       <button class="act" data-action="log:more"><span class="tok"><svg class="icon"><use href="#ellipsis"></use></svg></span><span class="act-lbl">More</span></button>
     </div>
     <div class="today-block">
-      <div class="today-hd"><h2>Today</h2>${todayEditMode ? `<a data-action="today:edit-done">Done</a>` : `<a data-action="nav:sleep">Timeline</a>`}</div>
+      <div class="today-hd"><h2>Today</h2>${todayEditMode ? `<a data-action="today:edit-done">Done</a>` : `<a data-action="nav:timeline">Timeline</a>`}</div>
       <div class="card log" data-longpress="today">${today.length ? today.map(logRow).join('') : `<div class="empty-log">No entries yet today — tap a button above to log.</div>`}</div>
     </div>`;
 }
