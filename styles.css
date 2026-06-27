@@ -632,6 +632,14 @@ body[data-mode="dark"] {
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .card { border-radius: 18px; }
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .info-card { border-radius: 12px; }
 
+/* dayjob material overrides — neutral silver highlight, no warm amber cast */
+:is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) {
+  --mat-highlight: oklch(0.96 0.008 220 / 0.32);
+  --mat-shadow:    oklch(0.22 0.008 220 / 0.14);
+  --mat-cast:      oklch(0.26 0.008 220 / 0.10);
+  --mat-glow:      oklch(0.88 0.010 220 / 0.28);
+}
+
 /* ---- trends ---- */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat { padding: 14px 16px; }
@@ -951,6 +959,35 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
 
+/* ---- sweetspot card — moon glow + star field ---- */
+.info-card.sweet { position: relative; overflow: hidden; }
+.info-card.sweet::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none; border-radius: inherit;
+  background:
+    /* moon glow — soft lavender halo upper-right */
+    radial-gradient(ellipse 52% 68% at 91% 22%, oklch(0.90 0.07 292 / 0.48), transparent 62%),
+    radial-gradient(ellipse 30% 85% at 98% 70%, oklch(0.76 0.10 270 / 0.26), transparent 66%),
+    /* star field — right 40% of card */
+    radial-gradient(circle at 82% 18%, white 0, white 1px, transparent 2px),
+    radial-gradient(circle at 90% 58%, white 0, white 0.9px, transparent 2px),
+    radial-gradient(circle at 76% 32%, white 0, white 0.7px, transparent 1.5px),
+    radial-gradient(circle at 93% 40%, white 0, white 0.6px, transparent 1.4px),
+    radial-gradient(circle at 86% 72%, white 0, white 0.8px, transparent 1.8px),
+    radial-gradient(circle at 96% 15%, white 0, white 0.6px, transparent 1.4px),
+    radial-gradient(circle at 80% 60%, white 0, white 0.7px, transparent 1.6px),
+    radial-gradient(circle at 72% 44%, white 0, white 0.6px, transparent 1.4px),
+    radial-gradient(circle at 94% 78%, white 0, white 0.7px, transparent 1.6px),
+    radial-gradient(circle at 68% 24%, white 0, white 0.5px, transparent 1.2px),
+    radial-gradient(circle at 88% 86%, white 0, white 0.6px, transparent 1.4px);
+  mix-blend-mode: soft-light;
+}
+[data-mode="dark"] .info-card.sweet::before {
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
 /* ---- glassmorphism ---- */
 @supports (backdrop-filter: blur(1px)) {
   .phone { background-color: transparent; }
@@ -963,5 +1000,13 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     background: oklch(0.22 0.018 50 / 0.42);
     backdrop-filter: blur(18px) saturate(1.25);
     -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  }
+  /* dayjob dark: lighter, cooler glass — no warm amber cast */
+  :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .card,
+  :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .info-card,
+  :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .sheet {
+    background: oklch(0.32 0.012 80 / 0.52);
+    backdrop-filter: blur(18px) saturate(1.15);
+    -webkit-backdrop-filter: blur(18px) saturate(1.15);
   }
 }
