@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -52,9 +53,10 @@ func handleAuthBegin(cfg Config) http.HandlerFunc {
 			http.Error(w, "auth url failed", http.StatusInternalServerError)
 			return
 		}
+		encoded := base64.StdEncoding.EncodeToString([]byte(name + "|" + sess.Marshal()))
 		http.SetCookie(w, &http.Cookie{
 			Name:     oauthStateCookie,
-			Value:    name + "|" + sess.Marshal(),
+			Value:    encoded,
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   true,
@@ -82,8 +84,13 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
-		// cookie value is "name|marshaledSession"
-		marshaled := cookie.Value
+		// cookie value is base64(name|marshaledSession)
+		decoded, decErr := base64.StdEncoding.DecodeString(cookie.Value)
+		if decErr != nil {
+			http.Redirect(w, r, "/?auth=error", http.StatusFound)
+			return
+		}
+		marshaled := string(decoded)
 		if i := indexByte(marshaled, '|'); i >= 0 {
 			marshaled = marshaled[i+1:]
 		}
