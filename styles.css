@@ -776,16 +776,11 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   background-image:
     linear-gradient(100deg,
       transparent calc(var(--glare, 0.5) * 100% - 26%),
-      oklch(1 0 0 / calc(0.32 + var(--fire-a, 0.08) * 2.2)) calc(var(--glare, 0.5) * 100%),
-      transparent calc(var(--glare, 0.5) * 100% + 26%)),
-    radial-gradient(ellipse 110% 85% at 50% 10%, oklch(0.97 0.012 70 / 0.5) 0%, transparent 45%),
-    radial-gradient(circle at 30% 115%, var(--ember-rim) 0%, transparent 50%);
-  background-size: 100% 100%, 100% 100%, 100% 100%;
+      oklch(1 0 0 / 0.28) calc(var(--glare, 0.5) * 100%),
+      transparent calc(var(--glare, 0.5) * 100% + 26%));
   box-shadow:
-    0 1.5px 0 oklch(0.98 0.01 75 / 0.6) inset,
-    0 -2px 3px -1px oklch(0.30 0.06 44 / 0.25) inset,
-    0 2px 6px var(--mat-cast),
-    0 calc(2px + var(--fire-a) * 3px) calc(5px + var(--fire-a) * 3px) -1px var(--ember-rim);
+    0 1px 0 oklch(0.99 0.01 75 / 0.7) inset,
+    0 2px 6px var(--mat-cast);
   transition:
     transform 0.42s cubic-bezier(0.34, 1.4, 0.5, 1),
     width 0.42s cubic-bezier(0.34, 1.4, 0.5, 1),
@@ -806,10 +801,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 [data-mode="dark"] .seg-thumb {
   background-color: oklch(0.30 0.030 48);
   box-shadow:
-    0 1.5px 0 oklch(0.62 0.18 48 / calc(0.20 + var(--fire-a) * 0.6)) inset,
-    0 -2px 3px -1px oklch(0.06 0.02 38 / 0.40) inset,
-    0 2px 8px oklch(0 0 0 / 0.55),
-    0 calc(2px + var(--fire-a) * 4px) calc(6px + var(--fire-a) * 4px) -1px var(--ember-rim);
+    0 1px 0 oklch(0.62 0.18 48 / 0.22) inset,
+    0 2px 8px oklch(0 0 0 / 0.55);
 }
 [data-mode="dark"] .seg-opt.on { color: var(--accent); }
 
