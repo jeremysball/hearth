@@ -212,8 +212,31 @@ function genericCard(type) {
   </div>`;
 }
 
+export function bathDaysSinceLabel(iso) {
+  if (!iso) return 'Never';
+  const midnight = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const days = Math.round((midnight(Date.now()) - midnight(iso)) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return days + ' days ago';
+}
+
+function bathCard() {
+  const items = state().log.filter((e) => e.type === 'bath');
+  const last = items.length ? items[0] : null;
+  const label = bathDaysSinceLabel(last ? last.start : null);
+  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="bath" data-card="bath">
+    <div class="ic-ring tone-${TYPES.bath.tone}"><svg class="icon"><use href="#${icon(TYPES.bath.icon)}"></use></svg></div>
+    <div class="ic-txt">
+      <div class="ic-lbl">Last bath</div>
+      <div class="ic-val">${esc(label)}</div>
+    </div>
+    ${icEdit('bath')}
+  </div>`;
+}
+
 const CARD_KEYS = ['bottle', 'medicine'];
-const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard };
+const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard };
 // Activity types eligible as timer cards (everything loggable except notes).
 export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
 
