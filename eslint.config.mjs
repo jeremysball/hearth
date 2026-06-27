@@ -5,7 +5,9 @@ import globals from 'globals';
 // a service worker (sw.js), and Node-run test scripts under tests/.
 // Each gets its own global environment so `no-undef` is accurate.
 export default [
-  { ignores: ['node_modules/**'] },
+  // Non-source trees: deps, agent/tooling state (incl. nested worktree copies),
+  // and untracked local scratch scripts. None of these are project source.
+  { ignores: ['node_modules/**', '.claude/**', '.worktrees/**', '_screenshot.js'] },
 
   js.configs.recommended,
 
