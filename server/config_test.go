@@ -65,3 +65,24 @@ func TestLoadConfigDefaults(t *testing.T) {
 		t.Errorf("StaticDir = %q, want empty (embedded by default)", cfg.StaticDir)
 	}
 }
+
+func TestLoadConfigReadsOAuthEnv(t *testing.T) {
+	os.Setenv("PUBLIC_BASE_URL", "https://hearth.example")
+	os.Setenv("GOOGLE_CLIENT_ID", "gid")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "gsec")
+	defer func() {
+		os.Unsetenv("PUBLIC_BASE_URL")
+		os.Unsetenv("GOOGLE_CLIENT_ID")
+		os.Unsetenv("GOOGLE_CLIENT_SECRET")
+	}()
+	c := loadConfig()
+	if c.PublicBaseURL != "https://hearth.example" {
+		t.Errorf("PublicBaseURL = %q", c.PublicBaseURL)
+	}
+	if !c.OAuthConfigured("google") {
+		t.Error("expected google to be configured")
+	}
+	if c.OAuthConfigured("apple") {
+		t.Error("apple should be unconfigured without its env")
+	}
+}
