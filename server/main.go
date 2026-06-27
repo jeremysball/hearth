@@ -7,6 +7,7 @@ import (
 
 func main() {
 	cfg := loadConfig()
+	initProviders(cfg)
 
 	log.Printf("Hearth starting up")
 	log.Printf("  db:     %s", cfg.DBPath)
@@ -24,7 +25,7 @@ func main() {
 	log.Printf("  db open OK")
 
 	hub := newHub()
-	mux := newRouter(db, hub, cfg.StaticDir)
+	mux := newRouter(db, hub, cfg.StaticDir, cfg)
 	addr := cfg.Host + ":" + cfg.Port
 
 	if cfg.CertFile != "" && cfg.KeyFile != "" {

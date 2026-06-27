@@ -36,7 +36,7 @@ func (sw *statusWriter) WriteHeader(status int) {
 	sw.ResponseWriter.WriteHeader(status)
 }
 
-func newRouter(db *sql.DB, hub *Hub, staticDir string) http.Handler {
+func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler {
 	var staticFS fs.FS = hearth.StaticFS
 	if staticDir != "" {
 		staticFS = os.DirFS(staticDir)
@@ -60,6 +60,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string) http.Handler {
 	mux.HandleFunc("PATCH /api/baby", requireAuth(db, handlePatchBaby(db, hub)))
 	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub)))
 	mux.HandleFunc("GET /api/caregivers", requireAuth(db, handleListCaregivers(db)))
+	mux.HandleFunc("GET /api/auth/{provider}", handleAuthBegin(cfg))
 	mux.Handle("/", http.FileServerFS(staticFS))
 	return logMiddleware(mux)
 }
