@@ -313,17 +313,6 @@ body {
 }
 .timer .u { font-size: 25px; color: var(--muted); font-weight: 600; }
 .hero-sub { font-size: 13px; color: var(--soft); font-weight: 600; }
-.track {
-  height: 9px; border-radius: 6px; background: var(--accent-soft); margin-top: 18px; overflow: hidden;
-  box-shadow: 0 1px 5px var(--mat-shadow) inset, 0 1px 0 oklch(0.97 0.01 80 / 0.3);
-}
-.track.sleep { background: var(--good-tint); }
-.track i {
-  display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .4s;
-  box-shadow: 0 1px 0 oklch(0.97 0.01 80 / 0.3) inset;
-}
-.track.sleep i { background: var(--good); }
-.track-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
 
 /* ---- info cards ---- */
 .info-stack { display: flex; flex-direction: column; gap: 10px; }
@@ -368,8 +357,9 @@ body {
 .info-stack[data-card-edit] .info-card { cursor: default; }
 .info-stack[data-card-edit] .info-card:active { background: var(--surface); transform: none; transition: none; }
 
-.hidden-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 7px 13px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+.add-card { all: unset; cursor: pointer; width: 100%; box-sizing: border-box; font-size: 13px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 11px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.add-card:active { background: var(--accent-soft); }
+.add-card .icon { width: 16px; height: 16px; }
 
 /* ---- quick actions ---- */
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
@@ -425,7 +415,7 @@ body {
 .row + .row { border-top: 1px solid var(--hair); }
 .row:active { background: var(--accent-tint); transform: scale(0.98); transition: transform 0.06s; }
 .row-ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; background: var(--tcb); color: var(--tc); flex: 0 0 auto; }
-.row-txt { display: flex; flex-direction: column; min-width: 0; }
+.row-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .what { font-size: 13px; font-weight: 700; }
 .when { font-size: 11px; color: var(--muted); font-weight: 600; }
 .meta { margin-left: auto; font-size: 12px; color: var(--soft); font-weight: 800; }
@@ -927,7 +917,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .theme-section { display: flex; flex-direction: column; gap: 6px; }
 .theme-section-hd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--soft); }
 .theme-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; background: var(--surface); box-shadow: 0 2px 6px oklch(0 0 0 / .07), 0 1px 2px oklch(0 0 0 / .05), inset 0 1px 0 oklch(1 0 0 / .75); transition: box-shadow .1s; }
+.theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; color: oklch(0.18 0.02 50); background: var(--surface); box-shadow: 0 2px 6px oklch(0 0 0 / .07), 0 1px 2px oklch(0 0 0 / .05), inset 0 1px 0 oklch(1 0 0 / .75); transition: box-shadow .1s; }
 .theme-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); box-shadow: 0 1px 2px oklch(0 0 0 / .05), inset 0 2px 4px oklch(0 0 0 / .08), inset 0 1px 0 color-mix(in oklch, var(--accent) 30%, white 70%); }
 .theme-swatch { width: 22px; height: 22px; border-radius: 50%; }
 .theme-swatch.girl { background: oklch(0.42 0.07 125); }
@@ -959,53 +949,175 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
 
-/* ---- sweetspot card — moon glow + star field ---- */
-.info-card.sweet { position: relative; overflow: hidden; }
-.info-card.sweet::before {
+/* ---- sleep hero card ---- */
+/* Cue 3 — sweetspot label */
+.sh-sweet-lbl { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-top: 14px; color: var(--muted); transition: color 0.6s; }
+[data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
+[data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
+[data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
+/* Ember Bed — the rail IS the fire: coals ignite left→right across the awake window */
+.sh-rail-wrap { margin-top: 8px; }
+.sh-bed {
+  display: flex; gap: 3px; padding: 5px 6px; border-radius: 9px;
+  background: linear-gradient(180deg, oklch(0.30 0.03 40 / 0.20), oklch(0.18 0.02 35 / 0.30));
+  box-shadow: inset 0 2px 6px oklch(0.20 0.04 35 / 0.45), inset 0 -1px 0 oklch(0.95 0.02 70 / 0.20), 0 1px 0 oklch(0.97 0.01 80 / 0.30);
+}
+.coal {
+  flex: 1; height: 16px; border-radius: 4px;
+  background: linear-gradient(180deg, oklch(0.42 0.03 45), oklch(0.30 0.025 40));
+  box-shadow: inset 0 1px 0 oklch(0.60 0.04 55 / 0.30), inset 0 -1px 1px oklch(0.18 0.02 35 / 0.50);
+  transition: background 0.7s ease, box-shadow 0.7s ease, transform 0.4s ease;
+}
+/* dark mode cold-coal base — placed before the state rules so lit/caught/toohot
+   (equal specificity) still win their colors in dark mode via source order */
+[data-mode="dark"] .coal {
+  background: linear-gradient(180deg, oklch(0.30 0.025 40), oklch(0.20 0.02 35));
+  box-shadow: inset 0 1px 0 oklch(0.48 0.04 55 / 0.25), inset 0 -1px 1px oklch(0.10 0.01 30 / 0.60);
+}
+/* lit ember — warm, glowing, breathing with the fire vars */
+.coal.lit {
+  background: linear-gradient(180deg, var(--ember-mid), var(--ember-cool));
+  box-shadow:
+    inset 0 1px 0 oklch(0.92 0.10 70 / 0.45),
+    inset 0 -1px 2px oklch(0.40 0.14 35 / 0.55),
+    0 0 calc(3px + var(--fire-b, 0.06) * 18px) oklch(0.66 0.18 44 / calc(0.30 + var(--fire-b, 0.06) * 1.6));
+}
+/* leading coal — hottest, most active flicker */
+.coal.front {
+  background: linear-gradient(180deg, oklch(0.92 0.16 66), var(--ember-mid));
+  box-shadow:
+    inset 0 1px 0 oklch(0.96 0.10 75 / 0.60),
+    inset 0 -1px 2px oklch(0.45 0.16 38 / 0.55),
+    0 0 calc(5px + var(--fire-a, 0.06) * 30px) oklch(0.78 0.20 50 / calc(0.45 + var(--fire-a, 0.06) * 2.2));
+}
+/* sweetspot coal waiting to catch — dim gold rim, the target */
+.coal.ready {
+  background: linear-gradient(180deg, oklch(0.50 0.06 85), oklch(0.38 0.05 80));
+  box-shadow:
+    inset 0 0 0 1px oklch(0.82 0.12 88 / 0.50),
+    inset 0 1px 0 oklch(0.88 0.10 90 / 0.30);
+}
+/* sweetspot coal that has caught — full gold bloom, lifts slightly */
+.coal.caught {
+  background: linear-gradient(180deg, oklch(0.90 0.16 92), oklch(0.78 0.15 85));
+  box-shadow:
+    inset 0 1px 0 oklch(0.97 0.10 95 / 0.65),
+    inset 0 -1px 2px oklch(0.55 0.14 80 / 0.45),
+    0 0 calc(5px + var(--fire-b, 0.06) * 26px) oklch(0.85 0.16 90 / calc(0.45 + var(--fire-b, 0.06) * 2.0));
+  transform: translateY(-1px);
+}
+/* overtired overshoot — too-hot orange-red, hardest flicker */
+.coal.toohot {
+  background: linear-gradient(180deg, oklch(0.66 0.25 30), oklch(0.52 0.22 28));
+  box-shadow:
+    inset 0 1px 0 oklch(0.80 0.18 40 / 0.50),
+    inset 0 -1px 2px oklch(0.40 0.20 25 / 0.60),
+    0 0 calc(5px + var(--fire-a, 0.06) * 34px) oklch(0.62 0.26 28 / calc(0.50 + var(--fire-a, 0.06) * 2.6));
+}
+/* banked overnight embers — asleep view, low and slow */
+.sh-bed.banked .coal.banked {
+  background: linear-gradient(180deg, oklch(0.46 0.10 40), oklch(0.34 0.08 35));
+  box-shadow:
+    inset 0 1px 0 oklch(0.62 0.10 55 / 0.30),
+    inset 0 -1px 2px oklch(0.24 0.06 30 / 0.55),
+    0 0 calc(2px + var(--fire-c, 0.10) * 10px) oklch(0.52 0.14 38 / calc(0.20 + var(--fire-c, 0.10) * 1.0));
+}
+/* dark mode: deeper trough — lit/caught/toohot embers brighten via --ember-* tokens */
+[data-mode="dark"] .sh-bed {
+  background: linear-gradient(180deg, oklch(0.16 0.02 35 / 0.55), oklch(0.10 0.015 30 / 0.65));
+  box-shadow: inset 0 2px 6px oklch(0.06 0.01 30 / 0.70), inset 0 -1px 0 oklch(0.70 0.06 60 / 0.12);
+}
+.sh-rail-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
+/* Past-window "nap overdue" flag next to timer */
+.overtired-flag { font-family: var(--font-sans); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: oklch(0.55 0.18 25); background: oklch(0.96 0.06 25 / 0.30); border: 1px solid oklch(0.70 0.14 25 / 0.35); border-radius: 8px; padding: 3px 8px; vertical-align: middle; margin-left: 10px; }
+[data-mode="dark"] .overtired-flag { color: oklch(0.82 0.14 25); background: oklch(0.38 0.10 25 / 0.30); border-color: oklch(0.60 0.12 25 / 0.40); }
+/* Hero card pulses red border when overtired */
+.card.hero[data-overtired] { animation: overtired-pulse 3s ease-in-out infinite; }
+@keyframes overtired-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.18 25 / 0); }
+  50% { box-shadow: 0 0 0 2px oklch(0.65 0.18 25 / 0.45), 0 4px 20px oklch(0.60 0.15 25 / 0.18); }
+}
+@media (prefers-reduced-motion: reduce) { .card.hero[data-overtired] { animation: none; } }
+/* Cue 2 — hero card border + glow blooms during sweetspot */
+.card.hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16); }
+.card.hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28); }
+.card.hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12); }
+/* ---- hero card — moon glow ---- */
+.card.hero { position: relative; }
+.card.hero::before {
   content: '';
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 0;
   pointer-events: none; border-radius: inherit;
   background:
-    /* moon glow — soft lavender halo upper-right */
-    radial-gradient(ellipse 52% 68% at 91% 22%, oklch(0.90 0.07 292 / 0.48), transparent 62%),
-    radial-gradient(ellipse 30% 85% at 98% 70%, oklch(0.76 0.10 270 / 0.26), transparent 66%),
-    /* star field — right 40% of card */
-    radial-gradient(circle at 82% 18%, white 0, white 1px, transparent 2px),
-    radial-gradient(circle at 90% 58%, white 0, white 0.9px, transparent 2px),
-    radial-gradient(circle at 76% 32%, white 0, white 0.7px, transparent 1.5px),
-    radial-gradient(circle at 93% 40%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 86% 72%, white 0, white 0.8px, transparent 1.8px),
-    radial-gradient(circle at 96% 15%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 80% 60%, white 0, white 0.7px, transparent 1.6px),
-    radial-gradient(circle at 72% 44%, white 0, white 0.6px, transparent 1.4px),
-    radial-gradient(circle at 94% 78%, white 0, white 0.7px, transparent 1.6px),
-    radial-gradient(circle at 68% 24%, white 0, white 0.5px, transparent 1.2px),
-    radial-gradient(circle at 88% 86%, white 0, white 0.6px, transparent 1.4px);
+    radial-gradient(ellipse 55% 60% at 92% 20%, oklch(0.90 0.07 292 / 0.38), transparent 62%),
+    radial-gradient(ellipse 30% 75% at 99% 65%, oklch(0.76 0.10 270 / 0.20), transparent 66%);
   mix-blend-mode: soft-light;
+  opacity: 0.6; transition: opacity 1s ease;
 }
-[data-mode="dark"] .info-card.sweet::before {
-  mix-blend-mode: screen;
-  opacity: 0.9;
+/* real crescent moon, top-right, sitting in the glow */
+.card.hero .hero-moon {
+  position: absolute; top: 15px; right: 17px;
+  width: 30px; height: 30px; z-index: 1;
+  color: oklch(0.85 0.11 90);
+  opacity: 0.95; pointer-events: none;
+  filter: drop-shadow(0 1px 1px oklch(0.55 0.09 60 / 0.25)) drop-shadow(0 0 10px oklch(0.9 0.1 92 / 0.45));
 }
+[data-mode="dark"] .card.hero .hero-moon {
+  color: oklch(0.93 0.08 95);
+  filter: drop-shadow(0 0 14px oklch(0.9 0.12 90 / 0.8));
+}
+[data-mode="dark"] .card.hero::before { mix-blend-mode: screen; opacity: 0.78; }
+[data-sweet="entering"] .card.hero::before,
+.card.hero[data-sweet="entering"]::before { opacity: 0.78; }
+.card.hero[data-sweet="now"]::before { opacity: 1; }
+.card.hero[data-sweet="passing"]::before { opacity: 0.85; }
+[data-mode="dark"] .card.hero[data-sweet="now"]::before { opacity: 1; }
+.card.hero > * { position: relative; z-index: 1; }
+.card.hero::before { z-index: 0; }
 
 /* ---- glassmorphism ---- */
 @supports (backdrop-filter: blur(1px)) {
   .phone { background-color: transparent; }
-  .card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-  .info-card { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-  .sheet { background: oklch(0.98 0.012 70 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .card { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .info-card { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .sheet { background: oklch(0.98 0.012 70 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
   [data-mode="dark"] .card,
   [data-mode="dark"] .info-card,
   [data-mode="dark"] .sheet {
-    background: oklch(0.22 0.018 50 / 0.42);
+    background: oklch(0.22 0.018 50 / 0.62);
     backdrop-filter: blur(18px) saturate(1.25);
     -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  }
+  /* hero card: restore warm fire gradients over glass base */
+  .card.hero {
+    background-color: oklch(0.95 0.022 66 / 0.74);
+    background-image:
+      radial-gradient(ellipse 60% 40% at var(--light-x, 72%) var(--light-y, 50%),
+        oklch(0.99 0.01 70 / calc(0.14 + var(--fire-c, 0.10) * 1.2)) 0%, transparent 60%),
+      radial-gradient(ellipse at 12% 8%, var(--mat-highlight), transparent 52%),
+      var(--tex-clay);
+    background-size: 100% 100%, 100% 100%, 180px 180px;
+    background-blend-mode: screen, soft-light, normal;
+    backdrop-filter: blur(18px) saturate(1.30);
+    -webkit-backdrop-filter: blur(18px) saturate(1.30);
+  }
+  [data-mode="dark"] .card.hero {
+    background-color: oklch(0.20 0.030 48 / 0.68);
+    background-image:
+      radial-gradient(ellipse 80% 55% at var(--light-x, 20%) var(--light-y, 110%),
+        oklch(0.65 0.26 40 / calc(0.12 + var(--fire-a, 0.06) * 1.4)), transparent 65%),
+      radial-gradient(ellipse at 12% 90%, oklch(0.52 0.18 42 / 0.24), transparent 55%),
+      var(--tex-clay);
+    background-size: 100% 100%, 100% 100%, 180px 180px;
+    background-blend-mode: screen, normal, multiply;
+    backdrop-filter: blur(18px) saturate(1.45);
+    -webkit-backdrop-filter: blur(18px) saturate(1.45);
   }
   /* dayjob dark: lighter, cooler glass — no warm amber cast */
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .info-card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .sheet {
-    background: oklch(0.32 0.012 80 / 0.52);
+    background: oklch(0.32 0.012 80 / 0.70);
     backdrop-filter: blur(18px) saturate(1.15);
     -webkit-backdrop-filter: blur(18px) saturate(1.15);
   }

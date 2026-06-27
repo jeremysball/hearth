@@ -16,7 +16,7 @@ const DEFAULT = () => ({
     ],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
-    cards: { sweetspot: true, bottle: true, medicine: true, order: ['sweetspot', 'bottle', 'medicine'] },
+    cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
     clock24: '12h',
     darkMode: 'auto'
@@ -33,6 +33,12 @@ function load() {
     if (raw) {
       const s = Object.assign(DEFAULT(), JSON.parse(raw));
       s.log = normalizeLog(s.log);
+      // Migrate legacy state: the standalone SweetSpot card was folded into the
+      // hero card, so drop its now-meaningless visibility key and order entry.
+      if (s.cards) {
+        delete s.cards.sweetspot;
+        if (Array.isArray(s.cards.order)) s.cards.order = s.cards.order.filter((k) => k !== 'sweetspot');
+      }
       return s;
     }
   } catch (e) {}
@@ -184,6 +190,18 @@ export const derive = {
     const last = feeds.length ? new Date(feeds[0].start) : new Date(Date.now() - 90 * MIN);
     const due = new Date(last.getTime() + _state.settings.bottleIntervalH * HR);
     return { last, due };
+  },
+  // Generic timer-card prediction for an arbitrary activity type. Predicts the
+  // next occurrence from the most recent entry of that type plus an interval:
+  // anchored on the entry's end when it has one (e.g. last wake for sleep) and
+  // its start otherwise. With no prior entry the card reads "due now".
+  nextForType(type, intervalH) {
+    const hrs = intervalH != null ? intervalH : ((_state.settings.cards.intervals || {})[type] ?? 3);
+    const items = _state.log.filter((e) => e.type === type);
+    const last = items.length ? items[0] : null; // log is sorted newest-first by start
+    const anchor = last ? new Date(last.end || last.start) : new Date(Date.now() - hrs * HR);
+    const due = new Date(anchor.getTime() + hrs * HR);
+    return { last, due, intervalH: hrs };
   },
   nextMeds() {
     return _state.settings.meds.map((m) => {
