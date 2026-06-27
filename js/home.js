@@ -107,10 +107,11 @@ function heroCard() {
   const sweetLabel = { before: `Sweetspot · ${timeRange}`, entering: 'Sweetspot approaching', now: 'Sweetspot now', passing: 'Sweetspot passing', passed: `Sweetspot · ${timeRange}` }[sweetState];
 
   const pastWindow = elapsed > win;
+  const overMin = Math.round(elapsed - win);
   const healthy = elapsed < win * 0.85
     ? 'Awake window looking healthy.'
     : elapsed < win ? 'Getting close to nap time.'
-    : 'Past the ideal awake window.';
+    : `Nap overdue by ${overMin}m.`;
 
   return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
