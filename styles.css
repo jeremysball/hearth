@@ -357,8 +357,6 @@ body {
 .info-stack[data-card-edit] .info-card { cursor: default; }
 .info-stack[data-card-edit] .info-card:active { background: var(--surface); transform: none; transition: none; }
 
-.hidden-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 7px 13px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
 .add-card { all: unset; cursor: pointer; width: 100%; box-sizing: border-box; font-size: 13px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border: 1px dashed var(--accent-soft); padding: 11px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .add-card:active { background: var(--accent-soft); }
 .add-card .icon { width: 16px; height: 16px; }
@@ -951,17 +949,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
 
-/* ---- sleep hero card — layout ---- */
-.info-card.sleep-hero {
-  flex-direction: column; align-items: stretch; gap: 0;
-  padding: 18px 18px 16px; position: relative; overflow: hidden;
-}
-.sh-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.sh-eye { display: flex; align-items: center; gap: 8px; }
-.sh-state-lbl { font-size: 12px; color: var(--soft); font-weight: 700; }
-.sh-timer { font-family: "Playfair Display", serif; font-size: 50px; font-weight: 700; line-height: 1; margin: 10px 0 5px; letter-spacing: -.02em; text-shadow: 0 2px 0 oklch(0.78 0.04 65 / 0.5), 0 -1px 0 oklch(0.97 0.01 80 / 0.35); }
-.sh-timer .u { font-size: 25px; color: var(--muted); font-weight: 600; }
-.sh-sub { font-size: 13px; color: var(--soft); font-weight: 600; }
+/* ---- sleep hero card ---- */
 /* Cue 3 — sweetspot label */
 .sh-sweet-lbl { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-top: 14px; color: var(--muted); transition: color 0.6s; }
 [data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }

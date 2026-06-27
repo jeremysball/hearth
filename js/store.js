@@ -33,6 +33,12 @@ function load() {
     if (raw) {
       const s = Object.assign(DEFAULT(), JSON.parse(raw));
       s.log = normalizeLog(s.log);
+      // Migrate legacy state: the standalone SweetSpot card was folded into the
+      // hero card, so drop its now-meaningless visibility key and order entry.
+      if (s.cards) {
+        delete s.cards.sweetspot;
+        if (Array.isArray(s.cards.order)) s.cards.order = s.cards.order.filter((k) => k !== 'sweetspot');
+      }
       return s;
     }
   } catch (e) {}
