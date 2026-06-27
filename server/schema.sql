@@ -81,3 +81,24 @@ CREATE TABLE IF NOT EXISTS growth_entries (
   deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_growth_entries_family_updated ON growth_entries(family_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS identities (
+  provider          TEXT NOT NULL,
+  provider_user_id  TEXT NOT NULL,
+  caregiver_id      TEXT NOT NULL REFERENCES caregivers(id),
+  email             TEXT,
+  created_at        TEXT NOT NULL,
+  PRIMARY KEY (provider, provider_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_identities_caregiver ON identities(caregiver_id);
+
+CREATE TABLE IF NOT EXISTS pending_auth (
+  token                TEXT PRIMARY KEY,
+  provider             TEXT NOT NULL,
+  provider_user_id     TEXT NOT NULL,
+  email                TEXT,
+  target_family_id     TEXT NOT NULL,
+  current_family_id    TEXT NOT NULL,
+  current_caregiver_id TEXT NOT NULL,
+  created_at           TEXT NOT NULL
+);
