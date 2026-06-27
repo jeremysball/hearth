@@ -76,22 +76,34 @@ function heroCard() {
   const elapsed = (now - since) / MIN;
   const t = fmt.durBig(elapsed);
   const asleep = st.state === 'asleep';
+  const N = 16; // coals in the ember bed
 
   if (asleep) {
+    // Banked overnight embers — coals warm left→right by nap progress, low and slow.
     const pct = Math.min(100, (elapsed / 70) * 100);
+    let coals = '';
+    for (let i = 0; i < N; i++) {
+      const c = (i + 0.5) / N * 100;
+      coals += `<i class="coal ${c <= pct ? 'banked' : ''}"></i>`;
+    }
     return `<div class="card hero" data-state="asleep">
       <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
       <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
       <div class="hero-sub">Resting peacefully.</div>
-      <div class="track sleep"><i style="width:${pct}%"></i></div>
-      <div class="track-cap"><span>asleep</span><span>~70m typical nap</span></div>
+      <div class="sh-rail-wrap">
+        <div class="sh-bed banked">${coals}</div>
+        <div class="sh-rail-cap"><span>asleep</span><span>~70m typical nap</span></div>
+      </div>
     </div>`;
   }
 
-  // Awake: build sweetspot rail
-  const railSpan = win * MIN;
-  const nowPct = Math.min(100, (now - since) / railSpan * 100);
+  // Awake: the bed spans the awake window plus an hour of "overdue" runway,
+  // so the gold sweetspot band (at the window's end) and any overshoot past it
+  // both have room to show. Without the headroom the sweetspot sits exactly at
+  // 100% and never renders.
   const sf = sp.from.getTime(), sto = sp.to.getTime();
+  const railSpan = (win + 60) * MIN;
+  const nowPct = Math.min(100, (now - since) / railSpan * 100);
   const sweetFromPct = Math.max(0, Math.min(100, (sf - since) / railSpan * 100));
   const sweetToPct   = Math.max(0, Math.min(100, (sto - since) / railSpan * 100));
   const bandWidth = Math.max(0, sweetToPct - sweetFromPct);
@@ -106,12 +118,31 @@ function heroCard() {
   const timeRange = `${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}`;
   const sweetLabel = { before: `Sweetspot · ${timeRange}`, entering: 'Sweetspot approaching', now: 'Sweetspot now', passing: 'Sweetspot passing', passed: `Sweetspot · ${timeRange}` }[sweetState];
 
-  const pastWindow = elapsed > win;
-  const overMin = Math.round(elapsed - win);
+  // Overdue begins only after the 30-min sweetspot grace window passes, so the
+  // gold "good nap window" and the red overtired state don't fire at once.
+  const pastWindow = now > sto;
+  const overMin = Math.round((now - sto) / MIN);
   const healthy = elapsed < win * 0.85
     ? 'Awake window looking healthy.'
-    : elapsed < win ? 'Getting close to nap time.'
+    : now < sf ? 'Getting close to nap time.'
+    : now <= sto ? 'Sweet spot — good time for a nap.'
     : `Nap overdue by ${overMin}m.`;
+
+  // Ember bed — coals ignite left→right as the awake window elapses.
+  let coals = '';
+  for (let i = 0; i < N; i++) {
+    const c = (i + 0.5) / N * 100;
+    const isLit = c <= nowPct;
+    const isSweet = bandWidth > 0 && c >= sweetFromPct && c <= sweetToPct;
+    let cls;
+    if (pastWindow && isLit && c > sweetToPct) cls = 'toohot'; // overshoot past sweetspot burns too hot
+    else if (isSweet && isLit) cls = 'caught';                 // sweetspot coal that has caught — gold
+    else if (isSweet) cls = 'ready';                           // sweetspot ahead — dim gold target
+    else if (isLit) cls = 'lit';                               // ordinary lit ember
+    else cls = '';                                             // cool, unlit coal
+    const isFront = cls === 'lit' && (i + 1.5) / N * 100 > nowPct; // hottest leading ember
+    coals += `<i class="coal ${cls}${isFront ? ' front' : ''}"></i>`;
+  }
 
   return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
@@ -119,10 +150,7 @@ function heroCard() {
     <div class="hero-sub">${healthy}</div>
     <div class="sh-sweet-lbl">${sweetLabel}</div>
     <div class="sh-rail-wrap">
-      <div class="sh-rail">
-        <div class="sh-rail-fill" style="width:${Math.min(100, nowPct).toFixed(1)}%"></div>
-        ${bandWidth > 0 ? `<div class="sh-sweet-band" style="left:${sweetFromPct.toFixed(1)}%;width:${bandWidth.toFixed(1)}%"></div>` : ''}
-      </div>
+      <div class="sh-bed">${coals}</div>
       <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>typical ${fmt.dur(win)}</span></div>
     </div>
   </div>`;

@@ -313,17 +313,6 @@ body {
 }
 .timer .u { font-size: 25px; color: var(--muted); font-weight: 600; }
 .hero-sub { font-size: 13px; color: var(--soft); font-weight: 600; }
-.track {
-  height: 9px; border-radius: 6px; background: var(--accent-soft); margin-top: 18px; overflow: hidden;
-  box-shadow: 0 1px 5px var(--mat-shadow) inset, 0 1px 0 oklch(0.97 0.01 80 / 0.3);
-}
-.track.sleep { background: var(--good-tint); }
-.track i {
-  display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .4s;
-  box-shadow: 0 1px 0 oklch(0.97 0.01 80 / 0.3) inset;
-}
-.track.sleep i { background: var(--good); }
-.track-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
 
 /* ---- info cards ---- */
 .info-stack { display: flex; flex-direction: column; gap: 10px; }
@@ -975,89 +964,78 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 [data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
 [data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
 [data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
-/* Rail */
+/* Ember Bed — the rail IS the fire: coals ignite left→right across the awake window */
 .sh-rail-wrap { margin-top: 8px; }
-.sh-rail { position: relative; height: 9px; border-radius: 6px; background: var(--accent-soft); overflow: visible; box-shadow: 0 1px 5px var(--mat-shadow) inset, 0 1px 0 oklch(0.97 0.01 80 / 0.3); }
-.sh-rail-sleep { background: var(--good-tint); }
-.sh-rail-fill { height: 100%; border-radius: 6px; background: var(--accent); box-shadow: 0 1px 0 oklch(0.97 0.01 80 / 0.3) inset; transition: background 0.6s; }
-.sh-rail-sleep .sh-rail-fill { background: var(--good); }
-/* Cue 1 — fill turns moonlit blue in sweetspot window */
-[data-sweet="entering"] .sh-rail-fill { background: oklch(0.62 0.12 280); }
-[data-sweet="now"] .sh-rail-fill { background: oklch(0.56 0.15 280); }
-[data-sweet="passing"] .sh-rail-fill { background: oklch(0.60 0.10 280); }
-/* Sweetspot "moon gate" — glass capsule carved into the rail */
-.sh-sweet-band {
-  position: absolute; top: -2px; bottom: -2px;
-  border-radius: 5px; pointer-events: none;
-  background: oklch(0.82 0.07 280 / 0.18);
+.sh-bed {
+  display: flex; gap: 3px; padding: 5px 6px; border-radius: 9px;
+  background: linear-gradient(180deg, oklch(0.30 0.03 40 / 0.20), oklch(0.18 0.02 35 / 0.30));
+  box-shadow: inset 0 2px 6px oklch(0.20 0.04 35 / 0.45), inset 0 -1px 0 oklch(0.95 0.02 70 / 0.20), 0 1px 0 oklch(0.97 0.01 80 / 0.30);
+}
+.coal {
+  flex: 1; height: 16px; border-radius: 4px;
+  background: linear-gradient(180deg, oklch(0.42 0.03 45), oklch(0.30 0.025 40));
+  box-shadow: inset 0 1px 0 oklch(0.60 0.04 55 / 0.30), inset 0 -1px 1px oklch(0.18 0.02 35 / 0.50);
+  transition: background 0.7s ease, box-shadow 0.7s ease, transform 0.4s ease;
+}
+/* dark mode cold-coal base — placed before the state rules so lit/caught/toohot
+   (equal specificity) still win their colors in dark mode via source order */
+[data-mode="dark"] .coal {
+  background: linear-gradient(180deg, oklch(0.30 0.025 40), oklch(0.20 0.02 35));
+  box-shadow: inset 0 1px 0 oklch(0.48 0.04 55 / 0.25), inset 0 -1px 1px oklch(0.10 0.01 30 / 0.60);
+}
+/* lit ember — warm, glowing, breathing with the fire vars */
+.coal.lit {
+  background: linear-gradient(180deg, var(--ember-mid), var(--ember-cool));
   box-shadow:
-    inset 0 1px 3px oklch(0.50 0.10 280 / 0.26),
-    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.18),
-    0 0 0 1px oklch(0.68 0.10 280 / 0.32);
-  transition: background 0.5s, box-shadow 0.5s;
+    inset 0 1px 0 oklch(0.92 0.10 70 / 0.45),
+    inset 0 -1px 2px oklch(0.40 0.14 35 / 0.55),
+    0 0 calc(3px + var(--fire-b, 0.06) * 18px) oklch(0.66 0.18 44 / calc(0.30 + var(--fire-b, 0.06) * 1.6));
 }
-/* Gate marker — small orb floating above band center */
-.sh-sweet-band::before {
-  content: '';
-  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-  width: 8px; height: 8px; border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, oklch(0.88 0.07 280), oklch(0.66 0.10 280));
-  box-shadow: 0 0 0 1px oklch(0.60 0.10 280 / 0.45), 0 1px 3px oklch(0 0 0 / 0.14);
-  transition: background 0.5s, box-shadow 0.5s, transform 0.5s;
-}
-/* Approaching — slightly brighter band */
-[data-sweet="entering"] .sh-sweet-band {
-  background: oklch(0.80 0.09 280 / 0.26);
+/* leading coal — hottest, most active flicker */
+.coal.front {
+  background: linear-gradient(180deg, oklch(0.92 0.16 66), var(--ember-mid));
   box-shadow:
-    inset 0 1px 3px oklch(0.50 0.12 280 / 0.32),
-    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.20),
-    0 0 0 1px oklch(0.66 0.12 280 / 0.50);
+    inset 0 1px 0 oklch(0.96 0.10 75 / 0.60),
+    inset 0 -1px 2px oklch(0.45 0.16 38 / 0.55),
+    0 0 calc(5px + var(--fire-a, 0.06) * 30px) oklch(0.78 0.20 50 / calc(0.45 + var(--fire-a, 0.06) * 2.2));
 }
-/* Now — bright, glowing, marker breathes */
-[data-sweet="now"] .sh-sweet-band {
-  background: oklch(0.76 0.11 280 / 0.38);
+/* sweetspot coal waiting to catch — dim gold rim, the target */
+.coal.ready {
+  background: linear-gradient(180deg, oklch(0.50 0.06 85), oklch(0.38 0.05 80));
   box-shadow:
-    inset 0 1px 3px oklch(0.48 0.14 280 / 0.38),
-    inset 0 -1px 0 oklch(0.90 0.06 280 / 0.24),
-    0 0 0 1.5px oklch(0.62 0.14 280 / 0.72),
-    0 0 12px oklch(0.64 0.13 280 / 0.32);
+    inset 0 0 0 1px oklch(0.82 0.12 88 / 0.50),
+    inset 0 1px 0 oklch(0.88 0.10 90 / 0.30);
 }
-[data-sweet="now"] .sh-sweet-band::before {
-  background: radial-gradient(circle at 38% 32%, oklch(0.92 0.08 280), oklch(0.52 0.17 280));
-  box-shadow: 0 0 0 1.5px oklch(0.56 0.16 280 / 0.65), 0 0 8px oklch(0.60 0.15 280 / 0.50);
-  animation: sweet-breathe 2.4s ease-in-out infinite;
-}
-@keyframes sweet-breathe {
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.18); }
-}
-@media (prefers-reduced-motion: reduce) { [data-sweet="now"] .sh-sweet-band::before { animation: none; } }
-/* Passing — fading */
-[data-sweet="passing"] .sh-sweet-band {
-  background: oklch(0.80 0.08 280 / 0.24);
+/* sweetspot coal that has caught — full gold bloom, lifts slightly */
+.coal.caught {
+  background: linear-gradient(180deg, oklch(0.90 0.16 92), oklch(0.78 0.15 85));
   box-shadow:
-    inset 0 1px 3px oklch(0.50 0.10 280 / 0.28),
-    0 0 0 1px oklch(0.64 0.10 280 / 0.45),
-    0 0 6px oklch(0.64 0.12 280 / 0.16);
+    inset 0 1px 0 oklch(0.97 0.10 95 / 0.65),
+    inset 0 -1px 2px oklch(0.55 0.14 80 / 0.45),
+    0 0 calc(5px + var(--fire-b, 0.06) * 26px) oklch(0.85 0.16 90 / calc(0.45 + var(--fire-b, 0.06) * 2.0));
+  transform: translateY(-1px);
 }
-[data-sweet="passing"] .sh-sweet-band::before {
-  background: radial-gradient(circle at 38% 32%, oklch(0.86 0.07 280), oklch(0.60 0.12 280));
-  box-shadow: 0 0 0 1px oklch(0.60 0.11 280 / 0.50), 0 0 5px oklch(0.62 0.12 280 / 0.28);
+/* overtired overshoot — too-hot orange-red, hardest flicker */
+.coal.toohot {
+  background: linear-gradient(180deg, oklch(0.66 0.25 30), oklch(0.52 0.22 28));
+  box-shadow:
+    inset 0 1px 0 oklch(0.80 0.18 40 / 0.50),
+    inset 0 -1px 2px oklch(0.40 0.20 25 / 0.60),
+    0 0 calc(5px + var(--fire-a, 0.06) * 34px) oklch(0.62 0.26 28 / calc(0.50 + var(--fire-a, 0.06) * 2.6));
 }
-/* Passed — quiet, desaturated */
-[data-sweet="passed"] .sh-sweet-band {
-  background: oklch(0.78 0.03 280 / 0.12);
-  box-shadow: 0 0 0 1px oklch(0.65 0.03 280 / 0.28);
+/* banked overnight embers — asleep view, low and slow */
+.sh-bed.banked .coal.banked {
+  background: linear-gradient(180deg, oklch(0.46 0.10 40), oklch(0.34 0.08 35));
+  box-shadow:
+    inset 0 1px 0 oklch(0.62 0.10 55 / 0.30),
+    inset 0 -1px 2px oklch(0.24 0.06 30 / 0.55),
+    0 0 calc(2px + var(--fire-c, 0.10) * 10px) oklch(0.52 0.14 38 / calc(0.20 + var(--fire-c, 0.10) * 1.0));
 }
-[data-sweet="passed"] .sh-sweet-band::before {
-  background: radial-gradient(circle at 38% 32%, oklch(0.82 0.03 280), oklch(0.62 0.03 280));
-  box-shadow: 0 0 0 1px oklch(0.62 0.03 280 / 0.35);
+/* dark mode: deeper trough — lit/caught/toohot embers brighten via --ember-* tokens */
+[data-mode="dark"] .sh-bed {
+  background: linear-gradient(180deg, oklch(0.16 0.02 35 / 0.55), oklch(0.10 0.015 30 / 0.65));
+  box-shadow: inset 0 2px 6px oklch(0.06 0.01 30 / 0.70), inset 0 -1px 0 oklch(0.70 0.06 60 / 0.12);
 }
-/* Now dot */
-.sh-now-dot { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--accent); box-shadow: 0 0 0 2.5px var(--surface), 0 1px 4px oklch(0 0 0 / 0.28); transition: background 0.5s, box-shadow 0.5s; }
-[data-state="asleep"] .sh-now-dot { background: var(--good); }
-[data-sweet="entering"] .sh-now-dot,
-[data-sweet="now"] .sh-now-dot { background: oklch(0.54 0.15 280); box-shadow: 0 0 0 2.5px var(--surface), 0 0 9px oklch(0.62 0.15 280 / 0.55); }
 .sh-rail-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
 /* Past-window "nap overdue" flag next to timer */
 .overtired-flag { font-family: var(--font-sans); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: oklch(0.55 0.18 25); background: oklch(0.96 0.06 25 / 0.30); border: 1px solid oklch(0.70 0.14 25 / 0.35); border-radius: 8px; padding: 3px 8px; vertical-align: middle; margin-left: 10px; }
