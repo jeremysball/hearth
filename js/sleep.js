@@ -1,5 +1,5 @@
 // sleep.js — 24h ring, naps, SweetSpot schedule, night summary.
-import { state, derive, startOfDay, ageLabel, awakeWindowMin } from './store.js';
+import { state, derive, startOfDay, wakeWindowRange, wakePosition } from './store.js';
 import { fmt } from './ui.js';
 
 const MIN = 60000;
@@ -34,26 +34,33 @@ export function sleep() {
   const napsHTML = naps.length ? naps.map((e) => {
     const pending = e.ongoing && e.s > now;
     const dur = pending ? 0 : Math.max(0, (e.en - e.s) / MIN);
+    let napContext = '';
+    if (!e.ongoing && dur > 0) {
+      if (dur < 20) napContext = 'Catnap — less than one full sleep cycle.';
+      else if (dur < 35) napContext = 'One sleep cycle. Light-sleep arousal is normal.';
+      else if (dur >= 60 && dur < 120) napContext = 'Solid nap — multiple sleep cycles completed.';
+    }
     const label = e.ongoing ? (pending ? 'Resuming soon' : 'Asleep now') : (dur > 240 ? 'Night sleep' : 'Nap');
     const endLabel = e.ongoing ? (pending ? 'soon' : 'now') : fmt.clock(e.en);
     return `<div class="row" data-action="entry:open" data-id="${e.raw.id}">
       <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
       <span class="row-txt"><span class="what">${label}</span>
       <span class="when">${fmt.clock(e.s)} – ${endLabel}</span></span>
-      <span class="meta">${fmt.dur(dur)}</span></div>`;
+      <span class="meta">${fmt.dur(dur)}</span>${napContext ? `<span class="nap-context">${napContext}</span>` : ''}</div>`;
   }).join('') : `<div class="empty-log">No sleep logged today yet.</div>`;
 
   // SweetSpot schedule — project remaining naps today
   const sched = [];
   const st = derive.status();
   let cursor = st.state === 'asleep' ? new Date(st.since.getTime() + 70 * MIN) : new Date(st.since);
-  const win = awakeWindowMin();
   for (let i = 0; i < 4; i++) {
-    const from = new Date(cursor.getTime() + win * MIN);
+    const pos = wakePosition(cursor);
+    const pred = wakeWindowRange(pos);
+    const from = new Date(cursor.getTime() + pred.midpoint * MIN);
     if (from.getHours() >= 20) break;
     const to = new Date(from.getTime() + 30 * MIN);
     sched.push({ from, to, past: to < now });
-    cursor = new Date(from.getTime() + 70 * MIN); // nap length
+    cursor = new Date(from.getTime() + 70 * MIN);
   }
   const schedHTML = sched.map((s) => `<div class="sched-item ${s.past ? 'past' : ''}">
     <span class="sched-dot"></span>
@@ -88,7 +95,7 @@ export function sleep() {
     </div>
 
     <div class="sched-card card">
-      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">based on ${ageLabel()}</span></div>
+      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction.label}</span></div>
       ${schedHTML || `<div class="empty-log">Past today's nap windows.</div>`}
     </div>
 
