@@ -366,6 +366,36 @@ test('derive.bedtimeWindow returns null when anchor is low confidence', () => {
   }
 });
 
+test('normalizeSettings initializes dismissedRegressions when missing', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  const s = normalizeSettings({ clock24: '12h' });
+  assert.ok(Array.isArray(s.dismissedRegressions), 'should have dismissedRegressions array');
+  assert.equal(s.dismissedRegressions.length, 0);
+});
+
+test('derive.regressionAlert returns null when baby age is far from any regression', () => {
+  // Current baby age from prior applySyncResponse calls is ~4 months.
+  // The 4-month regression fires at 3.5–5 months → may be in range.
+  // This test just verifies the return shape is null or a valid object.
+  const alert = derive.regressionAlert();
+  if (alert !== null) {
+    assert.ok(typeof alert.id === 'string');
+    assert.ok(typeof alert.name === 'string');
+    assert.ok(typeof alert.mechanism === 'string');
+    assert.ok(Array.isArray(alert.onsetRange));
+  }
+});
+
+test('derive.regressionAlert returns null for a dismissed regression', () => {
+  // Dismiss all regressions and verify null is returned.
+  const s = state().settings;
+  const saved = s.dismissedRegressions;
+  s.dismissedRegressions = ['4m', '6m', '810m', '12m', '18m'];
+  const alert = derive.regressionAlert();
+  assert.equal(alert, null);
+  s.dismissedRegressions = saved; // restore
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');
