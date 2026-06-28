@@ -285,6 +285,105 @@ async function runSuite(base) {
   }
   await closeOverlay();
 
+  // ---------- Type-mode: confirm button doesn't double-commit ----------
+  console.log('\n--- Spinner: type-mode confirm button doesn\'t double-commit ---');
+  {
+    await page.click('[data-action="log:open"][data-type="bottle"]');
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      window._commitCount = 0;
+      const el = document.querySelector('#f-amt');
+      if (el) el.addEventListener('change', () => window._commitCount++);
+    });
+    await page.click('.stepper-val');
+    await page.waitForTimeout(300);
+    const overlayDc = await page.$('.spinner-overlay');
+    if (!overlayDc) {
+      check('double-commit: spinner opened', false);
+    } else {
+      const onItemDc = await overlayDc.$('.spinner-item.on');
+      const onBoxDc = await onItemDc.boundingBox();
+      await page.mouse.move(onBoxDc.x + onBoxDc.width / 2, onBoxDc.y + onBoxDc.height / 2);
+      await page.mouse.down();
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      const inpDc = await overlayDc.$('input');
+      if (!inpDc) {
+        check('double-commit: type-mode input appeared', false);
+      } else {
+        await inpDc.fill('75');
+        await page.waitForTimeout(100);
+        const btnDc = await overlayDc.$('.spinner-check');
+        await btnDc.click();
+        await page.waitForTimeout(300);
+        const count = await page.evaluate(() => window._commitCount);
+        check('confirm button commits exactly once (no double-commit)', count === 1, 'change events fired: ' + count);
+      }
+    }
+    await closeOverlay();
+  }
+
+  // ---------- New drag cancels in-flight animation (not just sets a flag) ----------
+  console.log('\n--- Spinner: new drag cancels in-flight animation ---');
+  {
+    const overlayAnim = await openSpinner();
+    if (!overlayAnim) {
+      check('anim-cancel: spinner opened', false);
+    } else {
+      const winAnim = await (await overlayAnim.$('.spinner-window')).boundingBox();
+      const cxA = winAnim.x + winAnim.width / 2;
+      const cyA = winAnim.y + winAnim.height / 2;
+      await page.mouse.move(cxA, cyA + 20);
+      await page.mouse.down();
+      await page.mouse.move(cxA, cyA - 80, { steps: 4 });
+      await page.mouse.up();
+      await page.evaluate(() => {
+        window._cafCount = 0;
+        const orig = window.cancelAnimationFrame.bind(window);
+        window.cancelAnimationFrame = (id) => { window._cafCount++; return orig(id); };
+      });
+      await page.waitForTimeout(80);
+      await page.mouse.down();
+      await page.mouse.move(cxA, cyA - 40, { steps: 2 });
+      await page.mouse.up();
+      await page.waitForTimeout(700);
+      const cafCount = await page.evaluate(() => window._cafCount);
+      check('new drag calls cancelAnimationFrame to stop previous animation', cafCount > 0, 'cancelAnimationFrame called ' + cafCount + ' times');
+    }
+    await closeOverlay();
+  }
+
+  // ---------- Confirm button is keyboard-accessible via click event ----------
+  console.log('\n--- Spinner: confirm button responds to keyboard Enter ---');
+  {
+    const overlayKb = await openSpinner();
+    if (!overlayKb) {
+      check('keyboard-confirm: spinner opened', false);
+    } else {
+      const onItemKb = await overlayKb.$('.spinner-item.on');
+      const onBoxKb = await onItemKb.boundingBox();
+      await page.mouse.move(onBoxKb.x + onBoxKb.width / 2, onBoxKb.y + onBoxKb.height / 2);
+      await page.mouse.down();
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      const inpKb = await overlayKb.$('input');
+      if (!inpKb) {
+        check('keyboard-confirm: type-mode input appeared', false);
+      } else {
+        await inpKb.fill('200');
+        await page.waitForTimeout(100);
+        await page.evaluate(() => {
+          const btn = document.querySelector('.spinner-check');
+          if (btn) btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        });
+        await page.waitForTimeout(300);
+        const kbVal = await page.$eval('#f-amt', el => el.dataset.value);
+        check('keyboard Enter on confirm button commits typed value', kbVal === '200', 'value: ' + kbVal);
+      }
+    }
+    await closeOverlay();
+  }
+
   const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();
   return exitCode;
