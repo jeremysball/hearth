@@ -1,5 +1,5 @@
 // sheets.js — logging bottom sheet (detailed) + card config sheets.
-import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep } from './store.js';
+import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep } from './store.js';
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
@@ -337,13 +337,15 @@ export function saveLog(type, id) {
     sheet.close(); toast(TYPES[type].label + ' updated'); router.refresh();
     return;
   }
+  // autoClose must run before maybeInterrupt: close any existing open sleep first so
+  // maybeInterruptSleep does not see it as an active sleep to split.
   const closed = type === 'sleep' ? autoCloseOngoingSleep(e.start) : null;
   const split = maybeInterruptSleep(type, e.start);
   const added = addEntry(e);
   sheet.close();
   if (state().settings.sound !== false) { chime(); buzz(15); }
   confetti();
-  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); if (closed?.length) closed.forEach((c) => updateEntry(c.id, { end: null })); undoInterruptSleep(split); router.refresh(); });
+  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); undoAutoCloseSleep(closed); undoInterruptSleep(split); router.refresh(); });
   router.refresh();
 }
 
