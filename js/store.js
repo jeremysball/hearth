@@ -51,6 +51,7 @@ export function normalizeSettings(s) {
   if (s.clock24 === true) s.clock24 = '24h';
   else if (s.clock24 === false) s.clock24 = '12h';
   else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
+  if (typeof s.tipMorningLightDismissed !== 'boolean') s.tipMorningLightDismissed = false;
   return s;
 }
 
