@@ -315,6 +315,7 @@ document.addEventListener('pointerdown', (e) => {
   dragKey = handle.dataset.card;
   handle.setPointerCapture(e.pointerId);
   handle.closest('.info-card').classList.add('dragging');
+  document.addEventListener('touchmove', blockScroll, { passive: false });
 });
 document.addEventListener('pointermove', (e) => {
   if (!dragKey) return;
@@ -334,6 +335,7 @@ document.addEventListener('pointermove', (e) => {
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
   if (!dragKey) return;
+  document.removeEventListener('touchmove', blockScroll);
   dragKey = null;
   const stack = $('.info-stack'); if (!stack) return;
   state().settings.cards.order = [...stack.querySelectorAll('.info-card')].map((el) => el.dataset.card);
@@ -342,6 +344,11 @@ document.addEventListener('pointermove', (e) => {
 }));
 
 // ---------- pull-to-refresh ----------
+// Named so it can be dynamically added/removed — only active during PTR or drag,
+// never during normal scrolling (a permanent non-passive listener would block the
+// scroll compositor on every frame).
+function blockScroll(e) { e.preventDefault(); }
+
 let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
 const PTR_THRESHOLD = 70; // visual px to arm refresh
 const PTR_MAX = 80;       // visual px cap
@@ -372,8 +379,9 @@ function ptrReset() {
       setTimeout(cleanup, 700); // fallback if transitionend doesn't fire
     });
   }
-  ptr.style.transition = 'height .3s ease-out';
-  ptr.style.height = '0';
+  // Transform-based collapse: compositor-only, no layout reflow.
+  ptr.style.transition = 'transform .3s ease-out';
+  ptr.style.transform = 'translateY(-100%)';
 }
 
 function ptrCollapse() {
@@ -388,18 +396,19 @@ document.addEventListener('pointerdown', (e) => {
   const screen = e.target.closest('.screen');
   if (!screen || screen.scrollTop > 0) return;
   ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
+  // Block scroll only while PTR is active — removed in pointerup/cancel and on upward bail.
+  document.addEventListener('touchmove', blockScroll, { passive: false });
 });
-// Non-passive touchmove blocks the browser's scroll-claim so pointercancel never fires mid-pull or mid-drag.
-document.addEventListener('touchmove', (e) => { if (ptrActive || dragKey) e.preventDefault(); }, { passive: false });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
-  if (raw < 0) { ptrActive = false; return; }
+  if (raw < 0) { ptrActive = false; document.removeEventListener('touchmove', blockScroll); return; }
   const dist = Math.min(PTR_MAX, ptrDist(raw));
   const ptr = document.getElementById('ptr');
   if (!ptr) return;
+  // Transform-based reveal: no layout reflow, composited by the browser.
   ptr.style.transition = 'none';
-  ptr.style.height = dist + 'px';
+  ptr.style.transform = `translateY(calc(-100% + ${dist}px))`;
   const spinner = ptr.querySelector('.ptr-spinner');
   if (spinner) {
     spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
@@ -413,9 +422,12 @@ document.addEventListener('pointermove', (e) => {
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   ptrActive = false; ptrPid = null;
+  document.removeEventListener('touchmove', blockScroll);
   if (ptrArmed && !ptrSyncing) {
     ptrArmed = false;
     ptrSyncing = true;
+    const ptr = document.getElementById('ptr');
+    if (ptr) { ptr.style.transition = 'none'; ptr.style.transform = 'translateY(0)'; }
     document.getElementById('ptr')?.classList.add('ptr-spinning');
     ptrTimeout = setTimeout(ptrCollapse, 4000);
     syncOnce().then(ptrCollapse);

@@ -294,7 +294,7 @@ body {
   }
 }
 /* ---- pull-to-refresh ---- */
-.ptr-wrap { flex: 0 0 auto; height: 0; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; transition: height .3s ease-out; }
+.ptr-wrap { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; transform: translateY(-100%); will-change: transform; }
 .ptr-spinner { font-size: 24px; color: var(--muted); opacity: 0; }
 .ptr-releasing .ptr-spinner { transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease-out; }
 .ptr-spinning .ptr-spinner { animation: spin 0.8s linear infinite; }
