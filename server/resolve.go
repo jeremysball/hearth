@@ -62,9 +62,8 @@ func handleConflictInfo(db *sql.DB) http.HandlerFunc {
 
 func familySummary(db *sql.DB, familyID string) map[string]any {
 	var name string
-	db.QueryRow(`SELECT name FROM babies WHERE family_id = ?`, familyID).Scan(&name)
 	var count int
-	db.QueryRow(`SELECT COUNT(*) FROM log_entries WHERE family_id = ? AND deleted_at IS NULL`, familyID).Scan(&count)
+	db.QueryRow(`SELECT b.name, COUNT(le.id) FROM babies b LEFT JOIN log_entries le ON le.family_id = b.family_id AND le.deleted_at IS NULL WHERE b.family_id = ? GROUP BY b.id`, familyID).Scan(&name, &count)
 	return map[string]any{"familyId": familyID, "babyName": name, "entryCount": count}
 }
 

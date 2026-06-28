@@ -115,8 +115,7 @@ export function confetti() {
       size: 4 + Math.random() * 6,
       color: colors[Math.floor(Math.random() * colors.length)],
       rotation: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.3,
-      life: 1
+      rotSpeed: (Math.random() - 0.5) * 0.3
     });
   }
   let start = performance.now();
@@ -125,14 +124,14 @@ export function confetti() {
     const elapsed = (performance.now() - start) / 1000;
     if (elapsed > 1.5) { canvas.remove(); return; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const life = Math.max(0, 1 - elapsed / 1.5);
     particles.forEach((p) => {
       p.x += p.vx;
       p.y += p.vy;
       p.vy += 0.2;
       p.rotation += p.rotSpeed;
-      p.life = Math.max(0, 1 - elapsed / 1.5);
       ctx.save();
-      ctx.globalAlpha = p.life;
+      ctx.globalAlpha = life;
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rotation);
       ctx.fillStyle = p.color;

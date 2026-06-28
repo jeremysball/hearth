@@ -27,27 +27,17 @@ func newSessionToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-func createSession(db *sql.DB, caregiverID, familyID string) (string, error) {
-	token, err := newSessionToken()
-	if err != nil {
-		return "", err
-	}
-	now := nowISO()
-	_, err = db.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
-		token, caregiverID, familyID, now, now)
-	if err != nil {
-		return "", err
-	}
-	return token, nil
+type execer interface {
+	Exec(string, ...any) (sql.Result, error)
 }
 
-func createSessionTx(tx *sql.Tx, caregiverID, familyID string) (string, error) {
+func createSession(ex execer, caregiverID, familyID string) (string, error) {
 	token, err := newSessionToken()
 	if err != nil {
 		return "", err
 	}
 	now := nowISO()
-	_, err = tx.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
+	_, err = ex.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
 		token, caregiverID, familyID, now, now)
 	if err != nil {
 		return "", err

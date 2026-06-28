@@ -76,7 +76,7 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 export function addEntry(e) {
   e.id = e.id || uid();
   _state.log.push(e);
-  _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
+  _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   save();
   enqueue({ url: '/api/entries/' + e.id, method: 'PUT', body: e });
   log.event('store', 'addEntry', e.type, e.id);
@@ -92,7 +92,7 @@ export function updateEntry(id, patch) {
   const e = _state.log.find((x) => x.id === id);
   if (e) {
     Object.assign(e, patch);
-    _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
+    _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
     save();
     enqueue({ url: '/api/entries/' + id, method: 'PUT', body: e });
   }
@@ -135,7 +135,7 @@ export function addMeasure(m) {
   m.id = m.id || uid();
   const existing = _state.growth.find((x) => x.id === m.id);
   if (existing) Object.assign(existing, m); else _state.growth.push(m);
-  _state.growth.sort((a, b) => new Date(a.date) - new Date(b.date));
+  _state.growth.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   save();
   enqueue({ url: '/api/growth/' + m.id, method: 'PUT', body: m });
   return m;
@@ -297,7 +297,7 @@ export function seed() {
   add('bottle', 96, { amount: 120, unit: 'ml', contents: 'Formula' }); // 8:05
   add('medicine', 70, { medId: 'm1', name: 'Vitamin D', dose: '1 drop' });
 
-  log.sort((a, b) => new Date(b.start) - new Date(a.start));
+  log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   _state.log = log;
 
   // seed growth history (monthly weights/heights up to today)
@@ -319,7 +319,7 @@ export function applySyncResponse(resp) {
   if (resp.baby) Object.assign(_state.baby, resp.baby);
   if (resp.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
   _state.log = mergeById(_state.log, resp.entries || []);
-  _state.log.sort((a, b) => new Date(b.start) - new Date(a.start));
+  _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   _state.growth = mergeById(_state.growth, resp.growth || []);
   save();
 }
