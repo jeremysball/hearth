@@ -163,7 +163,7 @@ export function openSpinner(id) {
       if (dt > 0) vel = ((last.y - first.y) / dt) * 100;
     }
     const momentum = offsetY + vel;
-    const steps = Math.max(-8, Math.min(8, Math.round(momentum / ITEM_H)));
+    const steps = Math.max(-30, Math.min(30, Math.round(momentum / ITEM_H)));
     const targetOffset = clampOffset(steps * ITEM_H);
 
     // Animate the entire distance so all crossing steps are smooth.
@@ -225,7 +225,7 @@ export function openSpinner(id) {
     }
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); confirm(); } });
     btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); confirm(); });
-    inp.addEventListener('blur', () => exitTypeMode(onItem));
+    inp.addEventListener('blur', () => confirm());
     requestAnimationFrame(() => inp.focus());
   }
 
