@@ -180,6 +180,14 @@ document.addEventListener('click', (ev) => {
     'med:card': () => openMedCard(),
     'med:dose': () => logMedDose(d.mid),
     'med:remove': () => { const r = $(`.med-edit[data-mid="${d.mid}"]`); if (r) r.remove(); },
+    'tip:dismiss': () => {
+      const tip = el.dataset.tip;
+      if (tip === 'morning-light') {
+        state().settings.tipMorningLightDismissed = true;
+        save();
+        router.refresh();
+      }
+    },
     'entry:open': () => openEntry(d.id),
     'entry:edit': () => { const e = state().log.find((x) => x.id === d.id); if (e) openLog(e.type, e); },
     'measure:open': () => openMeasure(d.id || ''),

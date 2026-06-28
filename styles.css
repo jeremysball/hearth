@@ -1135,3 +1135,54 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .onb-or { text-align: center; color: var(--soft); font-size: 13px; margin: 14px 0 10px; }
 .account-row { display: flex; align-items: center; justify-content: space-between; }
 .conflict-fam { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 14px; background: color-mix(in oklch, var(--accent-tint) 50%, transparent); }
+
+/* --- Sleep model chips & tips --- */
+.tip-card {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tip-hd {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.tip-card p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2); }
+.tip-dismiss {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+.bedtime-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--card-bg);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  margin: 0 0 0.75rem;
+}
+
+.sweet-clock {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  margin-top: 0.2rem;
+}
+
+.nap-context {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  margin-top: 0.1rem;
+}
