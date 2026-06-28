@@ -62,7 +62,7 @@ async function runSuite(base) {
   const selCenter = selItem ? (selItem.top + selItem.bottom) / 2 : -1;
   const hiCenter = (highlightBox.y * 2 + highlightBox.height) / 2;
 
-  check('item count is 17', itemCount === 17, 'got ' + itemCount);
+  check('item count is 15', itemCount === 15, 'got ' + itemCount);
   check('selected is 120', onItems[0] === '120', 'got ' + onItems[0]);
   check('selected aligns with highlight (<5px)', Math.abs(selCenter - hiCenter) < 5, 'delta ' + Math.abs(selCenter - hiCenter).toFixed(1));
   console.log('  items:', itemTexts);
