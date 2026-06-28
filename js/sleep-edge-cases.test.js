@@ -105,6 +105,56 @@ test('todayStats handles zero-duration sleep (start === end)', () => {
   removeEntry(e.id);
 });
 
+// ── Test 8 ── todayStats sleepMin is 0 when only open sleep has a future start
+test('todayStats sleepMin is 0 when open sleep has a future start', () => {
+  closeAllSleeps();
+  const futureStart = new Date(Date.now() + 30 * 60000).toISOString();
+  const e = addEntry({ type: 'sleep', start: futureStart });
+  const stats = derive.todayStats();
+  assert.equal(stats.sleepMin, 0, 'future-start open sleep must not contribute sleep minutes');
+  removeEntry(e.id);
+});
+
+// ── Test 9 ── todayStats sleepMin is 0 for today when a stale open sleep exists (>24h old)
+test('todayStats sleepMin is 0 for today with a stale open sleep (>24h old)', () => {
+  closeAllSleeps();
+  const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString();
+  const e = addEntry({ type: 'sleep', start: twoDaysAgo });
+  const stats = derive.todayStats();
+  assert.equal(stats.sleepMin, 0, 'stale open sleep must not inflate today sleepMin');
+  removeEntry(e.id);
+});
+
+// ── Test 10 ── overnight sleep nap count: 1 on start day, 0 on the next
+test('overnight sleep: nap count is 1 on start day (yesterday), 0 on next day (today)', () => {
+  closeAllSleeps();
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+  const sleepStart = new Date(midnight.getTime() - 60 * 60000).toISOString();     // 1h before midnight
+  const sleepEnd   = new Date(midnight.getTime() + 7 * 60 * 60000).toISOString(); // 7h after midnight
+  const e = addEntry({ type: 'sleep', start: sleepStart, end: sleepEnd });
+  const todayNaps     = derive.todayStats(0).naps;
+  const yesterdayNaps = derive.todayStats(1).naps;
+  assert.equal(todayNaps, 0, 'overnight sleep started yesterday must not count as today nap');
+  assert.equal(yesterdayNaps, 1, 'overnight sleep must count as 1 nap on its start day');
+  removeEntry(e.id);
+});
+
+// ── Test 11 ── autoCloseOngoingSleep clamps close time to now for a future new start
+test('autoCloseOngoingSleep clamps close time to now when new start is in the future', () => {
+  closeAllSleeps();
+  const pastStart      = new Date(Date.now() - 60 * 60000).toISOString();  // 1h ago
+  const futureNewStart = new Date(Date.now() + 30 * 60000).toISOString();  // 30min from now
+  const e = addEntry({ type: 'sleep', start: pastStart });
+  const before = Date.now();
+  autoCloseOngoingSleep(futureNewStart);
+  const after = Date.now();
+  const updated = state().log.find((x) => x.id === e.id);
+  assert.ok(updated.end, 'sleep should be closed even when new start is future');
+  const closedAt = new Date(updated.end).getTime();
+  assert.ok(closedAt >= before && closedAt <= after + 100, 'close time must be ≤ now, not the future start');
+  removeEntry(e.id);
+});
+
 // ── Test 7 ── after maybeInterruptSleep, only one open sleep exists
 test('after interrupt-sleep split, only one sleep is open (the resumed one)', async () => {
   closeAllSleeps();
