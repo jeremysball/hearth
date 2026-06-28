@@ -101,6 +101,17 @@ function bedtimeBanner() {
   </div>`;
 }
 
+function regressionBanner() {
+  const r = derive.regressionAlert();
+  if (!r) return '';
+  const name = esc(state().baby.name || 'Your baby');
+  return `<div class="regression-banner card">
+    <div class="reg-hd">${icon('info')} ${esc(r.name)}</div>
+    <p>${name} is approaching the ${esc(r.name.toLowerCase())} — one of the most common. ${esc(r.mechanism)} This is normal development, not a problem to fix.</p>
+    <button class="tip-dismiss" data-action="regression:dismiss" data-rid="${esc(r.id)}" aria-label="Dismiss">Got it</button>
+  </div>`;
+}
+
 function heroCard() {
   const st = derive.status();
   const sp = derive.sweetSpot();
@@ -330,6 +341,7 @@ export function home() {
       ${avatar()}
     </div>
     ${heroCard()}
+    ${regressionBanner()}
     ${morningLightTip()}
     ${bedtimeBanner()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
