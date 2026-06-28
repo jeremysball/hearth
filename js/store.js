@@ -130,11 +130,14 @@ export function undoInterruptSleep(split) {
   updateEntry(split.sleepId, { end: null });
 }
 export function autoCloseOngoingSleep(newStartISO) {
-  const ongoing = _state.log.find((e) => e.type === 'sleep' && !e.end && new Date(e.start) <= new Date());
-  if (!ongoing || new Date(ongoing.start) >= new Date(newStartISO)) return null;
-  updateEntry(ongoing.id, { end: newStartISO });
-  log.event('store', 'autoCloseOngoingSleep', ongoing.id, { closedAt: newStartISO });
-  return ongoing;
+  const newStart = new Date(newStartISO);
+  const closed = _state.log.filter((e) => e.type === 'sleep' && !e.end && new Date(e.start) < newStart);
+  if (!closed.length) return [];
+  closed.forEach((e) => {
+    updateEntry(e.id, { end: newStartISO });
+    log.event('store', 'autoCloseOngoingSleep', e.id, { closedAt: newStartISO });
+  });
+  return closed;
 }
 
 // ---------- growth helpers ----------
@@ -252,7 +255,12 @@ export const derive = {
     if (cur) sleepMin += (cur[1] - cur[0]) / MIN;
     const feeds = inDay.filter((e) => e.type === 'feed' || e.type === 'bottle').length;
     const diapers = inDay.filter((e) => e.type === 'diaper').length;
-    const naps = inDay.filter((e) => e.type === 'sleep').length;
+    const naps = _state.log.filter((e) => {
+      if (e.type !== 'sleep') return false;
+      const rawS = new Date(e.start).getTime();
+      const rawEn = e.end ? new Date(e.end).getTime() : Math.min(Date.now(), end);
+      return rawEn > start && rawS < end;
+    }).length;
     let bottleVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
     return { sleepMin, feeds, diapers, naps, bottleVol };
