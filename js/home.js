@@ -1,5 +1,5 @@
 // home.js — home view + entry summary helper.
-import { state, derive, ageLabel, awakeWindowMin } from './store.js';
+import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 
@@ -72,10 +72,49 @@ function avatar() {
   return `<button class="avatar-btn" data-action="baby:photo" aria-label="View ${esc(b.name || 'baby')}'s photo">${inner}</button>`;
 }
 
+// One-time morning light tip card. Shown when the circadian anchor reaches
+// medium+ confidence. Dismissed to settings — never shown again after tap.
+function morningLightTip() {
+  if (state().settings.tipMorningLightDismissed) return '';
+  const anchor = derive.circadianAnchor();
+  if (!anchor || anchor.confidence === 'low') return '';
+  const name = esc(state().baby.name || 'Your baby');
+  const h = Math.floor(anchor.morningWakeMinutes / 60);
+  const m = anchor.morningWakeMinutes % 60;
+  const todayBase = new Date(); todayBase.setHours(h, m, 0, 0);
+  const timeStr = fmt.clock(todayBase);
+  return `<div class="card tip-card">
+    <div class="tip-hd">${icon('sunrise')} Morning light</div>
+    <p>${name} wakes around ${timeStr} most mornings. Morning light in the first 30 minutes — open curtains, step outside — helps anchor the sleep clock and makes nap timing more predictable.</p>
+    <button class="tip-dismiss" data-action="tip:dismiss" data-tip="morning-light">Got it</button>
+  </div>`;
+}
+
+// Bedtime estimate chip. Shown in the evening (after 4pm) when the circadian
+// anchor has medium+ confidence.
+function bedtimeBanner() {
+  if (new Date().getHours() < 16) return '';
+  const bw = derive.bedtimeWindow();
+  if (!bw) return '';
+  return `<div class="bedtime-chip">
+    ${icon('moon')} Sleep clock pointing toward bed ${fmt.clock(bw.from)}–${fmt.clock(bw.to)}
+  </div>`;
+}
+
+function regressionBanner() {
+  const r = derive.regressionAlert();
+  if (!r) return '';
+  const name = esc(state().baby.name || 'Your baby');
+  return `<div class="regression-banner card">
+    <div class="reg-hd">${icon('info')} ${esc(r.name)}</div>
+    <p>${name} is approaching the ${esc(r.name.toLowerCase())} — one of the most common. ${esc(r.mechanism)} This is normal development, not a problem to fix.</p>
+    <button class="tip-dismiss" data-action="regression:dismiss" data-rid="${esc(r.id)}" aria-label="Dismiss">Got it</button>
+  </div>`;
+}
+
 function heroCard() {
   const st = derive.status();
   const sp = derive.sweetSpot();
-  const win = awakeWindowMin();
   const now = Date.now();
   const since = new Date(st.since).getTime();
   const elapsed = (now - since) / MIN;
@@ -108,7 +147,7 @@ function heroCard() {
   // both have room to show. Without the headroom the sweetspot sits exactly at
   // 100% and never renders.
   const sf = sp.from.getTime(), sto = sp.to.getTime();
-  const railSpan = (win + 60) * MIN;
+  const railSpan = (sp.prediction.high + 60) * MIN;
   const nowPct = Math.min(100, (now - since) / railSpan * 100);
   const sweetFromPct = Math.max(0, Math.min(100, (sf - since) / railSpan * 100));
   const sweetToPct   = Math.max(0, Math.min(100, (sto - since) / railSpan * 100));
@@ -124,15 +163,25 @@ function heroCard() {
   const timeRange = `${fmt.clock(sp.from)} – ${fmt.clock(sp.to)}`;
   const sweetLabel = { before: `Sweetspot · ${timeRange}`, entering: 'Sweetspot approaching', now: 'Sweetspot now', passing: 'Sweetspot passing', passed: `Sweetspot · ${timeRange}` }[sweetState];
 
+  // Optional clock-time anchor label when circadian confidence is medium+.
+  const anchor = derive.circadianAnchor();
+  let clockTimeNote = '';
+  if (anchor && anchor.confidence !== 'low' && !sp.napping) {
+    const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
+    const anchorMs = todayBase.getTime() + anchor.morningWakeMinutes * MIN;
+    const clockFrom = new Date(anchorMs + sp.prediction.low * MIN);
+    const clockTo   = new Date(anchorMs + sp.prediction.high * MIN);
+    clockTimeNote = `<span class="sweet-clock">usually ${fmt.clock(clockFrom)}–${fmt.clock(clockTo)}</span>`;
+  }
+
   // Overdue begins only after the 30-min sweetspot grace window passes, so the
   // gold "good nap window" and the red overtired state don't fire at once.
   const pastWindow = now > sto;
-  const overMin = Math.round((now - sto) / MIN);
-  const healthy = elapsed < win * 0.85
-    ? 'Awake window looking healthy.'
-    : now < sf ? 'Getting close to nap time.'
-    : now <= sto ? 'Sweet spot — good time for a nap.'
-    : `Nap overdue by ${overMin}m.`;
+  const healthy = elapsed < sp.prediction.low * 0.85
+    ? 'Sleep pressure building — adenosine is rising.'
+    : now < sf ? 'Nap window opening. Watch for yawning or looking away.'
+    : now <= sto ? 'Sleep pressure is high — good time for a nap.'
+    : 'Past the usual window. Settling may take a little longer.';
 
   // Ember bed — coals ignite left→right as the awake window elapses.
   let coals = '';
@@ -153,12 +202,12 @@ function heroCard() {
   return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
     <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-    <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">nap overdue</span>' : ''}</div>
+    <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">past window</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
-    <div class="sh-sweet-lbl">${sweetLabel}</div>
+    <div class="sh-sweet-lbl">${sweetLabel}${clockTimeNote}</div>
     <div class="sh-rail-wrap">
       <div class="sh-bed">${coals}</div>
-      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>typical ${fmt.dur(win)}</span></div>
+      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}</span></div>
     </div>
   </div>`;
 }
@@ -292,6 +341,9 @@ export function home() {
       ${avatar()}
     </div>
     ${heroCard()}
+    ${regressionBanner()}
+    ${morningLightTip()}
+    ${bedtimeBanner()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
     <div class="info-stack" data-longpress="cards"${cardEditMode ? ' data-card-edit' : ''}>
       ${order.map(cardHTML).join('')}
