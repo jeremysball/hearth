@@ -344,29 +344,45 @@ document.addEventListener('pointermove', (e) => {
 }));
 
 // ---------- pull-to-refresh ----------
-// Named so it can be dynamically added/removed — only active during PTR or drag,
-// never during normal scrolling (a permanent non-passive listener would block the
-// scroll compositor on every frame).
+// Named function so it can be added/removed per gesture — never permanent.
 function blockScroll(e) { e.preventDefault(); }
 
 let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
+let ptrScrollBlocked = false, ptrRafId = null, ptrLatestY = 0;
 const PTR_THRESHOLD = 70; // visual px to arm refresh
 const PTR_MAX = 80;       // visual px cap
+// Must match .ptr-wrap height in CSS: PTR_MAX (80) + padding-bottom (12).
+const PTR_WRAP_H = PTR_MAX + 12;
 
 function ptrDist(raw) {
   // Two-phase resistance: 1:1 until 40px, then 0.5 damping.
-  // Threshold (70px) reached at raw=100; cap (80px) at raw=120.
   return raw <= 40 ? raw : 40 + (raw - 40) * 0.5;
 }
 
+function ptrUpdate() {
+  ptrRafId = null;
+  if (!ptrActive) return;
+  const dist = Math.min(PTR_MAX, ptrDist(ptrLatestY - ptrStartY));
+  const ptr = document.getElementById('ptr');
+  if (!ptr) return;
+  ptr.style.transition = 'none';
+  ptr.style.transform = `translateY(${dist - PTR_WRAP_H}px)`;
+  const spinner = ptr.querySelector('.ptr-spinner');
+  if (spinner) {
+    spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
+    spinner.style.opacity = String(Math.min(1, dist / 28));
+  }
+  if (!ptrArmed && dist >= PTR_THRESHOLD) { ptrArmed = true; buzz(12); }
+}
+
 function ptrReset() {
+  if (ptrRafId) { cancelAnimationFrame(ptrRafId); ptrRafId = null; }
   const ptr = document.getElementById('ptr');
   if (!ptr) return;
   ptr.classList.remove('ptr-spinning');
   const spinner = ptr.querySelector('.ptr-spinner');
   if (spinner && parseFloat(spinner.style.opacity) > 0) {
     ptr.classList.add('ptr-releasing');
-    // rAF ensures .ptr-releasing transition is painted before we mutate transform/opacity
     requestAnimationFrame(() => {
       spinner.style.transform = 'rotate(0deg)';
       spinner.style.opacity = '0';
@@ -376,12 +392,11 @@ function ptrReset() {
         spinner.style.opacity = '';
       };
       spinner.addEventListener('transitionend', cleanup, { once: true });
-      setTimeout(cleanup, 700); // fallback if transitionend doesn't fire
+      setTimeout(cleanup, 700);
     });
   }
-  // Transform-based collapse: compositor-only, no layout reflow.
   ptr.style.transition = 'transform .3s ease-out';
-  ptr.style.transform = 'translateY(-100%)';
+  ptr.style.transform = `translateY(-${PTR_WRAP_H}px)`;
 }
 
 function ptrCollapse() {
@@ -395,40 +410,27 @@ document.addEventListener('pointerdown', (e) => {
   if (ptrSyncing || e.pointerType === 'mouse') return;
   const screen = e.target.closest('.screen');
   if (!screen || screen.scrollTop > 0) return;
-  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
-  // Block scroll only while PTR is active — removed in pointerup/cancel and on upward bail.
-  document.addEventListener('touchmove', blockScroll, { passive: false });
+  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false; ptrScrollBlocked = false;
 });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
-  if (raw < 0) { ptrActive = false; document.removeEventListener('touchmove', blockScroll); return; }
-  const dist = Math.min(PTR_MAX, ptrDist(raw));
-  const ptr = document.getElementById('ptr');
-  if (!ptr) return;
-  // Transform-based reveal: no layout reflow, composited by the browser.
-  ptr.style.transition = 'none';
-  ptr.style.transform = `translateY(calc(-100% + ${dist}px))`;
-  const spinner = ptr.querySelector('.ptr-spinner');
-  if (spinner) {
-    spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
-    spinner.style.opacity = String(Math.min(1, dist / 28));
-  }
-  if (!ptrArmed && dist >= PTR_THRESHOLD) {
-    ptrArmed = true;
-    buzz(12);
-  }
+  if (raw <= 0) { ptrActive = false; return; }
+  // Add blockScroll lazily — only after the first confirmed downward move so
+  // upward (normal scroll) gestures on the hero card are never interrupted.
+  if (!ptrScrollBlocked) { ptrScrollBlocked = true; document.addEventListener('touchmove', blockScroll, { passive: false }); }
+  ptrLatestY = e.clientY;
+  if (!ptrRafId) ptrRafId = requestAnimationFrame(ptrUpdate);
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   ptrActive = false; ptrPid = null;
-  document.removeEventListener('touchmove', blockScroll);
+  if (ptrScrollBlocked) { ptrScrollBlocked = false; document.removeEventListener('touchmove', blockScroll); }
   if (ptrArmed && !ptrSyncing) {
     ptrArmed = false;
     ptrSyncing = true;
     const ptr = document.getElementById('ptr');
-    if (ptr) { ptr.style.transition = 'none'; ptr.style.transform = 'translateY(0)'; }
-    document.getElementById('ptr')?.classList.add('ptr-spinning');
+    if (ptr) { ptr.style.transition = 'none'; ptr.style.transform = 'translateY(0)'; ptr.classList.add('ptr-spinning'); }
     ptrTimeout = setTimeout(ptrCollapse, 4000);
     syncOnce().then(ptrCollapse);
   } else {
