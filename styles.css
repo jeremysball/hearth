@@ -926,18 +926,15 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-popup { background: var(--surface); border-radius: 28px; width: min(280px, 80vw); box-shadow: 0 20px 50px oklch(0 0 0 / .25); overflow: hidden; }
 .spinner-window { position: relative; height: 260px; overflow: hidden; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .spinner-window:active { cursor: grabbing; }
-.spinner-highlight { position: absolute; top: 50%; left: 12px; right: 12px; height: 52px; transform: translateY(-50%); background: var(--accent-tint); border-radius: 13px; pointer-events: none; z-index: 0; }
-.spinner-items { position: absolute; top: 50%; left: 0; right: 0; z-index: 1; will-change: transform; }
-.spinner-item { height: 52px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--muted); }
-.spinner-item.on { font-size: 28px; font-weight: 800; color: var(--ink); }
-.spinner-item.pos-1 { opacity: .62; font-size: 17px; }
-.spinner-item.pos-2 { opacity: .34; font-size: 14px; }
-.spinner-item.pos-3 { opacity: .16; font-size: 12px; }
-.spinner-item.pos-4 { opacity: .07; font-size: 11px; }
-.spinner-item.pos-5 { opacity: .03; font-size: 10px; }
-.spinner-item.pos-6 { opacity: .01; font-size: 10px; }
-.spinner-item.pos-7 { opacity: .005; font-size: 10px; }
-.spinner-item.pos-8 { opacity: .002; font-size: 10px; }
+/* top/bottom gradient fades mimic the iOS drum-picker lens */
+.spinner-window::before, .spinner-window::after { content: ''; position: absolute; left: 0; right: 0; height: 36%; z-index: 2; pointer-events: none; }
+.spinner-window::before { top: 0; background: linear-gradient(to bottom, var(--surface) 10%, transparent); }
+.spinner-window::after  { bottom: 0; background: linear-gradient(to top,   var(--surface) 10%, transparent); }
+.spinner-highlight { position: absolute; top: 50%; left: 12px; right: 12px; height: 44px; transform: translateY(-50%); background: var(--accent-tint); border-radius: 13px; pointer-events: none; z-index: 1; }
+.spinner-items { position: absolute; inset: 0; z-index: 1; }
+/* items are absolutely stacked at the centre; JS sets translateY + scaleY per-item */
+.spinner-item { position: absolute; left: 0; right: 0; top: 50%; height: 44px; margin-top: -22px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: var(--ink); transform-origin: center center; }
+.spinner-item.on { font-size: 26px; font-weight: 800; }
 .spinner-type { display: flex; align-items: center; gap: 6px; }
 .spinner-type input { width: 80px; text-align: center; border: 1.5px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 5px 8px; font-size: 20px; font-weight: 800; color: var(--ink); outline: none; }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }

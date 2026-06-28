@@ -29,8 +29,11 @@ export function openSpinner(id) {
   const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
   let val = parseFloat(el.dataset.value) || 0;
 
-  const ITEM_H = 52;
-  const OFF = 8;
+  const ITEM_H = 44;       // drag pixels per step (matches rendered row height)
+  const OFF = 7;           // items rendered above/below center
+  const ANGLE_PER_ITEM = 20; // degrees between adjacent items on the virtual cylinder
+  const CYLINDER_R = 120;  // cylinder radius in px
+  const PERSPECTIVE = 800; // perspective distance in px
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
   const pxToVal = (px) => val - (px / ITEM_H) * step;
   const valToPx = (v) => (val - v) / step * ITEM_H;
@@ -53,11 +56,28 @@ export function openSpinner(id) {
     for (let i = -OFF; i <= OFF; i++) {
       const v = center + i * step;
       const inRange = v >= min && v <= max;
-      const absOff = Math.abs(i);
-      const cls = i === 0 ? 'spinner-item on pos-0' : `spinner-item pos-${absOff}`;
+      const cls = i === 0 ? 'spinner-item on' : 'spinner-item';
       html += `<div class="${cls}">${inRange ? fmtVal(v) : ''}</div>`;
     }
     return html;
+  }
+
+  // Positions items on a virtual cylinder using 2D transforms computed from 3D geometry.
+  // drumAngle (degrees) is the current rotation of the cylinder — positive = top toward viewer.
+  function updateDrum(drumAngle) {
+    items.querySelectorAll('.spinner-item').forEach((el, idx) => {
+      const i = idx - OFF; // offset from center (-OFF … +OFF)
+      const effRad = (i * ANGLE_PER_ITEM - drumAngle) * Math.PI / 180;
+      const cosA = Math.cos(effRad);
+      const sinA = Math.sin(effRad);
+      const z = CYLINDER_R * cosA;
+      const y = CYLINDER_R * sinA;
+      const ps = PERSPECTIVE / (PERSPECTIVE - z); // perspective scale
+      const vy = y * ps;
+      const sY = Math.max(0, cosA * ps); // vertical foreshortening + perspective
+      el.style.transform = `translateY(${vy.toFixed(2)}px) scaleY(${sY.toFixed(4)})`;
+      el.style.opacity = Math.max(0, cosA).toFixed(3);
+    });
   }
 
   const overlay = document.createElement('div');
@@ -84,7 +104,7 @@ export function openSpinner(id) {
     // toward zero, which disagrees with the rounding for the back half of
     // every step and snaps the track a full row out of place mid-drag.
     const residual = offset - valToPx(center);
-    items.style.transform = `translateY(calc(-50% + ${residual}px))`;
+    updateDrum(-(residual / ITEM_H) * ANGLE_PER_ITEM);
     items.style.transition = 'none';
     return center;
   }
@@ -224,7 +244,7 @@ export function openSpinner(id) {
       const snapped = Math.min(max, Math.max(min, Math.round(num / step) * step));
       commit(snapped);
       items.innerHTML = trackHTML(snapped);
-      items.style.transform = 'translateY(calc(-50% + 0px))';
+      updateDrum(0);
       offsetY = 0; lastCenter = snapped;
     }
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); confirm(); } });
@@ -237,11 +257,11 @@ export function openSpinner(id) {
   function exitTypeMode(onItem) {
     if (!onItem || !onItem.querySelector('input')) return;
     items.innerHTML = trackHTML(lastCenter);
-    items.style.transform = 'translateY(calc(-50% + 0px))';
+    updateDrum(0);
   }
 
   document.body.appendChild(overlay);
-  items.style.transform = `translateY(calc(-50% + 0px))`;
+  updateDrum(0);
   requestAnimationFrame(() => overlay.classList.add('show'));
   el._closeSpinner = close;
 }
