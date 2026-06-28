@@ -147,7 +147,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only — do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -246,8 +246,35 @@ function weightedPercentile(observations, p) {
   return sorted.at(-1).value;
 }
 
+// Unweighted standard deviation of an array of numbers.
+function stdDev(values) {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((s, v) => s + v, 0) / values.length;
+  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+  return Math.sqrt(variance);
+}
+
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
+
+// Extracts morning wake times: end timestamps on overnight sleeps
+// (duration > 3h, ending between 4am–10am local, within 21 days).
+function morningWakes() {
+  const now = Date.now();
+  const cutoff = now - 21 * DAY;
+  return sleeps().filter((e) => {
+    if (!e.end) return false;
+    const s = new Date(e.start), en = new Date(e.end);
+    if (en.getTime() < cutoff) return false;
+    const durMin = (en - s) / MIN;
+    if (durMin < 180) return false;
+    const h = en.getHours() + en.getMinutes() / 60;
+    return h >= 4 && h < 10;
+  }).map((e) => {
+    const en = new Date(e.end);
+    return { wakeMinutes: en.getHours() * 60 + en.getMinutes(), date: en, weight: recencyWeight(en) };
+  });
+}
 export const derive = {
   status() {
     const ss = sleeps();
@@ -383,6 +410,50 @@ export const derive = {
       ? `based on ${name}'s pattern`
       : `based on ${name}'s recent naps`;
     return { low, high, midpoint, source, sampleSize: n, label };
+  },
+  // Recency-weighted median morning wake time. Confidence is gated by sample
+  // size and standard deviation — variable schedules cap at 'low'.
+  circadianAnchor() {
+    const wakes = morningWakes();
+    if (wakes.length < 5) return null;
+    const obs = wakes.map((w) => ({ value: w.wakeMinutes, weight: w.weight }));
+    const medianMinutes = Math.round(weightedMedian(obs));
+    const sd = stdDev(wakes.map((w) => w.wakeMinutes));
+    let confidence;
+    if (wakes.length >= 28)      confidence = 'high';
+    else if (wakes.length >= 14) confidence = 'medium';
+    else                          confidence = 'low';
+    if (sd > 45) confidence = 'low'; // irregular schedule: cap confidence
+    return { morningWakeMinutes: medianMinutes, confidence, sampleSize: wakes.length, sdMinutes: Math.round(sd) };
+  },
+
+  // Estimated bedtime window derived from the circadian anchor + typical daily
+  // awake time. Returns null when anchor is absent or confidence is low.
+  bedtimeWindow() {
+    const anchor = derive.circadianAnchor();
+    if (!anchor || anchor.confidence === 'low') return null;
+    const m = ageMonths();
+    const numNaps     = m < 5 ? 3 : m < 14 ? 2 : 1;
+    const napDuration = m < 6 ? 60 : 80;
+    const fp = derive.wakeWindowPrediction('first');
+    const mp = derive.wakeWindowPrediction('middle');
+    const lp = derive.wakeWindowPrediction('last');
+    let totalMinutes;
+    if (numNaps >= 3) {
+      totalMinutes = fp.midpoint + napDuration + mp.midpoint + napDuration + mp.midpoint + napDuration + lp.midpoint;
+    } else if (numNaps === 2) {
+      totalMinutes = fp.midpoint + napDuration + mp.midpoint + napDuration + lp.midpoint;
+    } else {
+      totalMinutes = fp.midpoint + Math.round(napDuration * 1.5) + lp.midpoint;
+    }
+    const bedtimeMid = anchor.morningWakeMinutes + totalMinutes;
+    const halfRange  = Math.round((lp.high - lp.low) / 2);
+    const baseMs = startOfDay(Date.now()).getTime() + bedtimeMid * MIN;
+    return {
+      from: new Date(baseMs - halfRange * MIN),
+      to:   new Date(baseMs + halfRange * MIN),
+      confidence: anchor.confidence,
+    };
   },
   week() {
     const arr = [];

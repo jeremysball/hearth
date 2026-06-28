@@ -307,6 +307,65 @@ test('derive.wakeWindowPrediction clamps personal median to 0.5×–2× populati
   assert.ok(pred.midpoint <= pop.midpoint * 2,   'must not exceed 200% of pop midpoint');
 });
 
+test('derive.circadianAnchor returns null with no overnight sleeps', () => {
+  // All prior sleeps in the test log are short naps (~70 min), not overnight.
+  const anchor = derive.circadianAnchor();
+  assert.equal(anchor, null);
+});
+
+test('derive.circadianAnchor detects 6am wake time from 6 overnight sleeps', () => {
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Add 6 overnight sleeps (8h) ending at 6am local on consecutive recent days.
+  for (let d = 15; d >= 10; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const wakeTime  = new Date(base.getTime() + 6 * 60 * MIN_MS);       // 6am
+    const sleepTime = new Date(wakeTime.getTime() - 8 * 60 * MIN_MS);   // 10pm
+    addEntry({ type: 'sleep', start: sleepTime.toISOString(), end: wakeTime.toISOString() });
+  }
+  const anchor = derive.circadianAnchor();
+  assert.ok(anchor !== null, 'should detect anchor with 6 morning wakes');
+  assert.equal(anchor.sampleSize, 6);
+  // morningWakeMinutes should be near 360 (6am = 6*60)
+  assert.ok(anchor.morningWakeMinutes >= 355 && anchor.morningWakeMinutes <= 365,
+    `wake time ${anchor.morningWakeMinutes} should be near 360 min`);
+  assert.equal(anchor.confidence, 'low'); // 6 < 14 → low
+});
+
+test('derive.circadianAnchor caps confidence at low when wake time SD > 45 min', () => {
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Add 8 more overnights alternating 5am / 8am (180-min span, SD ≈ 90 min).
+  for (let d = 9; d >= 2; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const wakeHour  = d % 2 === 0 ? 5 : 8;
+    const wakeTime  = new Date(base.getTime() + wakeHour * 60 * MIN_MS);
+    const sleepTime = new Date(wakeTime.getTime() - 8 * 60 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepTime.toISOString(), end: wakeTime.toISOString() });
+  }
+  const anchor = derive.circadianAnchor();
+  assert.ok(anchor !== null);
+  // Combined 14 observations but high SD → confidence capped at 'low'.
+  assert.equal(anchor.confidence, 'low', 'high SD should cap confidence at low');
+});
+
+test('derive.bedtimeWindow returns null when anchor is low confidence', () => {
+  const anchor = derive.circadianAnchor();
+  // Anchor is null or low confidence given current test data.
+  if (!anchor || anchor.confidence === 'low') {
+    assert.equal(derive.bedtimeWindow(), null);
+  } else {
+    // If confidence is medium+ (unlikely given test setup), verify shape.
+    const bw = derive.bedtimeWindow();
+    assert.ok(bw.from instanceof Date && bw.to instanceof Date);
+    assert.ok(bw.from < bw.to);
+  }
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');
