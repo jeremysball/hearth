@@ -15,6 +15,7 @@ function buildServer() {
 }
 
 async function startServer(port = 18787) {
+  port = Number(process.env.TEST_PORT) || port;
   if (!existsSync(BIN)) buildServer();
   const dbPath = `/tmp/hearth-test-${process.pid}.db`;
   rmSync(dbPath, { force: true });
