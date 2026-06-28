@@ -337,13 +337,13 @@ export function saveLog(type, id) {
     sheet.close(); toast(TYPES[type].label + ' updated'); router.refresh();
     return;
   }
-  if (type === 'sleep') autoCloseOngoingSleep(e.start);
+  const closed = type === 'sleep' ? autoCloseOngoingSleep(e.start) : null;
   const split = maybeInterruptSleep(type, e.start);
   const added = addEntry(e);
   sheet.close();
   if (state().settings.sound !== false) { chime(); buzz(15); }
   confetti();
-  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); undoInterruptSleep(split); router.refresh(); });
+  toast(TYPES[type].label + ' logged', () => { removeEntry(added.id); if (closed?.length) closed.forEach((c) => updateEntry(c.id, { end: null })); undoInterruptSleep(split); router.refresh(); });
   router.refresh();
 }
 
