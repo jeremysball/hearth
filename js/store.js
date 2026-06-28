@@ -129,6 +129,13 @@ export function undoInterruptSleep(split) {
   removeEntry(split.resumedId);
   updateEntry(split.sleepId, { end: null });
 }
+export function autoCloseOngoingSleep(newStartISO) {
+  const ongoing = _state.log.find((e) => e.type === 'sleep' && !e.end && new Date(e.start) <= new Date());
+  if (!ongoing || new Date(ongoing.start) >= new Date(newStartISO)) return null;
+  updateEntry(ongoing.id, { end: newStartISO });
+  log.event('store', 'autoCloseOngoingSleep', ongoing.id, { closedAt: newStartISO });
+  return ongoing;
+}
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -224,12 +231,25 @@ export const derive = {
     const start = startOfDay(Date.now() - dayOffset * DAY).getTime();
     const end = start + DAY;
     const inDay = _state.log.filter((e) => { const t = new Date(e.start).getTime(); return t >= start && t < end; });
-    let sleepMin = 0;
-    inDay.filter((e) => e.type === 'sleep').forEach((e) => {
-      const s = new Date(e.start).getTime();
-      const en = e.end ? new Date(e.end).getTime() : Math.min(Date.now(), end);
-      sleepMin += Math.max(0, (en - s) / MIN);
+    // Collect all sleep intervals that overlap today, clamped to day bounds, then
+    // merge overlapping ranges so double-counted minutes and overnight sleeps are
+    // handled correctly.
+    const sleepIntervals = [];
+    _state.log.filter((e) => e.type === 'sleep').forEach((e) => {
+      const rawS = new Date(e.start).getTime();
+      const rawEn = e.end ? new Date(e.end).getTime() : Math.min(Date.now(), end);
+      if (rawEn <= start || rawS >= end) return;
+      sleepIntervals.push([Math.max(rawS, start), Math.min(rawEn, end)]);
     });
+    sleepIntervals.sort((a, b) => a[0] - b[0]);
+    let sleepMin = 0;
+    let cur = null;
+    for (const [s, en] of sleepIntervals) {
+      if (!cur) { cur = [s, en]; }
+      else if (s <= cur[1]) { cur[1] = Math.max(cur[1], en); }
+      else { sleepMin += (cur[1] - cur[0]) / MIN; cur = [s, en]; }
+    }
+    if (cur) sleepMin += (cur[1] - cur[0]) / MIN;
     const feeds = inDay.filter((e) => e.type === 'feed' || e.type === 'bottle').length;
     const diapers = inDay.filter((e) => e.type === 'diaper').length;
     const naps = inDay.filter((e) => e.type === 'sleep').length;
