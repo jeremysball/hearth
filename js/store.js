@@ -130,14 +130,20 @@ export function undoInterruptSleep(split) {
   updateEntry(split.sleepId, { end: null });
 }
 export function autoCloseOngoingSleep(newStartISO) {
-  const newStart = new Date(newStartISO);
-  const closed = _state.log.filter((e) => e.type === 'sleep' && !e.end && new Date(e.start) < newStart);
+  // Clamp to now so a future-dated new sleep doesn't push the existing sleep's end into the future.
+  const closeAt = new Date(Math.min(new Date(newStartISO).getTime(), Date.now())).toISOString();
+  const closeDate = new Date(closeAt);
+  const closed = _state.log.filter((e) => e.type === 'sleep' && !e.end && new Date(e.start) < closeDate);
   if (!closed.length) return [];
   closed.forEach((e) => {
-    updateEntry(e.id, { end: newStartISO });
-    log.event('store', 'autoCloseOngoingSleep', e.id, { closedAt: newStartISO });
+    updateEntry(e.id, { end: closeAt });
+    log.event('store', 'autoCloseOngoingSleep', e.id, { closedAt: closeAt });
   });
   return closed;
+}
+export function undoAutoCloseSleep(closed) {
+  if (!closed?.length) return;
+  closed.forEach((c) => updateEntry(c.id, { end: null }));
 }
 
 // ---------- growth helpers ----------
@@ -240,6 +246,11 @@ export const derive = {
     const sleepIntervals = [];
     _state.log.filter((e) => e.type === 'sleep').forEach((e) => {
       const rawS = new Date(e.start).getTime();
+      if (!e.end) {
+        if (rawS > Date.now()) return;       // future-start: not yet ongoing
+        if (dayOffset > 0) return;           // historical day: open sleep has unknown end
+        if (rawS < start - DAY) return;      // stale: started >24h before this day's window
+      }
       const rawEn = e.end ? new Date(e.end).getTime() : Math.min(Date.now(), end);
       if (rawEn <= start || rawS >= end) return;
       sleepIntervals.push([Math.max(rawS, start), Math.min(rawEn, end)]);
@@ -255,12 +266,8 @@ export const derive = {
     if (cur) sleepMin += (cur[1] - cur[0]) / MIN;
     const feeds = inDay.filter((e) => e.type === 'feed' || e.type === 'bottle').length;
     const diapers = inDay.filter((e) => e.type === 'diaper').length;
-    const naps = _state.log.filter((e) => {
-      if (e.type !== 'sleep') return false;
-      const rawS = new Date(e.start).getTime();
-      const rawEn = e.end ? new Date(e.end).getTime() : Math.min(Date.now(), end);
-      return rawEn > start && rawS < end;
-    }).length;
+    // Count naps by start date (not overlap) so overnight sleeps aren't double-counted.
+    const naps = inDay.filter((e) => e.type === 'sleep').length;
     let bottleVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
     return { sleepMin, feeds, diapers, naps, bottleVol };
