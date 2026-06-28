@@ -48,10 +48,9 @@ function retry(start, timeoutMs, check, reject, why) {
 }
 
 async function launchBrowser() {
-  return chromium.launch({
-    executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
-    args: ['--no-sandbox', '--ignore-certificate-errors'],
-  });
+  const opts = { args: ['--no-sandbox', '--ignore-certificate-errors'] };
+  if (process.env.CHROMIUM) opts.executablePath = process.env.CHROMIUM;
+  return chromium.launch(opts);
 }
 
 async function onboard(page) {
