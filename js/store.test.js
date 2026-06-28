@@ -181,6 +181,53 @@ test('normalizeSettings coerces legacy boolean clock24 to a string option value'
   assert.equal(normalizeSettings({}).clock24, '12h');
 });
 
+const { wakePosition, wakeWindowRange } = await import('./store.js');
+
+test('wakePosition returns correct position for time of day', () => {
+  assert.equal(wakePosition(new Date('2026-01-01T09:30:00')), 'first');
+  assert.equal(wakePosition(new Date('2026-01-01T10:00:00')), 'middle'); // boundary: 10am is middle
+  assert.equal(wakePosition(new Date('2026-01-01T12:00:00')), 'middle');
+  assert.equal(wakePosition(new Date('2026-01-01T16:00:00')), 'last'); // boundary: 4pm is last
+  assert.equal(wakePosition(new Date('2026-01-01T16:30:00')), 'last');
+});
+
+test('wakeWindowRange returns wider last window than first', () => {
+  // Set birthdate to 5 months ago so the 5–7m bracket applies
+  const bd = new Date();
+  bd.setMonth(bd.getMonth() - 5);
+  applySyncResponse({ baby: { birthdate: bd.toISOString().slice(0, 10) }, settings: null, entries: [], growth: [] });
+  const first = wakeWindowRange('first');
+  const last = wakeWindowRange('last');
+  assert.ok(last.midpoint > first.midpoint, `last (${last.midpoint}m) should exceed first (${first.midpoint}m)`);
+  assert.equal(first.source, 'population');
+  assert.ok(first.label.startsWith('typical'), 'label should say typical');
+});
+
+test('wakeWindowRange returns correct bracket for a 4-month-old', () => {
+  const bd = new Date();
+  bd.setMonth(bd.getMonth() - 4);
+  applySyncResponse({ baby: { birthdate: bd.toISOString().slice(0, 10) }, settings: null, entries: [], growth: [] });
+  const r = wakeWindowRange('first'); // 3–5m bracket: first=[80,110]
+  assert.equal(r.low, 80);
+  assert.equal(r.high, 110);
+  assert.equal(r.midpoint, 95);
+});
+
+test('derive.sweetSpot() from/to match prediction low/high', () => {
+  // Close any ongoing sleeps left by prior tests
+  const MIN = 60000;
+  state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: new Date(Date.now() - MIN).toISOString() }); });
+  const sp = derive.sweetSpot();
+  assert.ok('prediction' in sp, 'sweetSpot should include prediction object');
+  const { prediction } = sp;
+  assert.ok(typeof prediction.low === 'number' && typeof prediction.high === 'number');
+  if (!sp.napping) {
+    const since = derive.status().since.getTime();
+    assert.ok(Math.abs((sp.from.getTime() - since) / MIN - prediction.low) < 1);
+    assert.ok(Math.abs((sp.to.getTime() - since) / MIN - prediction.high) < 1);
+  }
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');
