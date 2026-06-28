@@ -1,5 +1,5 @@
 // sleep.js — 24h ring, naps, SweetSpot schedule, night summary.
-import { state, derive, startOfDay, wakeWindowRange, wakePosition } from './store.js';
+import { state, derive, startOfDay, wakePosition } from './store.js';
 import { fmt } from './ui.js';
 
 const MIN = 60000;
@@ -55,7 +55,7 @@ export function sleep() {
   let cursor = st.state === 'asleep' ? new Date(st.since.getTime() + 70 * MIN) : new Date(st.since);
   for (let i = 0; i < 4; i++) {
     const pos = wakePosition(cursor);
-    const pred = wakeWindowRange(pos);
+    const pred = derive.wakeWindowPrediction(pos);
     const from = new Date(cursor.getTime() + pred.midpoint * MIN);
     if (from.getHours() >= 20) break;
     const to = new Date(from.getTime() + 30 * MIN);

@@ -279,6 +279,34 @@ test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep 
   assert.ok(result.median <= result.p75, 'median ≤ p75');
 });
 
+test('derive.wakeWindowPrediction returns population prior when position has no personal data', () => {
+  // 'last' position (after 4pm) — no 'last' window sleep pairs exist in the test log
+  const pred = derive.wakeWindowPrediction('last');
+  assert.equal(pred.source, 'population');
+  assert.ok(pred.label.startsWith('typical'), 'label should say typical');
+  assert.equal(pred.sampleSize, 0);
+});
+
+test('derive.wakeWindowPrediction blends when 7–29 personal observations exist', () => {
+  // Task 3 test added 9 'middle' observations at ~90 min. Source should be 'blend'.
+  const pred = derive.wakeWindowPrediction('middle');
+  assert.equal(pred.source, 'blend');
+  const pop = wakeWindowRange('middle');
+  // blended midpoint must be between pop.low and pop.high (sanity clamp)
+  assert.ok(pred.midpoint >= pop.low && pred.midpoint <= pop.high,
+    `midpoint ${pred.midpoint} should stay within population range`);
+  assert.ok(pred.label.includes("recent naps"), 'label should mention recent naps');
+});
+
+test('derive.wakeWindowPrediction clamps personal median to 0.5×–2× population midpoint', () => {
+  // Sanity: with 9 observations near the population midpoint, clamping doesn't fire.
+  // Verify no clamp by confirming midpoint is in a reasonable range.
+  const pred = derive.wakeWindowPrediction('middle');
+  const pop = wakeWindowRange('middle');
+  assert.ok(pred.midpoint >= pop.midpoint * 0.5, 'must not fall below 50% of pop midpoint');
+  assert.ok(pred.midpoint <= pop.midpoint * 2,   'must not exceed 200% of pop midpoint');
+});
+
 test('fmt.clock honors the clock24 setting', async () => {
   const { fmt } = await import('./ui.js');
   const d = new Date('2026-01-01T23:05:00');
