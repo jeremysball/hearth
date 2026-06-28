@@ -77,7 +77,7 @@ async function runSuite(base) {
   const win1b = await (await overlay1b.$('.spinner-window')).boundingBox();
   const cx1b = win1b.x + win1b.width / 2;
   const cy1b = win1b.y + win1b.height / 2;
-  const itemH = (await (await overlay1b.$('.spinner-item')).boundingBox()).height;
+  const itemH = 44; // ITEM_H — cylinder's outermost items have scaleY=0, making bounding-box height 0
 
   await page.mouse.move(cx1b, cy1b);
   await page.mouse.down();
@@ -177,7 +177,9 @@ async function runSuite(base) {
   });
   const stepAttr = await page.$eval('#f-amt', el => parseFloat(el.dataset.step));
   const startVal = await page.$eval('#f-amt', el => parseFloat(el.dataset.value));
-  const rowH = (await (await overlay6.$('.spinner-item')).boundingBox()).height;
+  // Outermost cylinder items have scaleY=0 so bounding-box height is 0.
+  // Use the logical drag distance per step (ITEM_H in sheets.js) directly.
+  const rowH = 44;
   const w6 = await (await overlay6.$('.spinner-window')).boundingBox();
   const cx6 = w6.x + w6.width / 2;
   const cy6 = w6.y + w6.height / 2 + 60;
