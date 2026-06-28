@@ -52,11 +52,8 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 		if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES (?, ?, 'Parent', 'Parent', ?)`, newCare, newFamily, now); e != nil {
 			return ReconcileResult{}, e
 		}
-		defaultUnits := `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
-		defaultReminders := `{"naps":true,"bottle":true,"meds":true,"quietStart":"20:00","quietEnd":"07:00"}`
-		defaultCards := `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
 		if _, e = tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
-			newFamily, defaultUnits, defaultReminders, defaultCards, now); e != nil {
+			newFamily, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); e != nil {
 			return ReconcileResult{}, e
 		}
 		if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,

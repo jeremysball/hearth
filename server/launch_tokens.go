@@ -75,7 +75,7 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		sessToken, err := createSessionTx(tx, caregiverID, familyID)
+		sessToken, err := createSession(tx, caregiverID, familyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
