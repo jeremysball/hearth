@@ -181,11 +181,41 @@ export function ageLabel() {
   const y = Math.floor(m / 12), rem = m % 12;
   return y + 'y' + (rem ? ' ' + rem + 'm' : '') + ' old';
 }
-export function awakeWindowMin() {
-  const m = ageMonths();
-  if (m < 1) return 50; if (m < 3) return 70; if (m < 5) return 95;
-  if (m < 7) return 125; if (m < 10) return 155; if (m < 13) return 185; return 215;
+// Population wake window ranges from Dubief, per day position and age bracket.
+// Each row covers ages < maxMonths; [low, high] in minutes.
+const WAKE_WINDOW_TABLE = [
+  { maxMonths:  1, first: [40, 60],   middle: [40, 60],   last: [50, 75]   },
+  { maxMonths:  3, first: [60, 80],   middle: [60, 80],   last: [75, 100]  },
+  { maxMonths:  5, first: [80, 110],  middle: [80, 110],  last: [105, 140] },
+  { maxMonths:  7, first: [110, 140], middle: [110, 140], last: [140, 180] },
+  { maxMonths: 10, first: [140, 170], middle: [140, 170], last: [180, 215] },
+  { maxMonths: 13, first: [170, 200], middle: [170, 200], last: [215, 250] },
+  { maxMonths: Infinity, first: [190, 240], middle: [190, 240], last: [190, 240] },
+];
+
+// Infers the position of an awake period in the day from the clock.
+// 'first' = before 10am (before day's first nap), 'last' = 4pm+ (pre-bedtime),
+// 'middle' = everything between. Thresholds are fixed population defaults;
+// Phase 3 will anchor them to the baby's actual morning wake time.
+export function wakePosition(date = new Date()) {
+  const h = date.getHours() + date.getMinutes() / 60;
+  if (h < 10) return 'first';
+  if (h >= 16) return 'last';
+  return 'middle';
 }
+
+// Age-appropriate wake window range for a given day position.
+// Returns a population-sourced range; Phase 2 will blend in personal data.
+export function wakeWindowRange(position = 'middle') {
+  const m = ageMonths();
+  const row = WAKE_WINDOW_TABLE.find((r) => m < r.maxMonths) ?? WAKE_WINDOW_TABLE.at(-1);
+  const [low, high] = row[position] ?? row.middle;
+  return { low, high, midpoint: Math.round((low + high) / 2), source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
+}
+
+// Compatibility shim — returns the population midpoint for the middle position.
+// Internal code should prefer wakeWindowRange() or derive.wakeWindowPrediction().
+export function awakeWindowMin() { return wakeWindowRange('middle').midpoint; }
 
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
@@ -200,15 +230,17 @@ export const derive = {
   },
   sweetSpot() {
     const st = derive.status();
-    const win = awakeWindowMin();
+    const pos = wakePosition();
+    const prediction = wakeWindowRange(pos);
     if (st.state === 'asleep') {
-      // projected wake ~ average nap 70m
       const wake = new Date(st.since.getTime() + 70 * MIN);
-      const nap = new Date(wake.getTime() + win * MIN);
-      return { napping: true, wake, from: nap, to: new Date(nap.getTime() + 30 * MIN) };
+      const from = new Date(wake.getTime() + prediction.low * MIN);
+      const to = new Date(wake.getTime() + prediction.high * MIN);
+      return { napping: true, wake, from, to, prediction };
     }
-    const from = new Date(st.since.getTime() + win * MIN);
-    return { napping: false, from, to: new Date(from.getTime() + 30 * MIN) };
+    const from = new Date(st.since.getTime() + prediction.low * MIN);
+    const to = new Date(st.since.getTime() + prediction.high * MIN);
+    return { napping: false, from, to, prediction };
   },
   nextBottle() {
     const feeds = _state.log.filter((e) => e.type === 'feed' || e.type === 'bottle');
