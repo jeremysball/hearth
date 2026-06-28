@@ -260,15 +260,15 @@ export const derive = {
   sweetSpot() {
     const st = derive.status();
     const pos = wakePosition();
-    const prediction = wakeWindowRange(pos);
+    const prediction = derive.wakeWindowPrediction(pos);
     if (st.state === 'asleep') {
       const wake = new Date(st.since.getTime() + 70 * MIN);
       const from = new Date(wake.getTime() + prediction.low * MIN);
-      const to = new Date(wake.getTime() + prediction.high * MIN);
+      const to   = new Date(wake.getTime() + prediction.high * MIN);
       return { napping: true, wake, from, to, prediction };
     }
     const from = new Date(st.since.getTime() + prediction.low * MIN);
-    const to = new Date(st.since.getTime() + prediction.high * MIN);
+    const to   = new Date(st.since.getTime() + prediction.high * MIN);
     return { napping: false, from, to, prediction };
   },
   nextBottle() {
@@ -357,6 +357,32 @@ export const derive = {
       p75:    Math.round(weightedPercentile(observations, 0.75)),
       sampleSize: observations.length,
     };
+  },
+  // Blended wake window prediction. Uses population data until 7 personal
+  // observations accumulate, then smoothly shifts toward personal data.
+  // At n=30 the personal signal reaches 90% weight; population acts as a
+  // sanity check at all times.
+  wakeWindowPrediction(position = 'middle') {
+    const pop = wakeWindowRange(position);
+    const personal = derive.personalWakeWindow(position);
+    if (!personal) {
+      return { ...pop, source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
+    }
+    const n = personal.sampleSize;
+    const w_p   = Math.min(0.9, Math.max(0, (n - 7) / 23));
+    const w_pop = 1 - w_p;
+    let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
+    // Clamp: personal signal must stay within 0.5×–2× population midpoint.
+    if (midpoint < pop.midpoint * 0.5) midpoint = pop.low;
+    if (midpoint > pop.midpoint * 2)   midpoint = pop.high;
+    const low  = Math.round(w_p * personal.p25 + w_pop * pop.low);
+    const high = Math.round(w_p * personal.p75 + w_pop * pop.high);
+    const source = w_p >= 0.9 ? 'personal' : 'blend';
+    const name = state().baby.name || 'your baby';
+    const label = w_p >= 0.9
+      ? `based on ${name}'s pattern`
+      : `based on ${name}'s recent naps`;
+    return { low, high, midpoint, source, sampleSize: n, label };
   },
   week() {
     const arr = [];
