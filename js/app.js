@@ -315,7 +315,6 @@ document.addEventListener('pointerdown', (e) => {
   dragKey = handle.dataset.card;
   handle.setPointerCapture(e.pointerId);
   handle.closest('.info-card').classList.add('dragging');
-  document.addEventListener('touchmove', blockScroll, { passive: false });
 });
 document.addEventListener('pointermove', (e) => {
   if (!dragKey) return;
@@ -335,7 +334,6 @@ document.addEventListener('pointermove', (e) => {
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
   if (!dragKey) return;
-  document.removeEventListener('touchmove', blockScroll);
   dragKey = null;
   const stack = $('.info-stack'); if (!stack) return;
   state().settings.cards.order = [...stack.querySelectorAll('.info-card')].map((el) => el.dataset.card);
@@ -344,11 +342,13 @@ document.addEventListener('pointermove', (e) => {
 }));
 
 // ---------- pull-to-refresh ----------
-// Named function so it can be added/removed per gesture — never permanent.
-function blockScroll(e) { e.preventDefault(); }
+// Permanent non-passive listener — pointermove fires before touchmove, so by the
+// time this runs ptrPulling already reflects direction. Zero cost on normal scroll.
+function blockScroll(e) { if ((ptrActive && ptrPulling) || dragKey) e.preventDefault(); }
+document.addEventListener('touchmove', blockScroll, { passive: false });
 
 let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
-let ptrScrollBlocked = false, ptrRafId = null, ptrLatestY = 0;
+let ptrPulling = false, ptrRafId = null, ptrLatestY = 0;
 const PTR_THRESHOLD = 70; // visual px to arm refresh
 const PTR_MAX = 80;       // visual px cap
 // Must match .ptr-wrap height in CSS: PTR_MAX (80) + padding-bottom (12).
@@ -410,22 +410,21 @@ document.addEventListener('pointerdown', (e) => {
   if (ptrSyncing || e.pointerType === 'mouse') return;
   const screen = e.target.closest('.screen');
   if (!screen || screen.scrollTop > 0) return;
-  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false; ptrScrollBlocked = false;
+  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false; ptrPulling = false; ptrLatestY = e.clientY;
 });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
-  if (raw <= 0) { ptrActive = false; return; }
-  // Add blockScroll lazily — only after the first confirmed downward move so
-  // upward (normal scroll) gestures on the hero card are never interrupted.
-  if (!ptrScrollBlocked) { ptrScrollBlocked = true; document.addEventListener('touchmove', blockScroll, { passive: false }); }
+  // Moving up (or no movement) = user is scrolling; flip off pulling so blockScroll
+  // won't preventDefault and will let the browser scroll freely.
+  if (raw <= 0) { ptrPulling = false; if (raw < 0) ptrActive = false; return; }
+  ptrPulling = true;
   ptrLatestY = e.clientY;
   if (!ptrRafId) ptrRafId = requestAnimationFrame(ptrUpdate);
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
-  ptrActive = false; ptrPid = null;
-  if (ptrScrollBlocked) { ptrScrollBlocked = false; document.removeEventListener('touchmove', blockScroll); }
+  ptrActive = false; ptrPid = null; ptrPulling = false;
   if (ptrArmed && !ptrSyncing) {
     ptrArmed = false;
     ptrSyncing = true;
