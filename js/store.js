@@ -146,6 +146,9 @@ export function undoAutoCloseSleep(closed) {
   closed.forEach((c) => updateEntry(c.id, { end: null }));
 }
 
+// Exported for unit tests only — do not use in application code.
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile };
+
 // ---------- growth helpers ----------
 export function addMeasure(m) {
   m.id = m.id || uid();
@@ -216,6 +219,32 @@ export function wakeWindowRange(position = 'middle') {
 // Compatibility shim — returns the population midpoint for the middle position.
 // Internal code should prefer wakeWindowRange() or derive.wakeWindowPrediction().
 export function awakeWindowMin() { return wakeWindowRange('middle').midpoint; }
+
+// Recency decay: observation from `date` gets weight 0.93^(ageDays).
+function recencyWeight(date, now = Date.now(), lambda = 0.93) {
+  const ageDays = (now - (date instanceof Date ? date.getTime() : date)) / DAY;
+  return Math.pow(lambda, ageDays);
+}
+
+// Value at the midpoint of cumulative weight (sorted ascending).
+function weightedMedian(observations) {
+  if (!observations.length) return 0;
+  const sorted = [...observations].sort((a, b) => a.value - b.value);
+  const total = sorted.reduce((s, o) => s + o.weight, 0);
+  let cum = 0;
+  for (const o of sorted) { cum += o.weight; if (cum >= total / 2) return o.value; }
+  return sorted.at(-1).value;
+}
+
+// Value at the p-fraction of cumulative weight (p: 0–1, sorted ascending).
+function weightedPercentile(observations, p) {
+  if (!observations.length) return 0;
+  const sorted = [...observations].sort((a, b) => a.value - b.value);
+  const total = sorted.reduce((s, o) => s + o.weight, 0);
+  let cum = 0;
+  for (const o of sorted) { cum += o.weight; if (cum >= total * p) return o.value; }
+  return sorted.at(-1).value;
+}
 
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
@@ -303,6 +332,31 @@ export const derive = {
     let bottleVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
     return { sleepMin, feeds, diapers, naps, bottleVol };
+  },
+  // Rolling personal wake window for a given day position, computed from consecutive
+  // completed sleeps in the last 21 days. Returns null if fewer than 7 observations.
+  personalWakeWindow(position) {
+    const now = Date.now();
+    const cutoffMs = now - 21 * DAY;
+    // ss is newest-first; wake window i = interval between ss[i+1].end → ss[i].start
+    const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs);
+    const observations = [];
+    for (let i = 0; i < ss.length - 1; i++) {
+      const wakeStart = new Date(ss[i + 1].end);
+      const wakeEnd   = new Date(ss[i].start);
+      if (wakeEnd <= wakeStart) continue;
+      const wakeMin = (wakeEnd - wakeStart) / MIN;
+      if (wakeMin < 10 || wakeMin > 360) continue; // sanity bounds
+      if (wakePosition(wakeStart) !== position) continue;
+      observations.push({ value: wakeMin, weight: recencyWeight(wakeStart, now) });
+    }
+    if (observations.length < 7) return null;
+    return {
+      median: Math.round(weightedMedian(observations)),
+      p25:    Math.round(weightedPercentile(observations, 0.25)),
+      p75:    Math.round(weightedPercentile(observations, 0.75)),
+      sampleSize: observations.length,
+    };
   },
   week() {
     const arr = [];
