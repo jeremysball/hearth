@@ -14,7 +14,9 @@ globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, maybeInterruptSleep, undoInterruptSleep, normalizeLog } = await import('./store.js');
+const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry,
+  maybeInterruptSleep, undoInterruptSleep, normalizeLog,
+  wakePosition, wakeWindowRange, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -181,7 +183,7 @@ test('normalizeSettings coerces legacy boolean clock24 to a string option value'
   assert.equal(normalizeSettings({}).clock24, '12h');
 });
 
-const { wakePosition, wakeWindowRange } = await import('./store.js');
+
 
 test('wakePosition returns correct position for time of day', () => {
   assert.equal(wakePosition(new Date('2026-01-01T09:30:00')), 'first');
@@ -226,6 +228,55 @@ test('derive.sweetSpot() from/to match prediction low/high', () => {
     assert.ok(Math.abs((sp.from.getTime() - since) / MIN - prediction.low) < 1);
     assert.ok(Math.abs((sp.to.getTime() - since) / MIN - prediction.high) < 1);
   }
+});
+
+test('weightedMedian returns median with equal weights', () => {
+  const { weightedMedian } = _testHelpers;
+  const obs = [90, 80, 100, 70, 110].map((v) => ({ value: v, weight: 1 }));
+  assert.equal(weightedMedian(obs), 90);
+});
+
+test('weightedMedian shifts toward the high-weight value', () => {
+  const { weightedMedian } = _testHelpers;
+  const obs = [
+    { value: 60, weight: 1 },
+    { value: 120, weight: 10 },
+    { value: 180, weight: 1 },
+  ];
+  assert.equal(weightedMedian(obs), 120);
+});
+
+test('derive.personalWakeWindow returns null with no data for that position', () => {
+  // All prior sleeps in the test log are Jan 2026 (outside 21-day cutoff)
+  // or have no end, so 'first' position should have zero observations.
+  const result = derive.personalWakeWindow('first');
+  assert.equal(result, null);
+});
+
+test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep pairs', () => {
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Add 9 days of sleep pairs (days 10 to 2 ago). Each pair:
+  //   Sleep A: ends at noon local (wakePosition = 'middle')
+  //   Sleep B: starts 90 min later (noon + 90 min)
+  // The algorithm pairs consecutive sleeps: (B_day, A_day) → 90-min wake window.
+  for (let d = 10; d >= 2; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);   // noon
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS); // nap duration
+    const sleepBStart = new Date(sleepAEnd.getTime() + 90 * MIN_MS); // 90-min wake
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  const result = derive.personalWakeWindow('middle');
+  assert.ok(result !== null, 'should return data with 9 middle-position observations');
+  assert.ok(result.sampleSize >= 9, `sampleSize ${result.sampleSize} should be ≥ 9`);
+  assert.ok(result.median >= 85 && result.median <= 95, `median ${result.median} should be near 90`);
+  assert.ok(result.p25 <= result.median, 'p25 ≤ median');
+  assert.ok(result.median <= result.p75, 'median ≤ p75');
 });
 
 test('fmt.clock honors the clock24 setting', async () => {
