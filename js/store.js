@@ -51,6 +51,8 @@ export function normalizeSettings(s) {
   if (s.clock24 === true) s.clock24 = '24h';
   else if (s.clock24 === false) s.clock24 = '12h';
   else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
+  if (typeof s.tipMorningLightDismissed !== 'boolean') s.tipMorningLightDismissed = false;
+  if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   return s;
 }
 
@@ -146,6 +148,9 @@ export function undoAutoCloseSleep(closed) {
   closed.forEach((c) => updateEntry(c.id, { end: null }));
 }
 
+// Exported for unit tests only — do not use in application code.
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev };
+
 // ---------- growth helpers ----------
 export function addMeasure(m) {
   m.id = m.id || uid();
@@ -181,14 +186,112 @@ export function ageLabel() {
   const y = Math.floor(m / 12), rem = m % 12;
   return y + 'y' + (rem ? ' ' + rem + 'm' : '') + ' old';
 }
-export function awakeWindowMin() {
-  const m = ageMonths();
-  if (m < 1) return 50; if (m < 3) return 70; if (m < 5) return 95;
-  if (m < 7) return 125; if (m < 10) return 155; if (m < 13) return 185; return 215;
+// Population wake window ranges from Dubief, per day position and age bracket.
+// Each row covers ages < maxMonths; [low, high] in minutes.
+const WAKE_WINDOW_TABLE = [
+  { maxMonths:  1, first: [40, 60],   middle: [40, 60],   last: [50, 75]   },
+  { maxMonths:  3, first: [60, 80],   middle: [60, 80],   last: [75, 100]  },
+  { maxMonths:  5, first: [80, 110],  middle: [80, 110],  last: [105, 140] },
+  { maxMonths:  7, first: [110, 140], middle: [110, 140], last: [140, 180] },
+  { maxMonths: 10, first: [140, 170], middle: [140, 170], last: [180, 215] },
+  { maxMonths: 13, first: [170, 200], middle: [170, 200], last: [215, 250] },
+  { maxMonths: Infinity, first: [190, 240], middle: [190, 240], last: [190, 240] },
+];
+
+// Infers the position of an awake period in the day from the clock.
+// 'first' = before 10am (before day's first nap), 'last' = 4pm+ (pre-bedtime),
+// 'middle' = everything between. Thresholds are fixed population defaults;
+// Phase 3 will anchor them to the baby's actual morning wake time.
+export function wakePosition(date = new Date()) {
+  const h = date.getHours() + date.getMinutes() / 60;
+  if (h < 10) return 'first';
+  if (h >= 16) return 'last';
+  return 'middle';
 }
+
+// Age-appropriate wake window range for a given day position.
+// Returns a population-sourced range; Phase 2 will blend in personal data.
+export function wakeWindowRange(position = 'middle') {
+  const m = ageMonths();
+  const row = WAKE_WINDOW_TABLE.find((r) => m < r.maxMonths) ?? WAKE_WINDOW_TABLE.at(-1);
+  const [low, high] = row[position] ?? row.middle;
+  return { low, high, midpoint: Math.round((low + high) / 2), source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
+}
+
+// Compatibility shim — returns the population midpoint for the middle position.
+// Internal code should prefer wakeWindowRange() or derive.wakeWindowPrediction().
+export function awakeWindowMin() { return wakeWindowRange('middle').midpoint; }
+
+// Recency decay: observation from `date` gets weight 0.93^(ageDays).
+function recencyWeight(date, now = Date.now(), lambda = 0.93) {
+  const ageDays = (now - (date instanceof Date ? date.getTime() : date)) / DAY;
+  return Math.pow(lambda, ageDays);
+}
+
+// Value at the midpoint of cumulative weight (sorted ascending).
+function weightedMedian(observations) {
+  if (!observations.length) return 0;
+  const sorted = [...observations].sort((a, b) => a.value - b.value);
+  const total = sorted.reduce((s, o) => s + o.weight, 0);
+  let cum = 0;
+  for (const o of sorted) { cum += o.weight; if (cum >= total / 2) return o.value; }
+  return sorted.at(-1).value;
+}
+
+// Value at the p-fraction of cumulative weight (p: 0–1, sorted ascending).
+function weightedPercentile(observations, p) {
+  if (!observations.length) return 0;
+  const sorted = [...observations].sort((a, b) => a.value - b.value);
+  const total = sorted.reduce((s, o) => s + o.weight, 0);
+  let cum = 0;
+  for (const o of sorted) { cum += o.weight; if (cum >= total * p) return o.value; }
+  return sorted.at(-1).value;
+}
+
+// Unweighted standard deviation of an array of numbers.
+function stdDev(values) {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((s, v) => s + v, 0) / values.length;
+  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+// Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
+// The banner fires when the baby is within onsetWeeksBefore weeks of minMonths.
+const REGRESSION_TABLE = [
+  { id: '4m',  name: '4-month sleep change', onsetRange: [3.5, 5],   onsetWeeksBefore: 4,
+    mechanism: 'Brain cycling through adult sleep stages — architecture changes, sleep gets lighter.' },
+  { id: '6m',  name: '6-month sleep change', onsetRange: [5.5, 7],   onsetWeeksBefore: 3,
+    mechanism: 'Increased cognitive load from a developmental leap.' },
+  { id: '810m', name: '8–10-month sleep change', onsetRange: [7.5, 10.5], onsetWeeksBefore: 3,
+    mechanism: 'Object permanence and separation awareness activating.' },
+  { id: '12m', name: '12-month sleep change', onsetRange: [11, 13],  onsetWeeksBefore: 3,
+    mechanism: 'Nap transition pressure plus walking milestone cortisol.' },
+  { id: '18m', name: '18-month sleep change', onsetRange: [17, 19],  onsetWeeksBefore: 3,
+    mechanism: 'Language explosion — vocabulary acquisition interferes with sleep.' },
+];
 
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
+
+// Extracts morning wake times: end timestamps on overnight sleeps
+// (duration > 3h, ending between 4am–10am local, within 21 days).
+function morningWakes() {
+  const now = Date.now();
+  const cutoff = now - 21 * DAY;
+  return sleeps().filter((e) => {
+    if (!e.end) return false;
+    const s = new Date(e.start), en = new Date(e.end);
+    if (en.getTime() < cutoff) return false;
+    const durMin = (en - s) / MIN;
+    if (durMin < 180) return false;
+    const h = en.getHours() + en.getMinutes() / 60;
+    return h >= 4 && h < 10;
+  }).map((e) => {
+    const en = new Date(e.end);
+    return { wakeMinutes: en.getHours() * 60 + en.getMinutes(), date: en, weight: recencyWeight(en) };
+  });
+}
 export const derive = {
   status() {
     const ss = sleeps();
@@ -200,15 +303,17 @@ export const derive = {
   },
   sweetSpot() {
     const st = derive.status();
-    const win = awakeWindowMin();
+    const pos = wakePosition();
+    const prediction = derive.wakeWindowPrediction(pos);
     if (st.state === 'asleep') {
-      // projected wake ~ average nap 70m
       const wake = new Date(st.since.getTime() + 70 * MIN);
-      const nap = new Date(wake.getTime() + win * MIN);
-      return { napping: true, wake, from: nap, to: new Date(nap.getTime() + 30 * MIN) };
+      const from = new Date(wake.getTime() + prediction.low * MIN);
+      const to   = new Date(wake.getTime() + prediction.high * MIN);
+      return { napping: true, wake, from, to, prediction };
     }
-    const from = new Date(st.since.getTime() + win * MIN);
-    return { napping: false, from, to: new Date(from.getTime() + 30 * MIN) };
+    const from = new Date(st.since.getTime() + prediction.low * MIN);
+    const to   = new Date(st.since.getTime() + prediction.high * MIN);
+    return { napping: false, from, to, prediction };
   },
   nextBottle() {
     const feeds = _state.log.filter((e) => e.type === 'feed' || e.type === 'bottle');
@@ -271,6 +376,114 @@ export const derive = {
     let bottleVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
     return { sleepMin, feeds, diapers, naps, bottleVol };
+  },
+  // Rolling personal wake window for a given day position, computed from consecutive
+  // completed sleeps in the last 21 days. Returns null if fewer than 7 observations.
+  personalWakeWindow(position) {
+    const now = Date.now();
+    const cutoffMs = now - 21 * DAY;
+    // ss is newest-first; wake window i = interval between ss[i+1].end → ss[i].start
+    const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs);
+    const observations = [];
+    for (let i = 0; i < ss.length - 1; i++) {
+      const wakeStart = new Date(ss[i + 1].end);
+      const wakeEnd   = new Date(ss[i].start);
+      if (wakeEnd <= wakeStart) continue;
+      const wakeMin = (wakeEnd - wakeStart) / MIN;
+      if (wakeMin < 10 || wakeMin > 360) continue; // sanity bounds
+      if (wakePosition(wakeStart) !== position) continue;
+      observations.push({ value: wakeMin, weight: recencyWeight(wakeStart, now) });
+    }
+    if (observations.length < 7) return null;
+    return {
+      median: Math.round(weightedMedian(observations)),
+      p25:    Math.round(weightedPercentile(observations, 0.25)),
+      p75:    Math.round(weightedPercentile(observations, 0.75)),
+      sampleSize: observations.length,
+    };
+  },
+  // Blended wake window prediction. Uses population data until 7 personal
+  // observations accumulate, then smoothly shifts toward personal data.
+  // At n=30 the personal signal reaches 90% weight; population acts as a
+  // sanity check at all times.
+  wakeWindowPrediction(position = 'middle') {
+    const pop = wakeWindowRange(position);
+    const personal = derive.personalWakeWindow(position);
+    if (!personal) {
+      return { ...pop, source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
+    }
+    const n = personal.sampleSize;
+    const w_p   = Math.min(0.9, Math.max(0, (n - 7) / 23));
+    const w_pop = 1 - w_p;
+    let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
+    // Clamp: personal signal must stay within 0.5×–2× population midpoint.
+    if (midpoint < pop.midpoint * 0.5) midpoint = pop.low;
+    if (midpoint > pop.midpoint * 2)   midpoint = pop.high;
+    const low  = Math.round(w_p * personal.p25 + w_pop * pop.low);
+    const high = Math.round(w_p * personal.p75 + w_pop * pop.high);
+    const source = w_p >= 0.9 ? 'personal' : 'blend';
+    const name = state().baby.name || 'your baby';
+    const label = w_p >= 0.9
+      ? `based on ${name}'s pattern`
+      : `based on ${name}'s recent naps`;
+    return { low, high, midpoint, source, sampleSize: n, label };
+  },
+  // Recency-weighted median morning wake time. Confidence is gated by sample
+  // size and standard deviation — variable schedules cap at 'low'.
+  circadianAnchor() {
+    const wakes = morningWakes();
+    if (wakes.length < 5) return null;
+    const obs = wakes.map((w) => ({ value: w.wakeMinutes, weight: w.weight }));
+    const medianMinutes = Math.round(weightedMedian(obs));
+    const sd = stdDev(wakes.map((w) => w.wakeMinutes));
+    let confidence;
+    if (wakes.length >= 28)      confidence = 'high';
+    else if (wakes.length >= 14) confidence = 'medium';
+    else                          confidence = 'low';
+    if (sd > 45) confidence = 'low'; // irregular schedule: cap confidence
+    return { morningWakeMinutes: medianMinutes, confidence, sampleSize: wakes.length, sdMinutes: Math.round(sd) };
+  },
+
+  // Estimated bedtime window derived from the circadian anchor + typical daily
+  // awake time. Returns null when anchor is absent or confidence is low.
+  bedtimeWindow() {
+    const anchor = derive.circadianAnchor();
+    if (!anchor || anchor.confidence === 'low') return null;
+    const m = ageMonths();
+    const numNaps     = m < 5 ? 3 : m < 14 ? 2 : 1;
+    const napDuration = m < 6 ? 60 : 80;
+    const fp = derive.wakeWindowPrediction('first');
+    const mp = derive.wakeWindowPrediction('middle');
+    const lp = derive.wakeWindowPrediction('last');
+    let totalMinutes;
+    if (numNaps >= 3) {
+      totalMinutes = fp.midpoint + napDuration + mp.midpoint + napDuration + mp.midpoint + napDuration + lp.midpoint;
+    } else if (numNaps === 2) {
+      totalMinutes = fp.midpoint + napDuration + mp.midpoint + napDuration + lp.midpoint;
+    } else {
+      totalMinutes = fp.midpoint + Math.round(napDuration * 1.5) + lp.midpoint;
+    }
+    const bedtimeMid = anchor.morningWakeMinutes + totalMinutes;
+    const halfRange  = Math.round((lp.high - lp.low) / 2);
+    const baseMs = startOfDay(Date.now()).getTime() + bedtimeMid * MIN;
+    return {
+      from: new Date(baseMs - halfRange * MIN),
+      to:   new Date(baseMs + halfRange * MIN),
+      confidence: anchor.confidence,
+    };
+  },
+  // Returns the approaching or active regression for the current baby age,
+  // or null if none applies or the regression has been dismissed.
+  regressionAlert() {
+    const dismissed = (state().settings.dismissedRegressions) || [];
+    const m = ageMonths();
+    for (const r of REGRESSION_TABLE) {
+      if (dismissed.includes(r.id)) continue;
+      const warningStart = r.onsetRange[0] - r.onsetWeeksBefore / 4.33;
+      const warningEnd   = r.onsetRange[1];
+      if (m >= warningStart && m <= warningEnd) return r;
+    }
+    return null;
   },
   week() {
     const arr = [];
