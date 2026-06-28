@@ -100,7 +100,7 @@ export function openSpinner(id) {
   let dragging = false, pid = null, dragged = false;
   let offsetY = 0, dragY = 0;
   let velSamples = [];
-  let animCancelled = false;
+  let rafId = 0;
 
   function clampOffset(offset) {
     if (min !== -Infinity) {
@@ -118,7 +118,7 @@ export function openSpinner(id) {
     if (e.target.closest('.spinner-type')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragging) return;
-    animCancelled = true;
+    cancelAnimationFrame(rafId);
     dragging = true; pid = e.pointerId; dragged = false;
     dragY = e.clientY;
     offsetY = 0; velSamples = [{ y: e.clientY, t: performance.now() }];
@@ -174,15 +174,14 @@ export function openSpinner(id) {
     const duration = Math.min(Math.abs(distance) * 3 + 180, 500);
     const startTime = performance.now();
 
-    animCancelled = false;
     function animate() {
-      if (overlay._closed || animCancelled) return;
+      if (overlay._closed) return;
       const t = Math.min(1, (performance.now() - startTime) / duration);
       const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic — fast start, settle
       offsetY = clampOffset(startOffset + distance * eased);
       render(offsetY);
       if (t < 1) {
-        requestAnimationFrame(animate);
+        rafId = requestAnimationFrame(animate);
       } else {
         // Final settle: snap to exact step boundary and commit
         const final = pxToVal(targetOffset);
@@ -192,7 +191,7 @@ export function openSpinner(id) {
         commit(snapped);
       }
     }
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
   }
 
   items.addEventListener('pointerdown', onDown);
@@ -215,7 +214,10 @@ export function openSpinner(id) {
     const inp = onItem.querySelector('input');
     const btn = onItem.querySelector('.spinner-check');
 
+    let confirmed = false;
     function confirm() {
+      if (confirmed) return;
+      confirmed = true;
       const raw = inp.value.trim();
       const num = Number(raw);
       if (raw === '' || isNaN(num)) { exitTypeMode(onItem); return; }
@@ -227,6 +229,7 @@ export function openSpinner(id) {
     }
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); confirm(); } });
     btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); confirm(); });
+    btn.addEventListener('click', confirm);
     inp.addEventListener('blur', () => confirm());
     requestAnimationFrame(() => inp.focus());
   }
