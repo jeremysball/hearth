@@ -5,7 +5,6 @@
 
 const { execSync, spawn } = require('child_process');
 const { existsSync, readdirSync } = require('fs');
-const os = require('os');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');

@@ -257,7 +257,6 @@ async function runSuite(base) {
   // ---------- Tap-to-type: click centered value, type a new value, commit ----------
   console.log('\n--- Spinner: tap-to-type entry ---');
   const overlay7 = await openSpinner();
-  const w7 = await (await overlay7.$('.spinner-window')).boundingBox();
   const onItemBox = await (await overlay7.$('.spinner-item.on')).boundingBox();
   const cx7 = onItemBox.x + onItemBox.width / 2;
   const cy7 = onItemBox.y + onItemBox.height / 2;
