@@ -163,7 +163,9 @@ export function openSpinner(id) {
       if (dt > 0) vel = ((last.y - first.y) / dt) * 100;
     }
     const momentum = offsetY + vel;
-    const steps = Math.max(-30, Math.min(30, Math.round(momentum / ITEM_H)));
+    let steps = Math.max(-30, Math.min(30, Math.round(momentum / ITEM_H)));
+    // Any intentional swipe should advance at least one step in its direction.
+    if (dragged && steps === 0 && momentum !== 0) steps = Math.sign(momentum);
     const targetOffset = clampOffset(steps * ITEM_H);
 
     // Animate the entire distance so all crossing steps are smooth.
