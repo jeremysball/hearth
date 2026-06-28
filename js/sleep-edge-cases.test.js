@@ -12,11 +12,11 @@ globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { state, derive, addEntry, updateEntry, autoCloseOngoingSleep } = await import('./store.js');
+const { state, derive, addEntry, updateEntry, removeEntry, autoCloseOngoingSleep } = await import('./store.js');
 
-// Seal all open sleeps so tests don't bleed into each other
+// Remove all sleep entries so tests don't bleed into each other
 function closeAllSleeps() {
-  state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: e.start }); });
+  state().log.filter((e) => e.type === 'sleep').forEach((e) => removeEntry(e.id));
 }
 
 // ── Test 1 ── autoCloseOngoingSleep closes an open sleep at the new start time
@@ -29,7 +29,7 @@ test('autoCloseOngoingSleep closes open sleep when new sleep starts after it', (
   const updated = state().log.find((e) => e.id === first.id);
   assert.equal(updated.end, t1, 'ongoing sleep should be closed at the new sleep start');
   // cleanup
-  updateEntry(first.id, { end: first.start });
+  removeEntry(first.id);
 });
 
 // ── Test 2 ── autoCloseOngoingSleep is a no-op when new start is before or equal to ongoing start
@@ -42,7 +42,7 @@ test('autoCloseOngoingSleep does not close a sleep that started after the new en
   const updated = state().log.find((e) => e.id === first.id);
   assert.equal(updated.end, undefined, 'sleep that started after the backdated entry should stay open');
   // cleanup
-  updateEntry(first.id, { end: first.start });
+  removeEntry(first.id);
 });
 
 // ── Test 3 ── todayStats counts overnight sleep (started yesterday, ends today)
@@ -59,7 +59,7 @@ test('todayStats counts the today-portion of an overnight sleep', () => {
   assert.ok(stats.sleepMin >= 119 && stats.sleepMin <= 121,
     `expected ~120 min, got ${stats.sleepMin}`);
   // cleanup
-  updateEntry(e.id, { end: e.start });
+  removeEntry(e.id);
 });
 
 // ── Test 4 ── todayStats deduplicates overlapping sleep intervals
@@ -78,8 +78,8 @@ test('todayStats counts union not sum of overlapping sleeps', () => {
   assert.ok(stats.sleepMin >= 179 && stats.sleepMin <= 181,
     `expected ~180 min (union), got ${stats.sleepMin}`);
   // cleanup
-  updateEntry(a.id, { end: a.start });
-  updateEntry(b.id, { end: b.start });
+  removeEntry(a.id);
+  removeEntry(b.id);
 });
 
 // ── Test 5 ── derive.status returns awake for a sleep with a future start
@@ -90,7 +90,7 @@ test('derive.status is awake when only sleep entry has a future start', () => {
   const st = derive.status();
   assert.equal(st.state, 'awake', 'future-start sleep should not count as asleep');
   // cleanup
-  updateEntry(e.id, { end: e.start });
+  removeEntry(e.id);
 });
 
 // ── Test 6 ── zero-duration sleep does not crash todayStats
@@ -102,7 +102,7 @@ test('todayStats handles zero-duration sleep (start === end)', () => {
   assert.doesNotThrow(() => { stats = derive.todayStats(); });
   assert.ok(stats.sleepMin >= 0, 'sleepMin should be non-negative');
   // cleanup
-  updateEntry(e.id, { end: e.start });
+  removeEntry(e.id);
 });
 
 // ── Test 7 ── after maybeInterruptSleep, only one open sleep exists
