@@ -1,5 +1,5 @@
 // home.js — home view + entry summary helper.
-import { state, derive, ageLabel, awakeWindowMin } from './store.js';
+import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 
@@ -75,7 +75,6 @@ function avatar() {
 function heroCard() {
   const st = derive.status();
   const sp = derive.sweetSpot();
-  const win = awakeWindowMin();
   const now = Date.now();
   const since = new Date(st.since).getTime();
   const elapsed = (now - since) / MIN;
@@ -108,7 +107,7 @@ function heroCard() {
   // both have room to show. Without the headroom the sweetspot sits exactly at
   // 100% and never renders.
   const sf = sp.from.getTime(), sto = sp.to.getTime();
-  const railSpan = (win + 60) * MIN;
+  const railSpan = (sp.prediction.high + 60) * MIN;
   const nowPct = Math.min(100, (now - since) / railSpan * 100);
   const sweetFromPct = Math.max(0, Math.min(100, (sf - since) / railSpan * 100));
   const sweetToPct   = Math.max(0, Math.min(100, (sto - since) / railSpan * 100));
@@ -127,12 +126,11 @@ function heroCard() {
   // Overdue begins only after the 30-min sweetspot grace window passes, so the
   // gold "good nap window" and the red overtired state don't fire at once.
   const pastWindow = now > sto;
-  const overMin = Math.round((now - sto) / MIN);
-  const healthy = elapsed < win * 0.85
-    ? 'Awake window looking healthy.'
-    : now < sf ? 'Getting close to nap time.'
-    : now <= sto ? 'Sweet spot — good time for a nap.'
-    : `Nap overdue by ${overMin}m.`;
+  const healthy = elapsed < sp.prediction.low * 0.85
+    ? 'Sleep pressure building — adenosine is rising.'
+    : now < sf ? 'Nap window opening. Watch for yawning or looking away.'
+    : now <= sto ? 'Sleep pressure is high — good time for a nap.'
+    : 'Past the usual window. Settling may take a little longer.';
 
   // Ember bed — coals ignite left→right as the awake window elapses.
   let coals = '';
@@ -153,12 +151,12 @@ function heroCard() {
   return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
     <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-    <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">nap overdue</span>' : ''}</div>
+    <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">past window</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
     <div class="sh-sweet-lbl">${sweetLabel}</div>
     <div class="sh-rail-wrap">
       <div class="sh-bed">${coals}</div>
-      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>typical ${fmt.dur(win)}</span></div>
+      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}</span></div>
     </div>
   </div>`;
 }
