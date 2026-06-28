@@ -52,6 +52,7 @@ export function normalizeSettings(s) {
   else if (s.clock24 === false) s.clock24 = '12h';
   else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
   if (typeof s.tipMorningLightDismissed !== 'boolean') s.tipMorningLightDismissed = false;
+  if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   return s;
 }
 
@@ -255,6 +256,21 @@ function stdDev(values) {
   return Math.sqrt(variance);
 }
 
+// Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
+// The banner fires when the baby is within onsetWeeksBefore weeks of minMonths.
+const REGRESSION_TABLE = [
+  { id: '4m',  name: '4-month sleep change', onsetRange: [3.5, 5],   onsetWeeksBefore: 4,
+    mechanism: 'Brain cycling through adult sleep stages — architecture changes, sleep gets lighter.' },
+  { id: '6m',  name: '6-month sleep change', onsetRange: [5.5, 7],   onsetWeeksBefore: 3,
+    mechanism: 'Increased cognitive load from a developmental leap.' },
+  { id: '810m', name: '8–10-month sleep change', onsetRange: [7.5, 10.5], onsetWeeksBefore: 3,
+    mechanism: 'Object permanence and separation awareness activating.' },
+  { id: '12m', name: '12-month sleep change', onsetRange: [11, 13],  onsetWeeksBefore: 3,
+    mechanism: 'Nap transition pressure plus walking milestone cortisol.' },
+  { id: '18m', name: '18-month sleep change', onsetRange: [17, 19],  onsetWeeksBefore: 3,
+    mechanism: 'Language explosion — vocabulary acquisition interferes with sleep.' },
+];
+
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
 
@@ -455,6 +471,19 @@ export const derive = {
       to:   new Date(baseMs + halfRange * MIN),
       confidence: anchor.confidence,
     };
+  },
+  // Returns the approaching or active regression for the current baby age,
+  // or null if none applies or the regression has been dismissed.
+  regressionAlert() {
+    const dismissed = (state().settings.dismissedRegressions) || [];
+    const m = ageMonths();
+    for (const r of REGRESSION_TABLE) {
+      if (dismissed.includes(r.id)) continue;
+      const warningStart = r.onsetRange[0] - r.onsetWeeksBefore / 4.33;
+      const warningEnd   = r.onsetRange[1];
+      if (m >= warningStart && m <= warningEnd) return r;
+    }
+    return null;
   },
   week() {
     const arr = [];
