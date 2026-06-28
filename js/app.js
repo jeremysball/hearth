@@ -342,24 +342,47 @@ document.addEventListener('pointermove', (e) => {
 }));
 
 // ---------- pull-to-refresh ----------
+// Permanent non-passive listener — pointermove fires before touchmove, so by the
+// time this runs ptrPulling already reflects direction. Zero cost on normal scroll.
+function blockScroll(e) { if ((ptrActive && ptrPulling) || dragKey) e.preventDefault(); }
+document.addEventListener('touchmove', blockScroll, { passive: false });
+
 let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
+let ptrPulling = false, ptrRafId = null, ptrLatestY = 0;
 const PTR_THRESHOLD = 70; // visual px to arm refresh
 const PTR_MAX = 80;       // visual px cap
+// Must match .ptr-wrap height in CSS: PTR_MAX (80) + padding-bottom (12).
+const PTR_WRAP_H = PTR_MAX + 12;
 
 function ptrDist(raw) {
   // Two-phase resistance: 1:1 until 40px, then 0.5 damping.
-  // Threshold (70px) reached at raw=100; cap (80px) at raw=120.
   return raw <= 40 ? raw : 40 + (raw - 40) * 0.5;
 }
 
+function ptrUpdate() {
+  ptrRafId = null;
+  if (!ptrActive) return;
+  const dist = Math.min(PTR_MAX, ptrDist(ptrLatestY - ptrStartY));
+  const ptr = document.getElementById('ptr');
+  if (!ptr) return;
+  ptr.style.transition = 'none';
+  ptr.style.transform = `translateY(${dist - PTR_WRAP_H}px)`;
+  const spinner = ptr.querySelector('.ptr-spinner');
+  if (spinner) {
+    spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
+    spinner.style.opacity = String(Math.min(1, dist / 28));
+  }
+  if (!ptrArmed && dist >= PTR_THRESHOLD) { ptrArmed = true; buzz(12); }
+}
+
 function ptrReset() {
+  if (ptrRafId) { cancelAnimationFrame(ptrRafId); ptrRafId = null; }
   const ptr = document.getElementById('ptr');
   if (!ptr) return;
   ptr.classList.remove('ptr-spinning');
   const spinner = ptr.querySelector('.ptr-spinner');
   if (spinner && parseFloat(spinner.style.opacity) > 0) {
     ptr.classList.add('ptr-releasing');
-    // rAF ensures .ptr-releasing transition is painted before we mutate transform/opacity
     requestAnimationFrame(() => {
       spinner.style.transform = 'rotate(0deg)';
       spinner.style.opacity = '0';
@@ -369,11 +392,11 @@ function ptrReset() {
         spinner.style.opacity = '';
       };
       spinner.addEventListener('transitionend', cleanup, { once: true });
-      setTimeout(cleanup, 700); // fallback if transitionend doesn't fire
+      setTimeout(cleanup, 700);
     });
   }
-  ptr.style.transition = 'height .3s ease-out';
-  ptr.style.height = '0';
+  ptr.style.transition = 'transform .3s ease-out';
+  ptr.style.transform = `translateY(-${PTR_WRAP_H}px)`;
 }
 
 function ptrCollapse() {
@@ -387,36 +410,26 @@ document.addEventListener('pointerdown', (e) => {
   if (ptrSyncing || e.pointerType === 'mouse') return;
   const screen = e.target.closest('.screen');
   if (!screen || screen.scrollTop > 0) return;
-  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false;
+  ptrActive = true; ptrPid = e.pointerId; ptrStartY = e.clientY; ptrArmed = false; ptrPulling = false; ptrLatestY = e.clientY;
 });
-// Non-passive touchmove blocks the browser's scroll-claim so pointercancel never fires mid-pull or mid-drag.
-document.addEventListener('touchmove', (e) => { if (ptrActive || dragKey) e.preventDefault(); }, { passive: false });
 document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   const raw = e.clientY - ptrStartY;
-  if (raw < 0) { ptrActive = false; return; }
-  const dist = Math.min(PTR_MAX, ptrDist(raw));
-  const ptr = document.getElementById('ptr');
-  if (!ptr) return;
-  ptr.style.transition = 'none';
-  ptr.style.height = dist + 'px';
-  const spinner = ptr.querySelector('.ptr-spinner');
-  if (spinner) {
-    spinner.style.transform = `rotate(${(dist / PTR_MAX) * 270}deg)`;
-    spinner.style.opacity = String(Math.min(1, dist / 28));
-  }
-  if (!ptrArmed && dist >= PTR_THRESHOLD) {
-    ptrArmed = true;
-    buzz(12);
-  }
+  // Moving up (or no movement) = user is scrolling; flip off pulling so blockScroll
+  // won't preventDefault and will let the browser scroll freely.
+  if (raw <= 0) { ptrPulling = false; if (raw < 0) ptrActive = false; return; }
+  ptrPulling = true;
+  ptrLatestY = e.clientY;
+  if (!ptrRafId) ptrRafId = requestAnimationFrame(ptrUpdate);
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
-  ptrActive = false; ptrPid = null;
+  ptrActive = false; ptrPid = null; ptrPulling = false;
   if (ptrArmed && !ptrSyncing) {
     ptrArmed = false;
     ptrSyncing = true;
-    document.getElementById('ptr')?.classList.add('ptr-spinning');
+    const ptr = document.getElementById('ptr');
+    if (ptr) { ptr.style.transition = 'none'; ptr.style.transform = 'translateY(0)'; ptr.classList.add('ptr-spinning'); }
     ptrTimeout = setTimeout(ptrCollapse, 4000);
     syncOnce().then(ptrCollapse);
   } else {
