@@ -23,4 +23,4 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     srv.close();
   }
   process.exit(tally());
-})();
+})().catch((e) => { console.error(e); process.exit(1); });
