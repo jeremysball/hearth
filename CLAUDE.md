@@ -2,6 +2,10 @@
 
 Hearth is a free, private baby tracker — an alternative to Huckleberry.
 
+## Quick reference
+
+**Read `docs/codebase-quickref.md` at the start of every session** before exploring files or touching code. It covers file map, key exports, patterns, test commands, and design constraints in one shot. Use the `/orient` skill to load it.
+
 ## Principles
 
 - Integrity and availability of user data above all else.
