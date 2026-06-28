@@ -79,8 +79,7 @@ export const router = {
     exitTodayEditMode();
     exitCardEditMode();
     current = view;
-    const v = $('#view');
-    if (!v) { router.boot(); }
+    if (!$('#view')) { router.boot(); }
     $('#view').innerHTML = VIEWS[view]();
     initThumbs($('#view'));
     $('#view').scrollTop = 0;
@@ -616,6 +615,7 @@ document.addEventListener('click', async (e) => {
 
 // ---------- server sync loop ----------
 async function syncOnce() {
+  if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
   const drained = await drainOutbox(fetch);
   if (!drained) { log.warn('sync', 'outbox drain failed — aborting pull'); return; }
@@ -627,7 +627,7 @@ async function syncOnce() {
     applySyncResponse(data);
     setLastSync(data.serverTime);
     log.info('sync', `OK — ${n} row${n !== 1 ? 's' : ''} from server`);
-    if (current !== 'home' || $('#view')) router.refresh();
+    if (n > 0 && (current !== 'home' || $('#view'))) router.refresh();
   } catch (e) {
     log.warn('sync', 'syncOnce failed', e.message);
   }

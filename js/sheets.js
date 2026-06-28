@@ -295,7 +295,8 @@ function gather(type) {
   } else if (type === 'feed') {
     base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
-    base.side = segVal('side'); base.contents = segVal('contents');
+    base.side = segVal('side');
+    if (type === 'bottle') base.contents = segVal('contents');
     let amt = Number($('#f-amt').dataset.value) || 0;
     if (state().settings.units.volume === 'oz') amt = amt * 29.5735; // store ml
     base.amount = Math.round(amt); base.unit = 'ml';

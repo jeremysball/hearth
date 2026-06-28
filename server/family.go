@@ -7,6 +7,12 @@ import (
 	"net/http"
 )
 
+const (
+	defaultUnitsJSON     = `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
+	defaultRemindersJSON = `{"naps":true,"bottle":true,"meds":true,"quietStart":"20:00","quietEnd":"07:00"}`
+	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
+)
+
 type createFamilyRequest struct {
 	BabyName      string `json:"babyName"`
 	Birthdate     string `json:"birthdate"`
@@ -22,10 +28,6 @@ type createFamilyResponse struct {
 
 func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 		var req createFamilyRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid json", http.StatusBadRequest)
@@ -68,11 +70,8 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		defaultUnits := `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
-		defaultReminders := `{"naps":true,"bottle":true,"meds":true,"quietStart":"20:00","quietEnd":"07:00"}`
-		defaultCards := `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
 		if _, err := tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
-			familyID, defaultUnits, defaultReminders, defaultCards, now); err != nil {
+			familyID, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
