@@ -188,6 +188,17 @@ document.addEventListener('click', (ev) => {
         router.refresh();
       }
     },
+    'regression:dismiss': () => {
+      const rid = el.dataset.rid;
+      if (rid) {
+        const s = state().settings;
+        if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
+        if (!s.dismissedRegressions.includes(rid)) s.dismissedRegressions.push(rid);
+        save();
+        enqueueSettingsSync();
+        router.refresh();
+      }
+    },
     'entry:open': () => openEntry(d.id),
     'entry:edit': () => { const e = state().log.find((x) => x.id === d.id); if (e) openLog(e.type, e); },
     'measure:open': () => openMeasure(d.id || ''),
