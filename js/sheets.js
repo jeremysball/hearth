@@ -100,6 +100,7 @@ export function openSpinner(id) {
   let dragging = false, pid = null, dragged = false;
   let offsetY = 0, dragY = 0;
   let velSamples = [];
+  let animCancelled = false;
 
   function clampOffset(offset) {
     if (min !== -Infinity) {
@@ -114,8 +115,10 @@ export function openSpinner(id) {
   }
 
   function onDown(e) {
+    if (e.target.closest('.spinner-type')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragging) return;
+    animCancelled = true;
     dragging = true; pid = e.pointerId; dragged = false;
     dragY = e.clientY;
     offsetY = 0; velSamples = [{ y: e.clientY, t: performance.now() }];
@@ -160,7 +163,7 @@ export function openSpinner(id) {
       if (dt > 0) vel = ((last.y - first.y) / dt) * 100;
     }
     const momentum = offsetY + vel;
-    const steps = Math.round(momentum / ITEM_H);
+    const steps = Math.max(-8, Math.min(8, Math.round(momentum / ITEM_H)));
     const targetOffset = clampOffset(steps * ITEM_H);
 
     // Animate the entire distance so all crossing steps are smooth.
@@ -169,8 +172,9 @@ export function openSpinner(id) {
     const duration = Math.min(Math.abs(distance) * 3 + 180, 500);
     const startTime = performance.now();
 
+    animCancelled = false;
     function animate() {
-      if (overlay._closed) return;
+      if (overlay._closed || animCancelled) return;
       const t = Math.min(1, (performance.now() - startTime) / duration);
       const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic — fast start, settle
       offsetY = clampOffset(startOffset + distance * eased);
@@ -220,7 +224,7 @@ export function openSpinner(id) {
       offsetY = 0; lastCenter = snapped;
     }
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); confirm(); } });
-    btn.addEventListener('click', (ev) => { ev.stopPropagation(); confirm(); });
+    btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); confirm(); });
     inp.addEventListener('blur', () => exitTypeMode(onItem));
     requestAnimationFrame(() => inp.focus());
   }
