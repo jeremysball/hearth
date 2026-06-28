@@ -71,7 +71,8 @@ export function diaperIcon(kind) {
 // ---------- DOM helper ----------
 export const $ = (sel, root) => (root || document).querySelector(sel);
 export const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
-export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const _escChars = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => _escChars[c]);
 
 export function positionThumb(group) {
   const thumb = group.querySelector('.seg-thumb');

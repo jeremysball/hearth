@@ -43,7 +43,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/family", handleCreateFamily(db))
+	mux.HandleFunc("POST /api/family", handleCreateFamily(db))
 	mux.HandleFunc("/api/events", requireAuth(db, handleEvents(hub)))
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/markbates/goth"
@@ -91,8 +92,8 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			return
 		}
 		marshaled := string(decoded)
-		if i := indexByte(marshaled, '|'); i >= 0 {
-			marshaled = marshaled[i+1:]
+		if _, after, ok := strings.Cut(marshaled, "|"); ok {
+			marshaled = after
 		}
 		sess, err := provider.UnmarshalSession(marshaled)
 		if err != nil {
@@ -145,12 +146,3 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 	}
 }
 
-// indexByte avoids importing strings just for one lookup.
-func indexByte(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
-	}
-	return -1
-}
