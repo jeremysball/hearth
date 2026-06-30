@@ -8,7 +8,7 @@ import (
 )
 
 func TestMeReportsIdentity(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)
@@ -32,7 +32,7 @@ func TestMeReportsIdentity(t *testing.T) {
 }
 
 func TestMeAnonymousHasNilIdentity(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)
@@ -49,7 +49,7 @@ func TestMeAnonymousHasNilIdentity(t *testing.T) {
 }
 
 func TestSignoutDeletesSession(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)

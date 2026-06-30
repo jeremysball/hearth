@@ -8,7 +8,7 @@ import (
 )
 
 func TestHandleSyncReturnsEntriesChangedSinceTimestamp(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 
@@ -33,7 +33,7 @@ func TestHandleSyncReturnsEntriesChangedSinceTimestamp(t *testing.T) {
 }
 
 func TestHandleSyncOmitsEntriesOlderThanSince(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 	reqUp := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`))
@@ -55,7 +55,7 @@ func TestHandleSyncOmitsEntriesOlderThanSince(t *testing.T) {
 }
 
 func TestHandleSyncIncludesDeletedAsTombstone(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 	reqUp := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`))
@@ -90,7 +90,7 @@ func TestHandleSyncIncludesDeletedAsTombstone(t *testing.T) {
 }
 
 func TestHandleSyncIncludesBabyWhenChanged(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 	reqPatch := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","theme":"boy"}`))

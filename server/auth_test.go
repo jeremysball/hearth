@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateSessionInsertsRow(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	token, err := createSession(db, "cg1", "fam1")
 	if err != nil {
 		t.Fatal(err)
@@ -25,7 +25,7 @@ func TestCreateSessionInsertsRow(t *testing.T) {
 }
 
 func TestRequireAuthRejectsMissingCookie(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("GET", "/api/whatever", nil)
 	rec := httptest.NewRecorder()
 	called := false
@@ -41,7 +41,7 @@ func TestRequireAuthRejectsMissingCookie(t *testing.T) {
 }
 
 func TestRequireAuthRejectsUnknownToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("GET", "/api/whatever", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "not-a-real-token"})
 	rec := httptest.NewRecorder()
@@ -58,7 +58,7 @@ func TestRequireAuthRejectsUnknownToken(t *testing.T) {
 }
 
 func TestRequireAuthAcceptsValidSession(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	token, err := createSession(db, "cg1", "fam1")
 	if err != nil {
 		t.Fatal(err)

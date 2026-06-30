@@ -10,7 +10,7 @@ import (
 )
 
 func TestHandleCreateInviteRequiresAuth(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("POST", "/api/invites", nil)
 	rec := httptest.NewRecorder()
 
@@ -22,7 +22,7 @@ func TestHandleCreateInviteRequiresAuth(t *testing.T) {
 }
 
 func TestHandleCreateInviteReturnsToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	token, err := createSession(db, "cg1", "fam1")
 	if err != nil {
@@ -54,7 +54,7 @@ func TestHandleCreateInviteReturnsToken(t *testing.T) {
 }
 
 func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at) VALUES ('inv1', 'fam1', 'cg1', ?)`,
 		"2099-01-01T00:00:00Z")
@@ -83,7 +83,7 @@ func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 }
 
 func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at, used_at) VALUES ('inv1', 'fam1', 'cg1', ?, ?)`,
 		"2099-01-01T00:00:00Z", nowISO())
@@ -100,7 +100,7 @@ func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
 }
 
 func TestHandleJoinInviteRejectsExpiredToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at) VALUES ('inv1', 'fam1', 'cg1', ?)`,
 		"2000-01-01T00:00:00Z")
@@ -117,7 +117,7 @@ func TestHandleJoinInviteRejectsExpiredToken(t *testing.T) {
 }
 
 func TestHandleJoinInviteRejectsUnknownToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("POST", "/api/join/nope", bytes.NewBufferString(`{"caregiverName":"Maya"}`))
 	req.SetPathValue("token", "nope")
 	rec := httptest.NewRecorder()

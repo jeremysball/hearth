@@ -17,7 +17,7 @@ func seedFamilyAndBaby(t *testing.T, db *sql.DB, familyID string) {
 }
 
 func TestHandlePatchBabyUpdatesFields(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 
@@ -38,7 +38,7 @@ func TestHandlePatchBabyUpdatesFields(t *testing.T) {
 }
 
 func TestHandlePatchBabyNotFoundForUnknownFamily(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	hub := newHub()
 	req := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive"}`))
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "no-such-family"})
@@ -52,7 +52,7 @@ func TestHandlePatchBabyNotFoundForUnknownFamily(t *testing.T) {
 }
 
 func TestHandlePatchSettingsUpdatesFields(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 
