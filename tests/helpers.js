@@ -49,6 +49,14 @@ function retry(start, timeoutMs, check, reject, why) {
 }
 
 async function launchBrowser() {
+  if (process.env.PLAYWRIGHT_WS_ENDPOINT) {
+    const browser = await chromium.connect(process.env.PLAYWRIGHT_WS_ENDPOINT);
+    const context = await browser.newContext();
+    return {
+      newPage: () => context.newPage(),
+      close: async () => { await context.close(); await browser.close(); },
+    };
+  }
   const opts = { args: ['--no-sandbox', '--ignore-certificate-errors'] };
   if (process.env.CHROMIUM) opts.executablePath = process.env.CHROMIUM;
   return chromium.launch(opts);
