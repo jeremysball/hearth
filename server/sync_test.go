@@ -32,6 +32,42 @@ func TestHandleSyncReturnsEntriesChangedSinceTimestamp(t *testing.T) {
 	}
 }
 
+func TestHandleSyncReturnsEntryAfterSinceWithLongerFractionalTimestamp(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+
+	_, err := db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"e1", "fam1", "sleep", "2026-06-23T10:00:00Z", `{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`, "cg1", "2026-06-30T21:04:05.1234Z")
+	if err != nil {
+		t.Fatalf("insert entry: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/sync?since=2026-06-30T21:04:05.123Z", nil)
+	req = withSession(req, SessionInfo{CaregiverID: "cg2", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleSync(db)(rec, req)
+
+	var resp syncResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v, body=%s", err, rec.Body.String())
+	}
+	if len(resp.Entries) != 1 {
+		t.Fatalf("expected 1 entry despite lexical timestamp ordering, got %d: %s", len(resp.Entries), rec.Body.String())
+	}
+}
+
+func TestSyncLowerBoundKeepsSameSecondCandidates(t *testing.T) {
+	got := syncLowerBound("2026-06-30T21:04:05.123Z")
+	want := "2026-06-30T21:04:05"
+	if got != want {
+		t.Fatalf("syncLowerBound() = %q, want %q", got, want)
+	}
+	if !("2026-06-30T21:04:05.1234Z" > got) {
+		t.Fatal("lower bound should preserve same-second candidates for parsed filtering")
+	}
+}
+
 func TestHandleSyncOmitsEntriesOlderThanSince(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
