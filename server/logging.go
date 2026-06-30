@@ -102,6 +102,7 @@ func logRequest(info requestLogInfo) {
 
 func logAuthEvent(r *http.Request, event string, session SessionInfo) {
 	origin := requestOrigin(r)
+	geo := mergeGeoInfo(geoFromHeaders(r), requestGeoIP.Lookup(origin.IP))
 	fields := []string{
 		currentLogStyle.event("auth"),
 		"event=" + sanitizeLogValue(event),
@@ -110,6 +111,9 @@ func logAuthEvent(r *http.Request, event string, session SessionInfo) {
 	}
 	fields = appendIfSet(fields, "caregiver", session.CaregiverID)
 	fields = appendIfSet(fields, "family", session.FamilyID)
+	fields = appendIfSet(fields, "geo_country", geo.Country)
+	fields = appendIfSet(fields, "geo_region", geo.Region)
+	fields = appendIfSet(fields, "geo_city", geo.City)
 	log.Print(strings.Join(fields, " "))
 }
 

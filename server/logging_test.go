@@ -66,6 +66,9 @@ func TestSignoutLogsAuthEventWithOrigin(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/auth/signout", nil)
 	req.RemoteAddr = "198.51.100.10:12345"
 	req.Header.Set("X-Forwarded-For", "203.0.113.7")
+	req.Header.Set("CF-IPCountry", "US")
+	req.Header.Set("X-Vercel-IP-Country-Region", "OR")
+	req.Header.Set("X-Vercel-IP-City", "Portland")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: token})
 	req = withSession(req, SessionInfo{CaregiverID: "cg", FamilyID: "fam"})
 	rec := httptest.NewRecorder()
@@ -73,7 +76,7 @@ func TestSignoutLogsAuthEventWithOrigin(t *testing.T) {
 	handleSignout(db)(rec, req)
 
 	line := logs.String()
-	for _, want := range []string{"auth event=signout", "caregiver=cg", "family=fam", "ip=203.0.113.7", "remote=198.51.100.10"} {
+	for _, want := range []string{"auth event=signout", "caregiver=cg", "family=fam", "ip=203.0.113.7", "remote=198.51.100.10", "geo_country=US", "geo_region=OR", "geo_city=Portland"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("log missing %q in %q", want, line)
 		}
