@@ -11,7 +11,7 @@ const ROOT = path.resolve(__dirname, '..');
 const BIN = path.join(ROOT, 'hearth-server');
 const SUITES = readdirSync(__dirname).filter(f => f.endsWith('.test.js'));
 const BASE_PORT = 19000;
-const CONCURRENCY = Math.min(Number(process.env.TEST_CONCURRENCY) || 2, SUITES.length);
+const CONCURRENCY = Math.min(Number(process.env.TEST_CONCURRENCY) || 1, SUITES.length);
 
 function buildServer() {
   execSync('go build -o ' + BIN + ' .', { cwd: path.join(ROOT, 'server'), stdio: 'pipe' });
