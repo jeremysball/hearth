@@ -23,31 +23,70 @@ export function sleep() {
     return `<circle cx="100" cy="100" r="${r}" fill="none" stroke="var(--good)" stroke-width="13" stroke-linecap="round"
       stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${off}" />`;
   }).join('');
+
+  // awake arcs — complement of sleep within [dayStart, now], drawn under sleep arcs
+  const nowMs = now.getTime();
+  const dayStartMs = dayStart.getTime();
+  const sortedSleeps = [...todaySleeps].sort((a, b) => a.s - b.s);
+  let ptr = dayStartMs;
+  const awakeSegs = [];
+  for (const e of sortedSleeps) {
+    const segStart = Math.max(ptr, e.s.getTime());
+    if (segStart > ptr + 60000) {
+      const h0 = Math.max(0, (ptr - dayStartMs) / 3600000);
+      const h1 = Math.min(24, (segStart - dayStartMs) / 3600000);
+      if (h1 > h0) { const len = (h1 - h0) / 24 * C, off = -(h0 / 24) * C; awakeSegs.push(`<circle cx="100" cy="100" r="${r}" fill="none" stroke="var(--ring-awake)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${off}" />`); }
+    }
+    ptr = Math.max(ptr, e.en.getTime());
+  }
+  if (ptr < nowMs - 60000) {
+    const h0 = Math.max(0, (ptr - dayStartMs) / 3600000);
+    const h1 = Math.min(24, (nowMs - dayStartMs) / 3600000);
+    if (h1 > h0) { const len = (h1 - h0) / 24 * C, off = -(h0 / 24) * C; awakeSegs.push(`<circle cx="100" cy="100" r="${r}" fill="none" stroke="var(--ring-awake)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${off}" />`); }
+  }
+
   // now marker
   const nowFrac = hoursInto(now, dayStart) / 24;
 
   const totalMin = derive.todayStats().sleepMin;
   const tb = fmt.durBig(totalMin);
 
-  // naps list (today, exclude overnight long >5h that started yesterday)
-  const naps = todaySleeps.sort((a, b) => b.s - a.s);
-  const napsHTML = naps.length ? naps.map((e) => {
-    const pending = e.ongoing && e.s > now;
-    const dur = pending ? 0 : Math.max(0, (e.en - e.s) / MIN);
-    let napContext = '';
-    if (!e.ongoing && dur > 0) {
-      if (dur < 20) napContext = 'Catnap — less than one full sleep cycle.';
-      else if (dur < 35) napContext = 'One sleep cycle. Light-sleep arousal is normal.';
-      else if (dur >= 60 && dur < 120) napContext = 'Solid nap — multiple sleep cycles completed.';
+  // naps list — ascending order with interleaved awake gaps
+  const napsAsc = [...todaySleeps].sort((a, b) => a.s - b.s);
+  let napsHTML;
+  if (!napsAsc.length) {
+    napsHTML = `<div class="empty-log">No sleep logged today yet.</div>`;
+  } else {
+    const rows = [];
+    let prevEnd = null;
+    for (const e of napsAsc) {
+      if (prevEnd !== null) {
+        const gapMin = Math.round((e.s - prevEnd) / MIN);
+        if (gapMin >= 5) rows.push(`<div class="row row-awake"><span class="row-ic tone-awake"></span><span class="row-txt"><span class="what">Awake</span></span><span class="meta">${fmt.dur(gapMin)}</span></div>`);
+      }
+      const pending = e.ongoing && e.s > now;
+      const dur = pending ? 0 : Math.max(0, (e.en - e.s) / MIN);
+      let napContext = '';
+      if (!e.ongoing && dur > 0) {
+        if (dur < 20) napContext = 'Catnap. Less than one full sleep cycle.';
+        else if (dur < 35) napContext = 'One sleep cycle. Light-sleep arousal is normal.';
+        else if (dur >= 60 && dur < 120) napContext = 'Solid nap. Multiple sleep cycles completed.';
+      }
+      const label = e.ongoing ? (pending ? 'Resuming soon' : 'Asleep now') : (dur > 240 ? 'Night sleep' : 'Nap');
+      const endLabel = e.ongoing ? (pending ? 'soon' : 'now') : fmt.clock(e.en);
+      rows.push(`<div class="row" data-action="entry:open" data-id="${e.raw.id}">
+        <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
+        <span class="row-txt"><span class="what">${label}</span>
+        <span class="when">${fmt.clock(e.s)} – ${endLabel}</span></span>
+        <span class="meta">${fmt.dur(dur)}</span>${napContext ? `<span class="nap-context">${napContext}</span>` : ''}</div>`);
+      prevEnd = e.ongoing ? null : e.en;
     }
-    const label = e.ongoing ? (pending ? 'Resuming soon' : 'Asleep now') : (dur > 240 ? 'Night sleep' : 'Nap');
-    const endLabel = e.ongoing ? (pending ? 'soon' : 'now') : fmt.clock(e.en);
-    return `<div class="row" data-action="entry:open" data-id="${e.raw.id}">
-      <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
-      <span class="row-txt"><span class="what">${label}</span>
-      <span class="when">${fmt.clock(e.s)} – ${endLabel}</span></span>
-      <span class="meta">${fmt.dur(dur)}</span>${napContext ? `<span class="nap-context">${napContext}</span>` : ''}</div>`;
-  }).join('') : `<div class="empty-log">No sleep logged today yet.</div>`;
+    if (prevEnd !== null) {
+      const awakeMin = Math.round((now - prevEnd) / MIN);
+      if (awakeMin >= 5) rows.push(`<div class="row row-awake"><span class="row-ic tone-awake"></span><span class="row-txt"><span class="what">Awake now</span></span><span class="meta">${fmt.dur(awakeMin)}</span></div>`);
+    }
+    napsHTML = rows.join('');
+  }
 
   // SweetSpot schedule — project remaining naps today
   const sched = [];
@@ -88,6 +127,7 @@ export function sleep() {
       <div class="ringwrap">
         <svg viewBox="0 0 200 200">
           <circle cx="100" cy="100" r="86" fill="none" stroke="var(--ring-track)" stroke-width="13" />
+          ${awakeSegs.join('')}
           ${segs}
           <circle cx="${100 + r}" cy="100" r="3.5" fill="var(--ink)" transform="rotate(${nowFrac * 360} 100 100)" />
         </svg>
