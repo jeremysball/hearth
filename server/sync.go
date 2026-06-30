@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 )
 
 type syncResponse struct {
@@ -18,6 +20,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
 		since := r.URL.Query().Get("since")
+		lowerBound := syncLowerBound(since)
 
 		resp := syncResponse{ServerTime: nowISO(), Entries: []json.RawMessage{}, Growth: []json.RawMessage{}}
 
@@ -26,7 +29,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		var babyUpdatedAt string
 		err := db.QueryRow(`SELECT name, birthdate, theme, photo, updated_at FROM babies WHERE family_id = ?`, session.FamilyID).
 			Scan(&name, &birthdate, &theme, &photo, &babyUpdatedAt)
-		if err == nil && babyUpdatedAt > since {
+		if err == nil && changedAfter(babyUpdatedAt, since) {
 			b, _ := json.Marshal(map[string]any{"name": name, "birthdate": birthdate, "theme": theme, "photo": photo.String})
 			resp.Baby = b
 		}
@@ -35,7 +38,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		var medsJSON, unitsJSON, remindersJSON, cardsJSON, settingsUpdatedAt string
 		err = db.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at FROM settings WHERE family_id = ?`, session.FamilyID).
 			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &settingsUpdatedAt)
-		if err == nil && settingsUpdatedAt > since {
+		if err == nil && changedAfter(settingsUpdatedAt, since) {
 			s, _ := json.Marshal(map[string]any{
 				"bottleIntervalH": bottleIntervalH,
 				"meds":            json.RawMessage(medsJSON),
@@ -46,27 +49,35 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 			resp.Settings = s
 		}
 
-		rows, err := db.Query(`SELECT payload_json, deleted_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, since)
+		rows, err := db.Query(`SELECT payload_json, deleted_at, updated_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
-				var payload string
+				var payload, updatedAt string
 				var deletedAt sql.NullString
-				if err := rows.Scan(&payload, &deletedAt); err != nil {
+				if err := rows.Scan(&payload, &deletedAt, &updatedAt); err != nil {
+					log.Printf("sync: scan log_entries family=%s: %v", session.FamilyID, err)
+					continue
+				}
+				if !changedAfter(updatedAt, since) {
 					continue
 				}
 				resp.Entries = append(resp.Entries, tombstoneOrPayload(payload, deletedAt))
 			}
 		}
 
-		grows, err := db.Query(`SELECT id, date, weight_kg, height_cm, head_cm, note, deleted_at FROM growth_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, since)
+		grows, err := db.Query(`SELECT id, date, weight_kg, height_cm, head_cm, note, deleted_at, updated_at FROM growth_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
 		if err == nil {
 			defer grows.Close()
 			for grows.Next() {
-				var id, date string
+				var id, date, updatedAt string
 				var weightKg, heightCm, headCm sql.NullFloat64
 				var note, deletedAt sql.NullString
-				if err := grows.Scan(&id, &date, &weightKg, &heightCm, &headCm, &note, &deletedAt); err != nil {
+				if err := grows.Scan(&id, &date, &weightKg, &heightCm, &headCm, &note, &deletedAt, &updatedAt); err != nil {
+					log.Printf("sync: scan growth_entries family=%s: %v", session.FamilyID, err)
+					continue
+				}
+				if !changedAfter(updatedAt, since) {
 					continue
 				}
 				if deletedAt.Valid && deletedAt.String != "" {
@@ -86,6 +97,36 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
+}
+
+func syncLowerBound(since string) string {
+	if since == "" {
+		return ""
+	}
+	s, err := time.Parse(time.RFC3339Nano, since)
+	if err != nil {
+		log.Printf("sync: invalid since %q: %v; falling back to lexical lower bound", since, err)
+		return since
+	}
+	return s.UTC().Format("2006-01-02T15:04:05")
+}
+
+func changedAfter(updatedAt, since string) bool {
+	if since == "" {
+		return true
+	}
+	u, uErr := time.Parse(time.RFC3339Nano, updatedAt)
+	s, sErr := time.Parse(time.RFC3339Nano, since)
+	if uErr == nil && sErr == nil {
+		return u.After(s)
+	}
+	if uErr != nil {
+		log.Printf("sync: invalid updated_at %q: %v; falling back to lexical comparison", updatedAt, uErr)
+	}
+	if sErr != nil {
+		log.Printf("sync: invalid since %q: %v; falling back to lexical comparison", since, sErr)
+	}
+	return updatedAt > since
 }
 
 func tombstoneOrPayload(payload string, deletedAt sql.NullString) json.RawMessage {

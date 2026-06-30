@@ -35,7 +35,7 @@ func openDB(path string) (*sql.DB, error) {
 }
 
 func nowISO() string {
-	return time.Now().UTC().Format(time.RFC3339Nano)
+	return time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
 }
 
 // newID returns a random 16-byte hex string, used as the primary key for
