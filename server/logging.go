@@ -130,5 +130,11 @@ func sanitizeLogValue(value string) string {
 	value = strings.TrimSpace(value)
 	value = strings.ReplaceAll(value, "\n", " ")
 	value = strings.ReplaceAll(value, "\r", " ")
+	value = strings.ReplaceAll(value, "\t", " ")
+	if strings.ContainsAny(value, " \\\"") {
+		value = strings.ReplaceAll(value, `\`, `\\`)
+		value = strings.ReplaceAll(value, `"`, `\"`)
+		return `"` + value + `"`
+	}
 	return value
 }

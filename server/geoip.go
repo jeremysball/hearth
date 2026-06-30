@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,7 +112,11 @@ func downloadMaxMindDBArchive(licenseKey, dest string) error {
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
-	url := "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=" + licenseKey + "&suffix=tar.gz"
+	params := url.Values{}
+	params.Set("edition_id", "GeoLite2-City")
+	params.Set("license_key", licenseKey)
+	params.Set("suffix", "tar.gz")
+	url := "https://download.maxmind.com/app/geoip_download?" + params.Encode()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

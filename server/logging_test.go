@@ -81,3 +81,71 @@ func TestSignoutLogsAuthEventWithOrigin(t *testing.T) {
 		t.Fatalf("log leaked session token: %q", line)
 	}
 }
+
+func TestSanitizeLogValueQuotesWhitespaceAndEscapesQuotes(t *testing.T) {
+	cases := map[string]string{
+		"simple":                 "simple",
+		"Mozilla/5.0 (X11)":      `"Mozilla/5.0 (X11)"`,
+		"hello\tworld":           `"hello world"`,
+		"hello\nworld":           `"hello world"`,
+		`quoted "value"`:         `"quoted \"value\""`,
+		`backslash \ value`:      `"backslash \\ value"`,
+		"  surrounding spaces  ": `"surrounding spaces"`,
+	}
+	for input, want := range cases {
+		if got := sanitizeLogValue(input); got != want {
+			t.Fatalf("sanitizeLogValue(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestRequestOriginPrecedence(t *testing.T) {
+	cases := []struct {
+		name       string
+		remoteAddr string
+		xff        string
+		xreal      string
+		wantIP     string
+		wantRemote string
+	}{
+		{name: "xff wins", remoteAddr: "198.51.100.10:12345", xff: "203.0.113.7, 198.51.100.10", xreal: "203.0.113.8", wantIP: "203.0.113.7", wantRemote: "198.51.100.10"},
+		{name: "xreal fallback", remoteAddr: "198.51.100.10:12345", xreal: "203.0.113.8", wantIP: "203.0.113.8", wantRemote: "198.51.100.10"},
+		{name: "remote fallback", remoteAddr: "198.51.100.10:12345", wantIP: "198.51.100.10", wantRemote: "198.51.100.10"},
+	}
+	for _, tc := range cases {
+		req := httptest.NewRequest("GET", "/api/me", nil)
+		req.RemoteAddr = tc.remoteAddr
+		if tc.xff != "" {
+			req.Header.Set("X-Forwarded-For", tc.xff)
+		}
+		if tc.xreal != "" {
+			req.Header.Set("X-Real-IP", tc.xreal)
+		}
+		got := requestOrigin(req)
+		if got.IP != tc.wantIP || got.Remote != tc.wantRemote {
+			t.Fatalf("%s: origin = %+v, want ip=%s remote=%s", tc.name, got, tc.wantIP, tc.wantRemote)
+		}
+	}
+}
+
+func TestRequestLogOmitsGeoFieldsWhenUnavailable(t *testing.T) {
+	logs := captureLogs(t)
+	db := newTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)
+	token, _ := createSession(db, "cg", "fam")
+	mux := newRouter(db, newHub(), "", Config{})
+
+	req := httptest.NewRequest("GET", "/api/me", nil)
+	req.RemoteAddr = "198.51.100.10:12345"
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: token})
+	mux.ServeHTTP(httptest.NewRecorder(), req)
+
+	line := logs.String()
+	for _, unexpected := range []string{"geo_country=", "geo_region=", "geo_city="} {
+		if strings.Contains(line, unexpected) {
+			t.Fatalf("log contained unexpected %q in %q", unexpected, line)
+		}
+	}
+}
