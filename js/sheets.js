@@ -43,6 +43,9 @@ export function openSpinner(id) {
   function commit(v) {
     v = Math.round(v * 1e6) / 1e6;
     if (v < min) v = min; else if (v > max) v = max;
+    // Keep offsetY valid after val shifts so an interrupted animation's
+    // position carries forward correctly into the next drag.
+    offsetY += (v - val) / step * ITEM_H;
     val = v;
     el.dataset.value = val;
     el.textContent = fmtVal(val);
@@ -141,8 +144,7 @@ export function openSpinner(id) {
     cancelAnimationFrame(rafId);
     dragging = true; pid = e.pointerId; dragged = false;
     dragY = e.clientY;
-    offsetY = 0; velSamples = [{ y: e.clientY, t: performance.now() }];
-    lastCenter = val;
+    velSamples = [{ y: e.clientY, t: performance.now() }];
     items.setPointerCapture(pid);
     items.style.transition = 'none';
   }
