@@ -908,6 +908,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .onb-top { text-align: center; padding: 20px 0 4px; }
 .onb-logo { display: block; margin: 0 auto 18px; height: 48px; width: auto; }
 .onb-sub { font-size: 14px; color: var(--muted); font-weight: 600; margin: 0 auto; max-width: 280px; line-height: 1.5; }
+.onb-tagline { font-family: "Playfair Display", serif; font-size: 16px; font-weight: 400; font-style: italic; color: var(--ink); }
 .onb-card { background: var(--surface); border-radius: 26px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 24px oklch(0.6 0.05 20 / .07); }
 .onb-photo { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; }
 .onb-photo .avatar { background: var(--accent-tint); color: var(--accent-ink); font-size: 26px; }
