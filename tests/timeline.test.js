@@ -17,8 +17,19 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('timeline opens with a chip bar', true);
     const rows = await page.$$('.tl-row');
     check('timeline shows at least one row', rows.length >= 1, 'rows=' + rows.length);
-    const hasToday = await page.$$eval('.tl-day-hd', els => els.some(e => e.textContent.trim() === 'Today'));
-    check('timeline groups under a Today header', hasToday);
+    const todayInfo = await page.$$eval('.tl-day-hd', els => {
+      const hd = els.find(e => e.querySelector('span:first-child')?.textContent.trim() === 'Today');
+      return hd ? { label: hd.querySelector('span:first-child').textContent.trim(), count: hd.querySelector('.tl-day-ct')?.textContent.trim() } : null;
+    });
+    check('timeline groups under a Today header', todayInfo && todayInfo.label === 'Today', JSON.stringify(todayInfo));
+    check('timeline shows the Today entry count', todayInfo && Number(todayInfo.count) >= 1, JSON.stringify(todayInfo));
+
+    const backColors = await page.$eval('.tl-back', (el) => {
+      const st = getComputedStyle(el);
+      const root = getComputedStyle(document.documentElement);
+      return { bg: st.backgroundColor, accentTint: root.getPropertyValue('--accent-tint').trim(), color: st.color };
+    });
+    check('timeline back button uses accent tint', backColors.bg !== 'rgba(0, 0, 0, 0)' && backColors.bg !== 'transparent', JSON.stringify(backColors));
     // Filter to a type with no entries → filtered-empty state.
     await page.click('.tl-chip[data-type="note"]');
     await page.waitForSelector('.tl-empty');

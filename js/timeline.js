@@ -65,7 +65,7 @@ export function timeline() {
     body = `<div class="tl-empty">Nothing matches these filters.</div>`;
   } else {
     body = groups.map((g) => `
-      <div class="tl-day"><h2 class="tl-day-hd">${esc(g.label)}</h2>
+      <div class="tl-day"><h2 class="tl-day-hd"><span>${esc(g.label)}</span><span class="tl-day-ct">${g.items.length}</span></h2>
         <div class="card log">${g.items.map(rowHTML).join('')}</div>
       </div>`).join('');
   }
