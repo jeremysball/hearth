@@ -8,7 +8,7 @@ import (
 )
 
 func TestHandleCreateFamily(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	body := bytes.NewBufferString(`{"babyName":"Mira","birthdate":"2026-01-01","theme":"girl","caregiverName":"Maya"}`)
 	req := httptest.NewRequest("POST", "/api/family", body)
 	rec := httptest.NewRecorder()
@@ -39,7 +39,7 @@ func TestHandleCreateFamily(t *testing.T) {
 }
 
 func TestHandleCreateFamilyRejectsMissingBabyName(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("POST", "/api/family", bytes.NewBufferString(`{}`))
 	rec := httptest.NewRecorder()
 

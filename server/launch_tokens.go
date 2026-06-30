@@ -86,6 +86,7 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 		}
 		setSessionCookie(w, sessToken)
 		log.Printf("launch token redeemed: caregiver=%s family=%s", caregiverID, familyID)
+		logAuthEvent(r, "launch_login", SessionInfo{CaregiverID: caregiverID, FamilyID: familyID})
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})

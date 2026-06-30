@@ -7,7 +7,7 @@ import (
 )
 
 func TestHandleListCaregiversReturnsFamilyMembers(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg2', 'fam1', 'Dad', 'Partner', ?)`, nowISO())
@@ -28,7 +28,7 @@ func TestHandleListCaregiversReturnsFamilyMembers(t *testing.T) {
 }
 
 func TestHandleListCaregiversOnlyReturnsOwnFamily(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famA', ?), ('famB', ?)`, nowISO(), nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA', 'famA', 'Maya', 'Parent', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgB', 'famB', 'Someone Else', 'Parent', ?)`, nowISO())
