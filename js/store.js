@@ -2,6 +2,9 @@
 import { enqueue, mergeById } from './sync.js';
 import { log } from './log.js';
 
+let _syncTrigger = null;
+export function setSyncTrigger(fn) { _syncTrigger = fn; }
+
 const KEY = 'hearth.state.v1';
 
 const DEFAULT = () => ({
@@ -81,6 +84,7 @@ export function addEntry(e) {
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   save();
   enqueue({ url: '/api/entries/' + e.id, method: 'PUT', body: e });
+  if (_syncTrigger) _syncTrigger();
   log.event('store', 'addEntry', e.type, e.id);
   return e;
 }
@@ -88,6 +92,7 @@ export function removeEntry(id) {
   _state.log = _state.log.filter((e) => e.id !== id);
   save();
   enqueue({ url: '/api/entries/' + id, method: 'DELETE' });
+  if (_syncTrigger) _syncTrigger();
   log.event('store', 'removeEntry', id);
 }
 export function updateEntry(id, patch) {
@@ -98,6 +103,7 @@ export function updateEntry(id, patch) {
     save();
     enqueue({ url: '/api/entries/' + id, method: 'PUT', body: e });
   }
+  if (_syncTrigger) _syncTrigger();
   log.event('store', 'updateEntry', id, patch);
   return e;
 }
