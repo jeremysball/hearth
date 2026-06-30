@@ -52,10 +52,15 @@ export function sleep() {
   // SweetSpot schedule — project remaining naps today
   const sched = [];
   const st = derive.status();
+  let priorSleepMin = null;
+  if (st.state === 'awake') {
+    const lastSleep = state().log.filter(e => e.type === 'sleep' && e.end).sort((a, b) => new Date(b.end) - new Date(a.end))[0];
+    if (lastSleep) priorSleepMin = (new Date(lastSleep.end) - new Date(lastSleep.start)) / MIN;
+  }
   let cursor = st.state === 'asleep' ? new Date(st.since.getTime() + 70 * MIN) : new Date(st.since);
   for (let i = 0; i < 4; i++) {
     const pos = wakePosition(cursor);
-    const pred = derive.wakeWindowPrediction(pos);
+    const pred = derive.wakeWindowPrediction(pos, i === 0 ? priorSleepMin : null);
     const from = new Date(cursor.getTime() + pred.midpoint * MIN);
     if (from.getHours() >= 20) break;
     const to = new Date(from.getTime() + 30 * MIN);

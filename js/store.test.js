@@ -404,3 +404,42 @@ test('fmt.clock honors the clock24 setting', async () => {
   state().settings.clock24 = '24h';
   assert.equal(fmt.clock(d), '23:05');
 });
+
+test('wakeWindowPrediction extends midpoint for a preceding long nap', () => {
+  const personal = derive.personalWakeWindow('middle');
+  assert.ok(personal !== null, 'should have personal wake window data');
+  assert.ok(personal.napMedianMin > 0, 'napMedianMin should be computed');
+
+  const baseline = derive.wakeWindowPrediction('middle');
+  const longNap = Math.round(personal.napMedianMin * 2);
+  const withLong = derive.wakeWindowPrediction('middle', longNap);
+
+  assert.ok(withLong.midpoint > baseline.midpoint,
+    `midpoint with long nap (${withLong.midpoint}) should exceed baseline (${baseline.midpoint})`);
+
+  const ratio = withLong.midpoint / baseline.midpoint;
+  assert.ok(ratio >= 0.84 && ratio <= 1.21,
+    `ratio ${ratio.toFixed(3)} should be within [0.85, 1.2] (loosened for Math.round)`);
+});
+
+test('wakeWindowPrediction shrinks midpoint for a preceding short nap', () => {
+  const personal = derive.personalWakeWindow('middle');
+  assert.ok(personal !== null && personal.napMedianMin > 0);
+
+  const baseline = derive.wakeWindowPrediction('middle');
+  const shortNap = Math.round(personal.napMedianMin * 0.5);
+  const withShort = derive.wakeWindowPrediction('middle', shortNap);
+
+  assert.ok(withShort.midpoint < baseline.midpoint,
+    `midpoint with short nap (${withShort.midpoint}) should be below baseline (${baseline.midpoint})`);
+
+  const ratio = withShort.midpoint / baseline.midpoint;
+  assert.ok(ratio >= 0.84 && ratio <= 1.21,
+    `ratio ${ratio.toFixed(3)} should be within [0.85, 1.2] (loosened for Math.round)`);
+});
+
+test('wakeWindowPrediction with no priorSleepMin returns unadjusted midpoint', () => {
+  const pred = derive.wakeWindowPrediction('middle');
+  const predNull = derive.wakeWindowPrediction('middle', null);
+  assert.equal(pred.midpoint, predNull.midpoint);
+});
