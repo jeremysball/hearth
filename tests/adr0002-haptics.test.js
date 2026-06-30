@@ -56,7 +56,10 @@ async function runSuite(base) {
   const win = await (await overlay.$('.spinner-window')).boundingBox();
   const cx = win.x + win.width / 2;
   const cy = win.y + win.height / 2;
-  const itemH = (await (await overlay.$('.spinner-item')).boundingBox()).height;
+  // Read the visible centered (.on) item height. The first .spinner-item in
+  // DOM is ~140° around the drum and updateDrum() scales it to scaleY(0),
+  // so its boundingBox().height is 0 — picking it would make the drag a no-op.
+  const itemH = (await (await overlay.$('.spinner-item.on')).boundingBox()).height;
 
   // Drag up exactly 3 item heights (3 rows) in small steps to ensure row-crossing events fire.
   await page.mouse.move(cx, cy);
