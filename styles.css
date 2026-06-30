@@ -26,7 +26,7 @@ body {
   --accent-soft: oklch(0.86 0.082 50); --accent-tint: oklch(0.905 0.055 54);
   --on-accent: oklch(0.985 0.012 70);
   --good: oklch(0.60 0.10 145); --good-deep: oklch(0.46 0.085 145); --good-halo: oklch(0.87 0.06 142);
-  --good-tint: oklch(0.91 0.05 142 / .5); --ring-track: oklch(0.88 0.028 62);
+  --good-tint: oklch(0.91 0.05 142 / .5); --ring-track: oklch(0.88 0.028 62); --ring-awake: oklch(0.72 0.14 50);
   /* material system — raking amber light, fired clay */
   --mat-highlight: oklch(0.86 0.10 58 / 0.40);
   --mat-shadow:    oklch(0.28 0.09 40 / 0.32);
@@ -72,6 +72,7 @@ body {
 
 /* category tones */
 .sleep,.tone-sleep { --tc: var(--good-deep); --tcb: var(--good-tint); }
+.awake,.tone-awake { --tc: oklch(0.52 0.14 50); --tcb: oklch(0.93 0.09 58); }
 .feed,.tone-feed { --tc: var(--accent-ink); --tcb: var(--accent-soft); }
 .diaper,.tone-diaper { --tc: oklch(0.55 0.08 70); --tcb: oklch(0.93 0.05 78); }
 .med,.tone-med { --tc: oklch(0.5 0.09 35); --tcb: oklch(0.92 0.045 40); }
@@ -424,6 +425,10 @@ body {
 .row-act { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex: 0 0 auto; }
 .row-act.edit { margin-left: auto; color: var(--accent-ink); background: var(--accent-tint); }
 .row-act.del { margin-left: 6px; color: oklch(0.6 0.12 25); background: oklch(0.95 0.03 25); }
+.row-awake { cursor: default; }
+.row-awake:active { background: transparent; transform: none; }
+.row-awake .what { color: var(--muted); font-size: 12px; font-weight: 600; }
+.row-awake .meta { color: var(--muted); font-weight: 600; }
 
 /* ---- page headers ---- */
 .page-hd { padding-top: 6px; }
@@ -440,7 +445,7 @@ body {
   --accent-soft: oklch(0.40 0.07 48); --accent-tint: oklch(0.30 0.04 52);
   --on-accent: oklch(0.20 0.02 50);
   --good: oklch(0.70 0.10 145); --good-deep: oklch(0.58 0.09 145); --good-halo: oklch(0.42 0.07 143);
-  --good-tint: oklch(0.36 0.05 143 / .5); --ring-track: oklch(0.34 0.018 55);
+  --good-tint: oklch(0.36 0.05 143 / .5); --ring-track: oklch(0.34 0.018 55); --ring-awake: oklch(0.65 0.14 50);
 }
 [data-mode="dark"][data-theme="boy"] {
   --page: oklch(0.165 0.060 195); --page-glow: oklch(0.30 0.100 188 / .60);
@@ -451,7 +456,7 @@ body {
   --accent-soft: oklch(0.40 0.06 186); --accent-tint: oklch(0.29 0.035 188);
   --on-accent: oklch(0.19 0.02 190);
   --good: oklch(0.70 0.095 150); --good-deep: oklch(0.58 0.085 150); --good-halo: oklch(0.42 0.06 148);
-  --good-tint: oklch(0.36 0.05 148 / .5); --ring-track: oklch(0.33 0.016 190);
+  --good-tint: oklch(0.36 0.05 148 / .5); --ring-track: oklch(0.33 0.016 190); --ring-awake: oklch(0.65 0.14 50);
 }
 
 /* ---- dayjob theme ---- */
@@ -489,7 +494,7 @@ body {
   --accent-soft: oklch(0.36 0.08 18); --accent-tint: oklch(0.24 0.05 18);
   --on-accent: oklch(0.18 0.02 70);
   --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
-  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);
+  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80); --ring-awake: oklch(0.65 0.14 50);
 }
 [data-mode="dark"][data-theme="dayjob-boy"] {
   --page: oklch(0.18 0.034 70); --page-glow: oklch(0.28 0.068 70 / .52);
@@ -500,7 +505,7 @@ body {
   --accent-soft: oklch(0.34 0.07 218); --accent-tint: oklch(0.24 0.05 220);
   --on-accent: oklch(0.18 0.015 220);
   --good: oklch(0.56 0.08 135); --good-deep: oklch(0.46 0.07 135); --good-halo: oklch(0.38 0.06 135);
-  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80);
+  --good-tint: oklch(0.22 0.04 135 / .5); --ring-track: oklch(0.32 0.015 80); --ring-awake: oklch(0.65 0.14 50);
 }
 [data-mode="dark"] {
   --bg: oklch(0.190 0.068 47); --surface: oklch(0.240 0.060 47);
@@ -534,6 +539,7 @@ body[data-mode="dark"] {
 [data-mode="dark"] .diaper, [data-mode="dark"] .tone-diaper { --tc: oklch(0.80 0.12 70);  --tcb: oklch(0.22 0.06 68);  }
 [data-mode="dark"] .med,    [data-mode="dark"] .tone-med    { --tc: oklch(0.78 0.12 35);  --tcb: oklch(0.22 0.06 33);  }
 [data-mode="dark"] .note,   [data-mode="dark"] .tone-note   { --tc: oklch(0.75 0.02 55);  --tcb: oklch(0.24 0.02 52);  }
+[data-mode="dark"] .awake,  [data-mode="dark"] .tone-awake  { --tc: oklch(0.80 0.13 52);  --tcb: oklch(0.24 0.09 50);  }
 [data-mode="dark"] .card {
   background-image:
     radial-gradient(ellipse at 15% 92%, oklch(0.55 0.20 42 / 0.28), transparent 60%),
