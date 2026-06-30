@@ -5,9 +5,60 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
+
+type logStyle struct {
+	enabled bool
+}
+
+var currentLogStyle = newLogStyle()
+
+func newLogStyle() logStyle {
+	return logStyle{enabled: isTerminal(os.Stderr)}
+}
+
+func isTerminal(f *os.File) bool {
+	info, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
+}
+
+func (s logStyle) color(code, value string) string {
+	if !s.enabled {
+		return value
+	}
+	return "\x1b[" + code + "m" + value + "\x1b[0m"
+}
+
+func (s logStyle) event(value string) string {
+	switch value {
+	case "auth":
+		return s.color("35", value)
+	case "geoip":
+		return s.color("36", value)
+	default:
+		return value
+	}
+}
+
+func (s logStyle) status(status int) string {
+	value := fmt.Sprintf("status=%d", status)
+	switch {
+	case status >= 500:
+		return s.color("31", value)
+	case status >= 400:
+		return s.color("33", value)
+	case status >= 300:
+		return s.color("36", value)
+	default:
+		return s.color("32", value)
+	}
+}
 
 type requestLogInfo struct {
 	Method    string
@@ -28,14 +79,14 @@ type requestLogInfo struct {
 
 func logRequest(info requestLogInfo) {
 	fields := []string{
-		"request",
+		currentLogStyle.event("request"),
 		"method=" + sanitizeLogValue(info.Method),
-		"path=" + sanitizeLogValue(info.Path),
-		fmt.Sprintf("status=%d", info.Status),
+		currentLogStyle.status(info.Status),
 		"duration=" + info.Duration.Round(time.Millisecond).String(),
-		"host=" + sanitizeLogValue(info.Host),
+		"path=" + sanitizeLogValue(info.Path),
 		"ip=" + sanitizeLogValue(info.IP),
 		"remote=" + sanitizeLogValue(info.Remote),
+		"host=" + sanitizeLogValue(info.Host),
 	}
 	fields = appendIfSet(fields, "xff", normalizeListHeader(info.XFF))
 	fields = appendIfSet(fields, "xreal", info.XRealIP)
@@ -52,7 +103,7 @@ func logRequest(info requestLogInfo) {
 func logAuthEvent(r *http.Request, event string, session SessionInfo) {
 	origin := requestOrigin(r)
 	fields := []string{
-		"auth",
+		currentLogStyle.event("auth"),
 		"event=" + sanitizeLogValue(event),
 		"ip=" + sanitizeLogValue(origin.IP),
 		"remote=" + sanitizeLogValue(origin.Remote),
@@ -111,7 +162,7 @@ func mergeGeoInfo(primary, fallback geoInfo) geoInfo {
 }
 
 func appendIfSet(fields []string, key, value string) []string {
-	value = sanitizeLogValue(value)
+	value = sanitizeLogValueOnce(value)
 	if value == "" {
 		return fields
 	}
@@ -127,7 +178,14 @@ func normalizeListHeader(value string) string {
 }
 
 func sanitizeLogValue(value string) string {
+	return sanitizeLogValueOnce(value)
+}
+
+func sanitizeLogValueOnce(value string) string {
 	value = strings.TrimSpace(value)
+	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		return value
+	}
 	value = strings.ReplaceAll(value, "\n", " ")
 	value = strings.ReplaceAll(value, "\r", " ")
 	value = strings.ReplaceAll(value, "\t", " ")

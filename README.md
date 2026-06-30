@@ -109,7 +109,7 @@ Without `STATIC_DIR`, the server serves the frontend baked in at the last Go bui
 
 ### Server logs
 
-The server logs to stdout. On startup: db path, static mode, optional GeoIP database path, and address. Every API request logs structured fields: method, path, status, duration, host, client IP, remote IP, proxy headers, user agent, caregiver ID, family ID, and available GeoIP fields. Static file errors (4xx/5xx) are logged; successful asset fetches are silent.
+The server logs through Go's standard logger. On startup: db path, static mode, optional GeoIP database path, and address. Every API request logs structured fields ordered for scanning: method, status, duration, path, client IP, remote IP, host, proxy headers, user agent, caregiver ID, family ID, and available GeoIP fields. Static file errors (4xx/5xx) are logged; successful asset fetches are silent. Status and auth events are colorized only when the log stream is an interactive terminal; redirected files and systemd logs stay plain text.
 
 Auth events log as `auth event=...` with caregiver ID, family ID, and origin IP. Events include signup, invite join, launch-token login, OAuth link/restore/signup, OAuth conflict resolution, and signout. Logs never include session tokens.
 

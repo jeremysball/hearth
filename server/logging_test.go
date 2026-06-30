@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func captureLogs(t *testing.T) *bytes.Buffer {
@@ -147,5 +148,64 @@ func TestRequestLogOmitsGeoFieldsWhenUnavailable(t *testing.T) {
 		if strings.Contains(line, unexpected) {
 			t.Fatalf("log contained unexpected %q in %q", unexpected, line)
 		}
+	}
+}
+
+func TestLogRequestOrdersFieldsForScanning(t *testing.T) {
+	logs := captureLogs(t)
+	prev := currentLogStyle
+	currentLogStyle = logStyle{}
+	t.Cleanup(func() { currentLogStyle = prev })
+
+	logRequest(requestLogInfo{
+		Method:   "GET",
+		Path:     "/api/me",
+		Status:   http.StatusOK,
+		Duration: 82 * time.Millisecond,
+		Host:     "hearth.example",
+		IP:       "203.0.113.7",
+		Remote:   "198.51.100.10",
+		Geo:      geoInfo{City: "New York"},
+	})
+
+	line := logs.String()
+	wantOrder := []string{"request", "method=GET", "status=200", "duration=82ms", "path=/api/me", "ip=203.0.113.7", "remote=198.51.100.10", "host=hearth.example", `geo_city="New York"`}
+	last := -1
+	for _, want := range wantOrder {
+		idx := strings.Index(line, want)
+		if idx < 0 {
+			t.Fatalf("log missing %q in %q", want, line)
+		}
+		if idx <= last {
+			t.Fatalf("%q appeared out of order in %q", want, line)
+		}
+		last = idx
+	}
+	if strings.Contains(line, `geo_city="\"New York\""`) {
+		t.Fatalf("geo city was double-sanitized in %q", line)
+	}
+}
+
+func TestLogStyleColorsOnlyWhenEnabled(t *testing.T) {
+	plain := logStyle{}
+	if got := plain.status(http.StatusInternalServerError); got != "status=500" {
+		t.Fatalf("plain status = %q", got)
+	}
+	if got := plain.event("auth"); got != "auth" {
+		t.Fatalf("plain event = %q", got)
+	}
+
+	colored := logStyle{enabled: true}
+	if got := colored.status(http.StatusOK); got != "\x1b[32mstatus=200\x1b[0m" {
+		t.Fatalf("colored 200 = %q", got)
+	}
+	if got := colored.status(http.StatusNotFound); got != "\x1b[33mstatus=404\x1b[0m" {
+		t.Fatalf("colored 404 = %q", got)
+	}
+	if got := colored.status(http.StatusInternalServerError); got != "\x1b[31mstatus=500\x1b[0m" {
+		t.Fatalf("colored 500 = %q", got)
+	}
+	if got := colored.event("auth"); got != "\x1b[35mauth\x1b[0m" {
+		t.Fatalf("colored auth = %q", got)
 	}
 }
