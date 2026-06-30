@@ -6,6 +6,18 @@ import { router } from './app.js';
 let _granted = false;
 let _scheduled = {};
 
+const NOTIFIED_KEY = 'hearth.notified.v1';
+
+function loadNotified() {
+  try { return new Map(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]')); }
+  catch { return new Map(); }
+}
+function saveNotified(m) {
+  const cutoff = Date.now() - 12 * 3600000;
+  const entries = [...m.entries()].filter(([, at]) => at > cutoff);
+  localStorage.setItem(NOTIFIED_KEY, JSON.stringify(entries));
+}
+
 export function notify(title, body) {
   if (!_granted || !('serviceWorker' in navigator)) return Promise.resolve(false);
   // Chrome for Android never implements `new Notification()` (throws "Illegal
@@ -37,14 +49,20 @@ export function scheduleReminders() {
   const now = Date.now();
   const quietStart = timeToMs(r.quietStart || '20:00');
   const quietEnd = timeToMs(r.quietEnd || '07:00');
+  const notified = loadNotified();
   reminders.forEach((rem) => {
+    const notifiedKey = rem.key + ':' + rem.at;
+    if (notified.has(notifiedKey)) return;
     const delay = rem.at - now;
-    if (delay < 0 || delay > 12 * 3600000) return; // only schedule within 12h
+    if (delay > 12 * 3600000) return;  // keep the 12h future cap
     if (isQuiet(rem.at, quietStart, quietEnd)) return;
     _scheduled[rem.key] = setTimeout(() => {
       notify(rem.title, rem.body);
       delete _scheduled[rem.key];
-    }, delay);
+      const n = loadNotified();
+      n.set(notifiedKey, rem.at);
+      saveNotified(n);
+    }, Math.max(0, delay));  // clamp — fires immediately if past-due
   });
 }
 
