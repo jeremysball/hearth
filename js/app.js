@@ -1,5 +1,5 @@
 // app.js — shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger } from './store.js';
 import { drainOutbox, getLastSync, setLastSync } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
@@ -664,5 +664,6 @@ function connectEvents() {
 
 window.addEventListener('online', syncOnce);
 setInterval(syncOnce, 30000);
+setSyncTrigger(() => { drainOutbox(); syncOnce(); });
 
 document.addEventListener('DOMContentLoaded', init);
