@@ -89,24 +89,44 @@ async function runSuite(base) {
   });
   const { cx, cy } = screenBox;
 
+  // The #ptr element is revealed via inline transform: translateY(dist - PTR_WRAP_H)
+  // (PTR_WRAP_H = 92). style.height is never set, so we parse the translateY value
+  // out of the inline transform. Collapsed = -92 (or empty inline → CSS translateY(-100%)).
+  // The transform is driven by requestAnimationFrame inside ptrUpdate(), so we poll
+  // briefly rather than read once — a single read can race the frame in headless Chromium.
+  const readPtrY = () => page.$eval('#ptr', el => {
+    const m = (el.style.transform || '').match(/translateY\(([-0-9.]+)px\)/);
+    return m ? parseFloat(m[1]) : -92;
+  });
+  async function pollPtrY(pred, timeoutMs = 500) {
+    const deadline = Date.now() + timeoutMs;
+    let y = await readPtrY();
+    while (Date.now() < deadline && !pred(y)) {
+      await page.waitForTimeout(20);
+      y = await readPtrY();
+    }
+    return y;
+  }
+
   // Pull 30px (below PTR_THRESHOLD of 70px).
   await touchPtrEvent(page, 'pointerdown', cx, cy, 1);
   await touchPtrEvent(page, 'pointermove', cx, cy + 20, 1);
   await touchPtrEvent(page, 'pointermove', cx, cy + 30, 1);
-  await page.waitForTimeout(50);
-
-  const ptrHeight30 = await page.$eval('#ptr', el => parseFloat(el.style.height) || 0);
-  console.log('  #ptr height at 30px raw pull:', ptrHeight30);
-  check('#ptr has positive height during short pull', ptrHeight30 > 0, ptrHeight30);
+  const ptrYAt30 = await pollPtrY(y => y > -92);
+  console.log('  #ptr translateY at 30px raw pull:', ptrYAt30);
+  check('#ptr has positive height during short pull', ptrYAt30 > -92, ptrYAt30);
 
   await touchPtrEvent(page, 'pointerup', cx, cy + 30, 1);
   await page.waitForTimeout(400);
 
-  const ptrHeightAfter = await page.$eval('#ptr', el => parseFloat(el.style.height) || 0);
+  const ptrYAfter = await page.$eval('#ptr', el => {
+    const m = (el.style.transform || '').match(/translateY\(([-0-9.]+)px\)/);
+    return m ? parseFloat(m[1]) : -92;
+  });
   const vibsShort = await page.evaluate(() => window.__vibrations);
   const syncCalledShort = await page.evaluate(() => window.__syncCalled);
-  console.log('  #ptr height after release:', ptrHeightAfter, 'vibrations:', vibsShort, 'sync called:', syncCalledShort);
-  check('#ptr collapses to 0 after below-threshold release', ptrHeightAfter === 0, ptrHeightAfter);
+  console.log('  #ptr translateY after release:', ptrYAfter, 'vibrations:', vibsShort, 'sync called:', syncCalledShort);
+  check('#ptr collapses to 0 after below-threshold release', ptrYAfter <= 0, ptrYAfter);
   check('no vibration on below-threshold pull', vibsShort.length === 0, vibsShort.length);
   check('no sync on below-threshold pull', !syncCalledShort);
 
@@ -132,8 +152,11 @@ async function runSuite(base) {
 
   // Indicator should collapse after sync
   await page.waitForTimeout(500);
-  const ptrHeightPost = await page.$eval('#ptr', el => parseFloat(el.style.height) || 0);
-  check('#ptr collapses to 0 after sync completes', ptrHeightPost === 0, ptrHeightPost);
+  const ptrYPost = await page.$eval('#ptr', el => {
+    const m = (el.style.transform || '').match(/translateY\(([-0-9.]+)px\)/);
+    return m ? parseFloat(m[1]) : -92;
+  });
+  check('#ptr collapses to 0 after sync completes', ptrYPost <= 0, ptrYPost);
 
   // ---------- PTR does not fire when screen is scrolled down ----------
   console.log('\n--- PTR: no trigger when screen is scrolled ---');
@@ -151,9 +174,12 @@ async function runSuite(base) {
   }
   await touchPtrEvent(page, 'pointerup', cx, cy + 120, 3);
   await page.waitForTimeout(300);
-  const ptrWhenScrolled = await page.$eval('#ptr', el => parseFloat(el.style.height) || 0);
-  console.log('  #ptr height when screen scrolled (should be 0):', ptrWhenScrolled);
-  check('#ptr does not trigger when screen is scrolled', ptrWhenScrolled === 0, ptrWhenScrolled);
+  const ptrYWhenScrolled = await page.$eval('#ptr', el => {
+    const m = (el.style.transform || '').match(/translateY\(([-0-9.]+)px\)/);
+    return m ? parseFloat(m[1]) : -92;
+  });
+  console.log('  #ptr translateY when screen scrolled (should be <=0):', ptrYWhenScrolled);
+  check('#ptr does not trigger when screen is scrolled', ptrYWhenScrolled <= 0, ptrYWhenScrolled);
 
   // Reset scroll
   await page.evaluate(() => { const s = document.querySelector('.screen'); if (s) s.scrollTop = 0; });
@@ -176,12 +202,15 @@ async function runSuite(base) {
 
   // Wait past the 4s timeout
   await page.waitForTimeout(4400);
-  const ptrAfterTimeout = await page.$eval('#ptr', el => ({
-    height: parseFloat(el.style.height) || 0,
-    spinning: el.classList.contains('ptr-spinning')
-  }));
+  const ptrAfterTimeout = await page.$eval('#ptr', el => {
+    const m = (el.style.transform || '').match(/translateY\(([-0-9.]+)px\)/);
+    return {
+      y: m ? parseFloat(m[1]) : -92,
+      spinning: el.classList.contains('ptr-spinning')
+    };
+  });
   console.log('  #ptr after 4.4s timeout:', ptrAfterTimeout);
-  check('#ptr collapses after 4s timeout', ptrAfterTimeout.height === 0, ptrAfterTimeout.height);
+  check('#ptr collapses after 4s timeout', ptrAfterTimeout.y <= 0, ptrAfterTimeout.y);
   check('ptr-spinning class removed after timeout', !ptrAfterTimeout.spinning);
 
   const exitCode = tally() === 0 ? 0 : 1;
