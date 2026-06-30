@@ -6,7 +6,6 @@
 const { execSync, spawn } = require('child_process');
 const { existsSync, readdirSync } = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
 const BIN = path.join(ROOT, 'hearth-server');
@@ -24,11 +23,6 @@ function buildServer() {
     buildServer();
   }
 
-  const launchOpts = { args: ['--no-sandbox', '--ignore-certificate-errors'] };
-  if (process.env.CHROMIUM) launchOpts.executablePath = process.env.CHROMIUM;
-  const browserServer = await chromium.launchServer(launchOpts);
-  const wsEndpoint = browserServer.wsEndpoint();
-
   console.log('Running ' + SUITES.length + ' suites (' + CONCURRENCY + ' parallel)\n');
 
   const results = new Array(SUITES.length).fill(null);
@@ -39,7 +33,7 @@ function buildServer() {
       while (next < SUITES.length) {
         const i = next++;
         process.stdout.write('starting ' + SUITES[i] + ' on port ' + (BASE_PORT + i) + '\n');
-        results[i] = await runSuite(SUITES[i], BASE_PORT + i, wsEndpoint);
+        results[i] = await runSuite(SUITES[i], BASE_PORT + i);
       }
     })
   );
@@ -50,17 +44,16 @@ function buildServer() {
     if (code !== 0 && exitCode === 0) exitCode = code;
   }
 
-  await browserServer.close();
   process.exit(exitCode);
 })().catch((e) => { console.error(e); process.exit(1); });
 
-function runSuite(suite, port, wsEndpoint) {
+function runSuite(suite, port) {
   return new Promise((resolve) => {
     const chunks = ['\n=== Running ' + suite + ' ===\n'];
     const p = spawn('node', [path.join(__dirname, suite)], {
       stdio: 'pipe',
       cwd: ROOT,
-      env: { ...process.env, TEST_PORT: String(port), PLAYWRIGHT_WS_ENDPOINT: wsEndpoint },
+      env: { ...process.env, TEST_PORT: String(port) },
     });
     p.stdout.on('data', (d) => chunks.push(d.toString()));
     p.stderr.on('data', (d) => chunks.push(d.toString()));
