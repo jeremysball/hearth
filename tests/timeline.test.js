@@ -24,12 +24,17 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('timeline groups under a Today header', todayInfo && todayInfo.label === 'Today', JSON.stringify(todayInfo));
     check('timeline shows the Today entry count', todayInfo && Number(todayInfo.count) >= 1, JSON.stringify(todayInfo));
 
-    const backColors = await page.$eval('.tl-back', (el) => {
+    const backUsesAccentTint = await page.$eval('.tl-back', (el) => {
       const st = getComputedStyle(el);
-      const root = getComputedStyle(document.documentElement);
-      return { bg: st.backgroundColor, accentTint: root.getPropertyValue('--accent-tint').trim(), color: st.color };
+      const temp = document.createElement('div');
+      temp.style.display = 'none';
+      temp.style.backgroundColor = 'var(--accent-tint)';
+      document.body.appendChild(temp);
+      const computedAccent = getComputedStyle(temp).backgroundColor;
+      document.body.removeChild(temp);
+      return st.backgroundColor === computedAccent;
     });
-    check('timeline back button uses accent tint', backColors.bg !== 'rgba(0, 0, 0, 0)' && backColors.bg !== 'transparent', JSON.stringify(backColors));
+    check('timeline back button uses accent tint', backUsesAccentTint, 'expected .tl-back background to match var(--accent-tint)');
     // Filter to a type with no entries → filtered-empty state.
     await page.click('.tl-chip[data-type="note"]');
     await page.waitForSelector('.tl-empty');
