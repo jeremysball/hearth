@@ -225,7 +225,7 @@ function bottleCard() {
     <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">Next bottle · every ${state().settings.bottleIntervalH}h</div>
-      <div class="ic-val">${fmt.clock(nb.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(nb.due)}</span></div>
+      <div class="ic-val">${fmt.clock(nb.due)} <span class="ic-rel">${fmt.untilOrAgo(nb.due)}</span></div>
     </div>
     ${icEdit('bottle')}
   </div>`;
@@ -244,9 +244,8 @@ function medicineCard() {
   let val, lbl;
   if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
   else {
-    const overdue = next.due < new Date();
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
-    val = `${fmt.clock(next.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(next.due)}</span>`;
+    val = `${fmt.clock(next.due)} <span class="ic-rel">${fmt.untilOrAgo(next.due)}</span>`;
   }
   return `<div class="info-card" ${action} data-card="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
@@ -264,7 +263,7 @@ function genericCard(type) {
     <div class="ic-ring tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">Next ${esc(c.label.toLowerCase())} · every ${n.intervalH}h</div>
-      <div class="ic-val">${fmt.clock(n.due)} <span class="ic-rel">${overdue ? 'due now' : fmt.untilOrAgo(n.due)}</span></div>
+      <div class="ic-val">${fmt.clock(n.due)} <span class="ic-rel">${fmt.untilOrAgo(n.due)}</span></div>
     </div>
     ${icEdit(type)}
   </div>`;
