@@ -209,10 +209,18 @@ test('wakeWindowRange returns correct bracket for a 4-month-old', () => {
   const bd = new Date();
   bd.setMonth(bd.getMonth() - 4);
   applySyncResponse({ baby: { birthdate: bd.toISOString().slice(0, 10) }, settings: null, entries: [], growth: [] });
-  const r = wakeWindowRange('first'); // 3–5m bracket: first=[80,110]
-  assert.equal(r.low, 80);
-  assert.equal(r.high, 110);
-  assert.equal(r.midpoint, 95);
+  const r = wakeWindowRange('first'); // 3–5m bracket: first=[70,95]
+  assert.equal(r.low, 70);
+  assert.equal(r.high, 95);
+  assert.equal(r.midpoint, 83);
+});
+
+test('wakeWindowRange first window is shorter than middle for infants', () => {
+  // 4 months old — maxMonths:5 row has first=[70,95], middle=[80,110]
+  const f = wakeWindowRange('first');
+  const m = wakeWindowRange('middle');
+  assert.ok(f.midpoint < m.midpoint,
+    `first midpoint (${f.midpoint}) should be less than middle midpoint (${m.midpoint})`);
 });
 
 test('derive.sweetSpot() from/to match prediction low/high', () => {

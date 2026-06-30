@@ -195,12 +195,12 @@ export function ageLabel() {
 // Population wake window ranges from Dubief, per day position and age bracket.
 // Each row covers ages < maxMonths; [low, high] in minutes.
 const WAKE_WINDOW_TABLE = [
-  { maxMonths:  1, first: [40, 60],   middle: [40, 60],   last: [50, 75]   },
-  { maxMonths:  3, first: [60, 80],   middle: [60, 80],   last: [75, 100]  },
-  { maxMonths:  5, first: [80, 110],  middle: [80, 110],  last: [105, 140] },
-  { maxMonths:  7, first: [110, 140], middle: [110, 140], last: [140, 180] },
-  { maxMonths: 10, first: [140, 170], middle: [140, 170], last: [180, 215] },
-  { maxMonths: 13, first: [170, 200], middle: [170, 200], last: [215, 250] },
+  { maxMonths:  1, first: [35, 50],   middle: [40, 60],   last: [50, 75]   },
+  { maxMonths:  3, first: [50, 70],   middle: [60, 80],   last: [75, 100]  },
+  { maxMonths:  5, first: [70, 95],   middle: [80, 110],  last: [105, 140] },
+  { maxMonths:  7, first: [95, 120],  middle: [110, 140], last: [140, 180] },
+  { maxMonths: 10, first: [120, 145], middle: [140, 170], last: [180, 215] },
+  { maxMonths: 13, first: [145, 170], middle: [170, 200], last: [215, 250] },
   { maxMonths: Infinity, first: [190, 240], middle: [190, 240], last: [190, 240] },
 ];
 
