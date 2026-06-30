@@ -58,3 +58,7 @@ export function mergeById(localList, incoming) {
   }
   return [...byId.values()];
 }
+
+export function syncChangeCount(resp) {
+  return (resp.entries?.length || 0) + (resp.growth?.length || 0);
+}
