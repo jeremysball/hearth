@@ -11,12 +11,20 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     const themes = await page.$$eval('.theme-opt', (els) => els.map((el) => el.dataset.theme));
     check('onboarding shows four theme choices', themes.join(',') === 'girl,boy,dayjob-girl,dayjob-boy', themes.join(','));
 
+    const expectedColors = {
+      girl: '#f3eee0',
+      boy: '#eef0e4',
+      'dayjob-girl': '#f3ead9',
+      'dayjob-boy': '#f3ead9'
+    };
     for (const theme of themes) {
       await page.click(`.theme-opt[data-theme="${theme}"]`);
       const bodyTheme = await page.evaluate(() => document.body.dataset.theme);
       const selected = await page.$eval(`.theme-opt[data-theme="${theme}"]`, (el) => el.classList.contains('on'));
+      const themeColorMeta = await page.$eval('meta[name="theme-color"]', (el) => el.content);
       check('theme preview updates for ' + theme, bodyTheme === theme, bodyTheme);
       check('selected state updates for ' + theme, selected);
+      check('theme-color meta for ' + theme, themeColorMeta === expectedColors[theme], themeColorMeta);
     }
 
     const tagline = await page.$eval('.onb-tagline', (el) => ({
