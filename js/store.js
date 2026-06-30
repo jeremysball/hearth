@@ -195,12 +195,12 @@ export function ageLabel() {
 // Population wake window ranges from Dubief, per day position and age bracket.
 // Each row covers ages < maxMonths; [low, high] in minutes.
 const WAKE_WINDOW_TABLE = [
-  { maxMonths:  1, first: [40, 60],   middle: [40, 60],   last: [50, 75]   },
-  { maxMonths:  3, first: [60, 80],   middle: [60, 80],   last: [75, 100]  },
-  { maxMonths:  5, first: [80, 110],  middle: [80, 110],  last: [105, 140] },
-  { maxMonths:  7, first: [110, 140], middle: [110, 140], last: [140, 180] },
-  { maxMonths: 10, first: [140, 170], middle: [140, 170], last: [180, 215] },
-  { maxMonths: 13, first: [170, 200], middle: [170, 200], last: [215, 250] },
+  { maxMonths:  1, first: [35, 50],   middle: [40, 60],   last: [50, 75]   },
+  { maxMonths:  3, first: [50, 70],   middle: [60, 80],   last: [75, 100]  },
+  { maxMonths:  5, first: [70, 95],   middle: [80, 110],  last: [105, 140] },
+  { maxMonths:  7, first: [95, 120],  middle: [110, 140], last: [140, 180] },
+  { maxMonths: 10, first: [120, 145], middle: [140, 170], last: [180, 215] },
+  { maxMonths: 13, first: [145, 170], middle: [170, 200], last: [215, 250] },
   { maxMonths: Infinity, first: [190, 240], middle: [190, 240], last: [190, 240] },
 ];
 
@@ -391,6 +391,7 @@ export const derive = {
     // ss is newest-first; wake window i = interval between ss[i+1].end → ss[i].start
     const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs);
     const observations = [];
+    const priorSleeps = [];
     for (let i = 0; i < ss.length - 1; i++) {
       const wakeStart = new Date(ss[i + 1].end);
       const wakeEnd   = new Date(ss[i].start);
@@ -399,6 +400,8 @@ export const derive = {
       if (wakeMin < 10 || wakeMin > 360) continue; // sanity bounds
       if (wakePosition(wakeStart) !== position) continue;
       observations.push({ value: wakeMin, weight: recencyWeight(wakeStart, now) });
+      const priorDur = (new Date(ss[i + 1].end) - new Date(ss[i + 1].start)) / MIN;
+      priorSleeps.push({ value: priorDur, weight: recencyWeight(wakeStart, now) });
     }
     if (observations.length < 7) return null;
     return {
@@ -406,13 +409,14 @@ export const derive = {
       p25:    Math.round(weightedPercentile(observations, 0.25)),
       p75:    Math.round(weightedPercentile(observations, 0.75)),
       sampleSize: observations.length,
+      napMedianMin: priorSleeps.length ? Math.round(weightedMedian(priorSleeps)) : 0,
     };
   },
   // Blended wake window prediction. Uses population data until 7 personal
   // observations accumulate, then smoothly shifts toward personal data.
   // At n=30 the personal signal reaches 90% weight; population acts as a
   // sanity check at all times.
-  wakeWindowPrediction(position = 'middle') {
+  wakeWindowPrediction(position = 'middle', priorSleepMin = null) {
     const pop = wakeWindowRange(position);
     const personal = derive.personalWakeWindow(position);
     if (!personal) {
@@ -425,8 +429,15 @@ export const derive = {
     // Clamp: personal signal must stay within 0.5×–2× population midpoint.
     if (midpoint < pop.midpoint * 0.5) midpoint = pop.low;
     if (midpoint > pop.midpoint * 2)   midpoint = pop.high;
-    const low  = Math.round(w_p * personal.p25 + w_pop * pop.low);
-    const high = Math.round(w_p * personal.p75 + w_pop * pop.high);
+    let low  = Math.round(w_p * personal.p25 + w_pop * pop.low);
+    let high = Math.round(w_p * personal.p75 + w_pop * pop.high);
+    if (priorSleepMin && personal && personal.napMedianMin > 0) {
+      const ratio = priorSleepMin / personal.napMedianMin;
+      const factor = Math.min(1.2, Math.max(0.85, 1 + 0.25 * (ratio - 1)));
+      midpoint = Math.round(midpoint * factor);
+      low = Math.round(low * factor);
+      high = Math.round(high * factor);
+    }
     const source = w_p >= 0.9 ? 'personal' : 'blend';
     const name = state().baby.name || 'your baby';
     const label = w_p >= 0.9
