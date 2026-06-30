@@ -12,7 +12,7 @@ export function onboarding() {
   return `<div class="onboard">
     <div class="onb-top">
       <img src="icons/hearth-logo.svg" class="onb-logo" alt="Hearth" />
-      <p class="onb-sub onb-tagline">A calm home for your baby's days. <br>Let's set things up.</p>
+      <p class="onb-sub onb-tagline">A calm home for your baby's days.&nbsp;<br>Let's set things up.</p>
     </div>
 
     <div class="onb-card">
