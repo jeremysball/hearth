@@ -29,9 +29,11 @@ func handleMe(db *sql.DB) http.HandlerFunc {
 
 func handleSignout(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		session := sessionFrom(r)
 		if c, err := r.Cookie(sessionCookieName); err == nil {
 			db.Exec(`DELETE FROM sessions WHERE token = ?`, c.Value)
 		}
+		logAuthEvent(r, "signout", session)
 		http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Path: "/", MaxAge: -1})
 		w.WriteHeader(http.StatusNoContent)
 	}
