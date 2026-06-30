@@ -10,7 +10,7 @@ import (
 )
 
 func TestHandleUpsertEntryCreates(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	hub := newHub()
 
@@ -34,7 +34,7 @@ func TestHandleUpsertEntryCreates(t *testing.T) {
 }
 
 func TestHandleUpsertEntryUpdatesExisting(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	hub := newHub()
 
@@ -61,7 +61,7 @@ func TestHandleUpsertEntryUpdatesExisting(t *testing.T) {
 }
 
 func TestHandleUpsertEntryIgnoresCrossFamilyCollision(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famA', ?), ('famB', ?)`, nowISO(), nowISO())
 	hub := newHub()
 
@@ -83,7 +83,7 @@ func TestHandleUpsertEntryIgnoresCrossFamilyCollision(t *testing.T) {
 }
 
 func TestHandleUpsertEntryRejectsMissingType(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	hub := newHub()
 	req := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"start":"2026-06-23T10:00:00Z"}`))
 	req.SetPathValue("id", "e1")
@@ -98,7 +98,7 @@ func TestHandleUpsertEntryRejectsMissingType(t *testing.T) {
 }
 
 func TestHandleDeleteEntrySoftDeletes(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	hub := newHub()
 	now := nowISO()
@@ -122,7 +122,7 @@ func TestHandleDeleteEntrySoftDeletes(t *testing.T) {
 }
 
 func TestHandleDeleteEntryNotFound(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	hub := newHub()
 	req := httptest.NewRequest("DELETE", "/api/entries/nope", nil)
 	req.SetPathValue("id", "nope")

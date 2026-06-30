@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandleUpsertGrowthCreates(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	hub := newHub()
 
@@ -33,7 +33,7 @@ func TestHandleUpsertGrowthCreates(t *testing.T) {
 }
 
 func TestHandleUpsertGrowthRejectsMissingDate(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	hub := newHub()
 	req := httptest.NewRequest("PUT", "/api/growth/g1", bytes.NewBufferString(`{"weightKg":7.3}`))
 	req.SetPathValue("id", "g1")
@@ -48,7 +48,7 @@ func TestHandleUpsertGrowthRejectsMissingDate(t *testing.T) {
 }
 
 func TestHandleDeleteGrowthSoftDeletes(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	hub := newHub()
 	now := nowISO()
@@ -72,7 +72,7 @@ func TestHandleDeleteGrowthSoftDeletes(t *testing.T) {
 }
 
 func TestHandleDeleteGrowthNotFound(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	hub := newHub()
 	req := httptest.NewRequest("DELETE", "/api/growth/nope", nil)
 	req.SetPathValue("id", "nope")

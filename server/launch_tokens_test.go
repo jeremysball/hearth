@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandleCreateLaunchTokenRequiresAuth(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("POST", "/api/launch-tokens", nil)
 	rec := httptest.NewRecorder()
 
@@ -21,7 +21,7 @@ func TestHandleCreateLaunchTokenRequiresAuth(t *testing.T) {
 }
 
 func TestHandleCreateLaunchTokenReturnsToken(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	sessToken, _ := createSession(db, "cg1", "fam1")
 
@@ -51,7 +51,7 @@ func TestHandleCreateLaunchTokenReturnsToken(t *testing.T) {
 }
 
 func TestHandleRedeemLaunchTokenNotFound(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	req := httptest.NewRequest("GET", "/api/launch/nope", nil)
 	req.SetPathValue("token", "nope")
 	rec := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestHandleRedeemLaunchTokenNotFound(t *testing.T) {
 }
 
 func TestHandleRedeemLaunchTokenExpired(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
 	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at) VALUES ('lt1', 'cg1', 'fam1', ?)`,
@@ -82,7 +82,7 @@ func TestHandleRedeemLaunchTokenExpired(t *testing.T) {
 }
 
 func TestHandleRedeemLaunchTokenAlreadyUsed(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
 	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at, used_at) VALUES ('lt1', 'cg1', 'fam1', ?, ?)`,
@@ -100,7 +100,7 @@ func TestHandleRedeemLaunchTokenAlreadyUsed(t *testing.T) {
 }
 
 func TestHandleRedeemLaunchTokenSetsSessionCookieAndMarksUsed(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
 	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at) VALUES ('lt1', 'cg1', 'fam1', ?)`,
