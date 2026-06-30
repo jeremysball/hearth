@@ -94,6 +94,7 @@ func handleJoinInvite(db *sql.DB) http.HandlerFunc {
 		}
 		setSessionCookie(w, sessToken)
 		log.Printf("caregiver joined: name=%q family=%s", caregiverName, familyID)
+		logAuthEvent(r, "invite_join", SessionInfo{CaregiverID: caregiverID, FamilyID: familyID})
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(joinInviteResponse{FamilyID: familyID, CaregiverID: caregiverID})

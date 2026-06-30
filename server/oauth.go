@@ -133,6 +133,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 				return
 			}
 			setSessionCookie(w, token)
+			logAuthEvent(r, "oauth_"+res.Kind, SessionInfo{CaregiverID: res.CaregiverID, FamilyID: res.FamilyID})
 			http.Redirect(w, r, "/?auth=ok", http.StatusFound)
 		case "conflict":
 			pending := newID()
@@ -145,4 +146,3 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		}
 	}
 }
-

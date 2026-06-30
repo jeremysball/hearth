@@ -14,6 +14,10 @@ type Config struct {
 	DBPath    string
 	StaticDir string
 
+	GeoIPEnabled      bool
+	GeoIPDBPath       string
+	MaxMindLicenseKey string
+
 	PublicBaseURL      string
 	GoogleClientID     string
 	GoogleClientSecret string
@@ -32,6 +36,10 @@ func loadConfig() Config {
 		KeyFile:   os.Getenv("KEY_FILE"),
 		DBPath:    getenv("DB_PATH", "hearth.db"),
 		StaticDir: getenv("STATIC_DIR", ""),
+
+		GeoIPEnabled:      envBool("GEOIP_ENABLED"),
+		GeoIPDBPath:       os.Getenv("GEOIP_DB_PATH"),
+		MaxMindLicenseKey: os.Getenv("MAXMIND_LICENSE_KEY"),
 
 		PublicBaseURL:      os.Getenv("PUBLIC_BASE_URL"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -58,6 +66,14 @@ func getenv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func envBool(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 // loadEnvFile reads KEY=VALUE lines from path into the process environment,
