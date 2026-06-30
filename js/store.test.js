@@ -209,10 +209,18 @@ test('wakeWindowRange returns correct bracket for a 4-month-old', () => {
   const bd = new Date();
   bd.setMonth(bd.getMonth() - 4);
   applySyncResponse({ baby: { birthdate: bd.toISOString().slice(0, 10) }, settings: null, entries: [], growth: [] });
-  const r = wakeWindowRange('first'); // 3–5m bracket: first=[80,110]
-  assert.equal(r.low, 80);
-  assert.equal(r.high, 110);
-  assert.equal(r.midpoint, 95);
+  const r = wakeWindowRange('first'); // 3–5m bracket: first=[70,95]
+  assert.equal(r.low, 70);
+  assert.equal(r.high, 95);
+  assert.equal(r.midpoint, 83);
+});
+
+test('wakeWindowRange first window is shorter than middle for infants', () => {
+  // 4 months old — maxMonths:5 row has first=[70,95], middle=[80,110]
+  const f = wakeWindowRange('first');
+  const m = wakeWindowRange('middle');
+  assert.ok(f.midpoint < m.midpoint,
+    `first midpoint (${f.midpoint}) should be less than middle midpoint (${m.midpoint})`);
 });
 
 test('derive.sweetSpot() from/to match prediction low/high', () => {
@@ -403,4 +411,43 @@ test('fmt.clock honors the clock24 setting', async () => {
   assert.equal(fmt.clock(d), '11:05 PM');
   state().settings.clock24 = '24h';
   assert.equal(fmt.clock(d), '23:05');
+});
+
+test('wakeWindowPrediction extends midpoint for a preceding long nap', () => {
+  const personal = derive.personalWakeWindow('middle');
+  assert.ok(personal !== null, 'should have personal wake window data');
+  assert.ok(personal.napMedianMin > 0, 'napMedianMin should be computed');
+
+  const baseline = derive.wakeWindowPrediction('middle');
+  const longNap = Math.round(personal.napMedianMin * 2);
+  const withLong = derive.wakeWindowPrediction('middle', longNap);
+
+  assert.ok(withLong.midpoint > baseline.midpoint,
+    `midpoint with long nap (${withLong.midpoint}) should exceed baseline (${baseline.midpoint})`);
+
+  const ratio = withLong.midpoint / baseline.midpoint;
+  assert.ok(ratio >= 0.84 && ratio <= 1.21,
+    `ratio ${ratio.toFixed(3)} should be within [0.85, 1.2] (loosened for Math.round)`);
+});
+
+test('wakeWindowPrediction shrinks midpoint for a preceding short nap', () => {
+  const personal = derive.personalWakeWindow('middle');
+  assert.ok(personal !== null && personal.napMedianMin > 0);
+
+  const baseline = derive.wakeWindowPrediction('middle');
+  const shortNap = Math.round(personal.napMedianMin * 0.5);
+  const withShort = derive.wakeWindowPrediction('middle', shortNap);
+
+  assert.ok(withShort.midpoint < baseline.midpoint,
+    `midpoint with short nap (${withShort.midpoint}) should be below baseline (${baseline.midpoint})`);
+
+  const ratio = withShort.midpoint / baseline.midpoint;
+  assert.ok(ratio >= 0.84 && ratio <= 1.21,
+    `ratio ${ratio.toFixed(3)} should be within [0.85, 1.2] (loosened for Math.round)`);
+});
+
+test('wakeWindowPrediction with no priorSleepMin returns unadjusted midpoint', () => {
+  const pred = derive.wakeWindowPrediction('middle');
+  const predNull = derive.wakeWindowPrediction('middle', null);
+  assert.equal(pred.midpoint, predNull.midpoint);
 });
