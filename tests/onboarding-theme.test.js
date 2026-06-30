@@ -32,7 +32,7 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
       family: getComputedStyle(el).fontFamily,
       fontStyle: getComputedStyle(el).fontStyle,
     }));
-    check('tagline copy is concise', tagline.text === "A calm home for your baby's days. Let's set things up.", tagline.text);
+    check('tagline copy is concise', tagline.text === "A calm home for your baby's days.\u00A0Let's set things up.", tagline.text);
     check('tagline uses Playfair Display', tagline.family.includes('Playfair Display'), tagline.family);
     check('tagline is italic', tagline.fontStyle === 'italic', tagline.fontStyle);
   } catch (e) {
