@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -11,7 +10,9 @@ import (
 	"github.com/jeremysball/hearth"
 )
 
-// logMiddleware logs every request: method, path, status, and elapsed time.
+var requestGeoIP *geoIP
+
+// logMiddleware logs every API request with origin, auth, and timing context.
 // Static file requests (no /api/ prefix) are logged at a lower signal — only
 // non-200 responses — to avoid noise from the shell assets.
 func logMiddleware(next http.Handler) http.Handler {
@@ -21,19 +22,30 @@ func logMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 		isAPI := len(r.URL.Path) > 4 && r.URL.Path[:5] == "/api/"
 		if isAPI || rw.status >= 400 {
-			log.Printf("%s %s %d %s", r.Method, r.URL.Path, rw.status, time.Since(start).Round(time.Millisecond))
+			origin := requestOrigin(r)
+			geo := mergeGeoInfo(geoFromHeaders(r), requestGeoIP.Lookup(origin.IP))
+			logRequest(requestLogInfo{
+				Method: r.Method, Path: r.URL.Path, Status: rw.status, Duration: time.Since(start), Host: r.Host,
+				IP: origin.IP, Remote: origin.Remote, XFF: origin.XFF, XRealIP: origin.XRealIP, Forwarded: origin.Forwarded,
+				UserAgent: r.UserAgent(), Caregiver: rw.session.CaregiverID, Family: rw.session.FamilyID, Geo: geo,
+			})
 		}
 	})
 }
 
 type statusWriter struct {
 	http.ResponseWriter
-	status int
+	status  int
+	session SessionInfo
 }
 
 func (sw *statusWriter) WriteHeader(status int) {
 	sw.status = status
 	sw.ResponseWriter.WriteHeader(status)
+}
+
+func (sw *statusWriter) setSession(session SessionInfo) {
+	sw.session = session
 }
 
 func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler {

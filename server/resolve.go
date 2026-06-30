@@ -110,6 +110,7 @@ func handleResolve(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			setSessionCookie(w, tok)
+			logAuthEvent(r, "oauth_resolve_"+req.Choice, SessionInfo{CaregiverID: careB, FamilyID: target})
 			finish()
 			w.WriteHeader(http.StatusNoContent)
 		default:

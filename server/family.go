@@ -87,6 +87,7 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 		}
 		setSessionCookie(w, token)
 		log.Printf("family created: baby=%q caregiver=%q family=%s", req.BabyName, caregiverName, familyID)
+		logAuthEvent(r, "signup", SessionInfo{CaregiverID: caregiverID, FamilyID: familyID})
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(createFamilyResponse{FamilyID: familyID, BabyID: babyID, CaregiverID: caregiverID})

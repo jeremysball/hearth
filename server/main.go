@@ -16,6 +16,15 @@ func main() {
 		staticLabel = "embedded"
 	}
 	log.Printf("  static: %s", staticLabel)
+	geo, err := setupGeoIP(cfg)
+	if err != nil {
+		log.Fatalf("geoip setup: %v", err)
+	}
+	requestGeoIP = geo
+	if geo != nil {
+		defer geo.Close()
+		log.Printf("  geoip:  %s", cfg.GeoIPDBPath)
+	}
 
 	db, err := openDB(cfg.DBPath)
 	if err != nil {

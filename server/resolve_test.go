@@ -1,14 +1,14 @@
 package main
 
 import (
-	"strings"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
 func TestMergeFamiliesCopiesEntries(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('A', ?), ('B', ?)`, now, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','A','A','Parent',?),('cgB','B','B','Parent',?)`, now, now)
@@ -32,7 +32,7 @@ func TestMergeFamiliesCopiesEntries(t *testing.T) {
 }
 
 func TestMergeFamiliesDedupesById(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('A', ?), ('B', ?)`, now, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','A','A','Parent',?),('cgB','B','B','Parent',?)`, now, now)
@@ -50,7 +50,7 @@ func TestMergeFamiliesDedupesById(t *testing.T) {
 }
 
 func TestResolveSwitchIssuesSessionForTarget(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('A', ?), ('B', ?)`, now, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','A','A','Parent',?),('cgB','B','B','Parent',?)`, now, now)

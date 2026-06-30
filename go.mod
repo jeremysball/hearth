@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/markbates/goth v1.82.0
+	github.com/oschwald/maxminddb-golang v1.13.1
 	modernc.org/sqlite v1.53.0
 )
 

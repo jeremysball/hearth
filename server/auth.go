@@ -74,7 +74,11 @@ func requireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		db.Exec(`UPDATE sessions SET last_seen_at = ? WHERE token = ?`, nowISO(), cookie.Value)
-		ctx := context.WithValue(r.Context(), ctxSessionKey, SessionInfo{CaregiverID: caregiverID, FamilyID: familyID})
+		session := SessionInfo{CaregiverID: caregiverID, FamilyID: familyID}
+		if sw, ok := w.(interface{ setSession(SessionInfo) }); ok {
+			sw.setSession(session)
+		}
+		ctx := context.WithValue(r.Context(), ctxSessionKey, session)
 		next(w, r.WithContext(ctx))
 	}
 }

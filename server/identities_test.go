@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestIdentitiesAndPendingTablesExist(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	if _, err := db.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES ('google','sub1','cg1','a@b.c','t')`); err != nil {
 		t.Fatalf("insert identity: %v", err)
 	}

@@ -64,14 +64,17 @@ sudo systemctl enable --now hearth
 
 Settings come from environment variables or a `.env` file in the working directory:
 
-| Variable     | Default     | Description |
-| ------------ | ----------- | ----------- |
-| `HOST`       | `0.0.0.0`   | Listen address |
-| `PORT`       | `8443`      | Listen port |
-| `CERT_FILE`  | *(empty)*   | TLS certificate path |
-| `KEY_FILE`   | *(empty)*   | TLS private key path |
-| `DB_PATH`    | `hearth.db` | SQLite database path |
-| `STATIC_DIR` | *(empty)*   | Empty: serve the frontend embedded in the binary. Set to `.`: serve files live from disk — edits show up on refresh without a Go rebuild. |
+| Variable              | Default     | Description |
+| --------------------- | ----------- | ----------- |
+| `HOST`                | `0.0.0.0`   | Listen address |
+| `PORT`                | `8443`      | Listen port |
+| `CERT_FILE`           | *(empty)*   | TLS certificate path |
+| `KEY_FILE`            | *(empty)*   | TLS private key path |
+| `DB_PATH`             | `hearth.db` | SQLite database path |
+| `STATIC_DIR`          | *(empty)*   | Empty: serve the frontend embedded in the binary. Set to `.`: serve files live from disk — edits show up on refresh without a Go rebuild. |
+| `GEOIP_ENABLED`       | `false`     | Set to `true` to enrich request logs from a local MaxMind GeoLite2 City database. |
+| `GEOIP_DB_PATH`       | *(empty)*   | Path to `GeoLite2-City.mmdb`. Required when GeoIP is enabled. |
+| `MAXMIND_LICENSE_KEY` | *(empty)*   | Optional. If set and `GEOIP_DB_PATH` is missing, Hearth downloads and extracts GeoLite2 City on startup. |
 
 Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HTTP.
 
@@ -106,7 +109,11 @@ Without `STATIC_DIR`, the server serves the frontend baked in at the last Go bui
 
 ### Server logs
 
-The server logs to stdout. On startup: db path, static mode, and address. Every API request: method, path, status, and elapsed time. Static file errors (4xx/5xx) are logged; successful asset fetches are silent. Key events — `family created`, `caregiver joined` — log by name.
+The server logs through Go's standard logger. On startup: db path, static mode, optional GeoIP database path, and address. Every API request logs structured fields ordered for scanning: method, status, duration, path, client IP, remote IP, host, proxy headers, user agent, caregiver ID, family ID, and available GeoIP fields. Static file errors (4xx/5xx) are logged; successful asset fetches are silent. Status and auth events are colorized only when the log stream is an interactive terminal; redirected files and systemd logs stay plain text.
+
+Auth events log as `auth event=...` with caregiver ID, family ID, and origin IP. Events include signup, invite join, launch-token login, OAuth link/restore/signup, OAuth conflict resolution, and signout. Logs never include session tokens.
+
+GeoIP is off by default. If `GEOIP_ENABLED=true` and `GEOIP_DB_PATH` points to a missing file, startup downloads GeoLite2 City when `MAXMIND_LICENSE_KEY` is set. Without a license key, startup stops with a message telling the operator to download the database from MaxMind or provide the key. Proxy-provided location headers, such as Cloudflare or Vercel country/city headers, are logged when present even without the local database.
 
 ### Client debug logs
 

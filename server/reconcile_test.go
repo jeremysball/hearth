@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestReconcileLinksAnonymousDevice(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famA', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','famA','A','Parent',?)`, now)
@@ -23,7 +23,7 @@ func TestReconcileLinksAnonymousDevice(t *testing.T) {
 }
 
 func TestReconcileRestoresOnCleanDevice(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famB', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgB','famB','B','Parent',?)`, now)
@@ -38,7 +38,7 @@ func TestReconcileRestoresOnCleanDevice(t *testing.T) {
 }
 
 func TestReconcileConflictWhenBothHaveData(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famA', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','famA','A','Parent',?)`, now)
@@ -58,7 +58,7 @@ func TestReconcileConflictWhenBothHaveData(t *testing.T) {
 }
 
 func TestReconcileRestoresWhenDeviceHasNoData(t *testing.T) {
-	db := newTestDB(t)
+	db := newParallelTestDB(t)
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('famA', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','famA','A','Parent',?)`, now)
