@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSync, setLastSync } = await import('./sync.js');
+const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSync, setLastSync, syncChangeCount } = await import('./sync.js');
 
 test('enqueue appends an op and loadOutbox reads it back', () => {
   saveOutbox([]);
@@ -37,6 +37,11 @@ test('mergeById applies a tombstone delete', () => {
 test('mergeById adds a brand-new row not previously known locally', () => {
   const result = mergeById([{ id: 'a', v: 1 }], [{ id: 'b', v: 1 }]);
   assert.deepEqual(result.map((r) => r.id).sort(), ['a', 'b']);
+});
+
+test('syncChangeCount counts server entries and growth rows', () => {
+  const count = syncChangeCount({ entries: [{ id: 'e1' }], growth: [{ id: 'g1' }] });
+  assert.equal(count, 2);
 });
 
 test('drainOutbox stops and keeps the queue on network failure', async () => {

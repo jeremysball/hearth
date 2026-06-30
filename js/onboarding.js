@@ -1,5 +1,5 @@
 // onboarding.js — first-run setup (name, birthdate, theme, photo, caregiver).
-import { state, save, seed, markSynced } from './store.js';
+import { state, save, seed, markSynced, enqueueSettingsSync } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
@@ -91,6 +91,7 @@ export async function onboardFinish() {
   st.setup = true;
   seed();
   save();
+  enqueueSettingsSync();
   applyTheme();
   router.boot();
   router.go('home');

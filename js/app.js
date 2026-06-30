@@ -1,6 +1,6 @@
 // app.js — shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger } from './store.js';
-import { drainOutbox, getLastSync, setLastSync } from './sync.js';
+import { drainOutbox, getLastSync, setLastSync, syncChangeCount } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
@@ -642,7 +642,7 @@ async function syncOnce() {
     const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSync()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
     const data = await res.json();
-    const n = (data.log?.length || 0) + (data.measures?.length || 0);
+    const n = syncChangeCount(data);
     applySyncResponse(data);
     setLastSync(data.serverTime);
     log.info('sync', `OK — ${n} row${n !== 1 ? 's' : ''} from server`);
