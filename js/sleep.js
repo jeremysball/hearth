@@ -65,7 +65,7 @@ export function sleep() {
   const schedHTML = sched.map((s) => `<div class="sched-item ${s.past ? 'past' : ''}">
     <span class="sched-dot"></span>
     <span class="sched-win">${fmt.clock(s.from)} – ${fmt.clock(s.to)}</span>
-    <span class="sched-tag">${s.past ? 'passed' : fmt.untilOrAgo(s.from)}</span></div>`).join('');
+    <span class="sched-tag">${fmt.untilOrAgo(s.from)}</span></div>`).join('');
 
   // last night summary
   const night = state().log.filter((e) => e.type === 'sleep' && e.end)
