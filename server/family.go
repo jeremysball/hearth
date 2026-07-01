@@ -65,8 +65,8 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		if _, err := tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES (?, ?, ?, 'Parent', ?)`,
-			caregiverID, familyID, caregiverName, now); err != nil {
+		if _, err := tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, ?, 'Parent', ?, ?)`,
+			caregiverID, familyID, caregiverName, now, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}

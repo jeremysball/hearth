@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS caregivers (
   family_id TEXT NOT NULL REFERENCES families(id),
   display_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'Parent',
+  photo TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_caregivers_family ON caregivers(family_id);

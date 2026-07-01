@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -29,6 +30,15 @@ func openDB(path string) (*sql.DB, error) {
 	}
 	if _, err := db.Exec(string(schema)); err != nil {
 		db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN photo TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
+	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
+	if _, err := db.Exec(`UPDATE caregivers SET updated_at = created_at WHERE updated_at = ''`); err != nil {
 		return nil, err
 	}
 	return db, nil

@@ -152,3 +152,33 @@ func TestHandleSyncIncludesBabyWhenChanged(t *testing.T) {
 		t.Errorf("baby.name = %q, want Olive", baby.Name)
 	}
 }
+
+func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	now := nowISO()
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, photo, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', '', ?, ?)`, now, now)
+	db.Exec(`UPDATE caregivers SET photo = 'data:image/jpeg;base64,cg', updated_at = ? WHERE id = 'cg1'`, now)
+
+	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleSync(db)(rec, req)
+
+	var resp syncResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(resp.Caregivers) == 0 {
+		t.Fatalf("expected caregivers in sync response, got %s", rec.Body.String())
+	}
+	var cg caregiverInfo
+	json.Unmarshal(resp.Caregivers[0], &cg)
+	if cg.ID != "cg1" || cg.Photo != "data:image/jpeg;base64,cg" {
+		t.Fatalf("caregiver = %+v", cg)
+	}
+	if resp.CurrentCaregiverID != "cg1" {
+		t.Fatalf("currentCaregiverId = %q, want cg1", resp.CurrentCaregiverID)
+	}
+}

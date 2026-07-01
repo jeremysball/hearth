@@ -25,7 +25,9 @@ const DEFAULT = () => ({
     darkMode: 'auto'
   },
   log: [],
-  growth: []
+  growth: [],
+  caregivers: [],
+  currentCaregiverId: ''
 });
 
 let _state = load();
@@ -634,6 +636,8 @@ export function applySyncResponse(resp) {
   _state.log = mergeById(_state.log, resp.entries || []);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   _state.growth = mergeById(_state.growth, resp.growth || []);
+  if (resp.currentCaregiverId) _state.currentCaregiverId = resp.currentCaregiverId;
+  _state.caregivers = mergeById(_state.caregivers || [], resp.caregivers || []);
   save();
 }
 
