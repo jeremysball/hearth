@@ -21,7 +21,9 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.click('.tab[data-tab="trends"]');
     await page.waitForSelector('.chart-card');
     const body = await page.textContent('#view');
+    const avgFeedVol = await page.locator('.stat', { hasText: 'Avg feed vol / day' }).textContent();
     check('trends shows feed volume stat', body.includes('Avg feed vol / day'), body);
+    check('feed volume average uses 7-day mean', avgFeedVol.includes('30ml') || avgFeedVol.includes('30 ml'), avgFeedVol);
     check('trends shows feed volume chart', body.includes('Feed volume'), body);
     check('feed volume includes bottle and pump', body.includes('210ml') || body.includes('210 ml'), body);
   } catch (e) {
