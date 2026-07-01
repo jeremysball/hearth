@@ -25,3 +25,12 @@ Hearth is a free, private baby tracker — an alternative to Huckleberry.
 - Keep the README current with how to install and run.
 - **Run tests before merging any PR.** Always run the unit tests (`node --test js/store.test.js`) and the Playwright suites for files the PR touches. If the PR only touches a subset of JS/view files, run only their corresponding `tests/*.test.js` suites rather than the full `npm test`. Run the full suite (`CHROMIUM=/usr/bin/chromium npm test`) only when changes are broad (e.g. `app.js`, `ui.js`, `sw.js`, `styles.css`). All suites must pass (or pre-existing failures must be confirmed unchanged) before the branch merges. Fix any new test failures before merging. Do not install Playwright in CI — run it locally in the session.
 - **Regenerate PNG icons after any change to `icons/hearth-icon.svg`.** Run: `rsvg-convert -w 192 -h 192 icons/hearth-icon.svg -o icons/icon-192.png && rsvg-convert -w 512 -h 512 icons/hearth-icon.svg -o icons/icon-512.png` for the standard icons. For the maskable icon, build a wrapper SVG with `#fbf3f0` background and the icon scaled to 358×358 centered on a 512×512 canvas (77px padding each side), then rasterize to `icons/icon-maskable-512.png`.
+
+## Shell-out to opencode for a second opinion
+
+When the user says **"run with gpt 5.5"** or **"run with glm 5.2"**, shell out to the `opencode` CLI for a second opinion. Always prefer the `opencode-go/` provider; fall back to another provider only when the model isn't published under `opencode-go/`.
+
+- **"run with gpt 5.5"** → `opencode run -m openai/gpt-5.5 --dangerously-skip-permissions "<message>"` (gpt-5.5 is not available under `opencode-go/`, so `openai/` is the fallback).
+- **"run with glm 5.2"** → `opencode run -m opencode-go/glm-5.2 --dangerously-skip-permissions "<message>"`.
+
+Run from the workspace root (`/workspace/hearth`). Quote the `<message>` and keep it on one line. Pipe through `tail -200` if the output is long. Default timeout 300000ms.
