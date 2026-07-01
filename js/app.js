@@ -3,7 +3,7 @@ import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySy
 import { drainOutbox, getLastSync, setLastSync, syncChangeCount } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
-import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode } from './home.js';
+import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
 import { trends } from './trends.js';
 import { sleep } from './sleep.js';
 import { growth } from './growth.js';
@@ -560,6 +560,9 @@ function tick() {
   if (current === 'home' && $('#view') && !$('#scrim.show')) router.refresh();
 }
 setInterval(tick, 60000);
+setInterval(() => {
+  if (current === 'home' && $('#view') && !$('#scrim.show')) refreshOverdueLabels();
+}, 15000);
 
 // ---------- init ----------
 async function init() {

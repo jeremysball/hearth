@@ -315,6 +315,35 @@ function genericCard(type) {
   </div>`;
 }
 
+export function refreshOverdueLabels() {
+  const cards = document.querySelectorAll('.info-card.due');
+  cards.forEach((card) => {
+    const type = card.dataset.type || card.dataset.card;
+    if (type === 'bottle') {
+      const nb = derive.nextBottle();
+      const lbl = card.querySelector('.ic-lbl');
+      const rel = card.querySelector('.ic-rel');
+      if (lbl) lbl.textContent = `Bottle due · ${fmt.untilOrAgo(nb.due)}`;
+      if (rel) rel.textContent = fmt.untilOrAgo(nb.due);
+    } else if (type === 'medicine') {
+      const meds = derive.nextMeds();
+      const next = meds.find((m) => m.due) || meds[0];
+      if (!next || !next.due) return;
+      const lbl = card.querySelector('.ic-lbl');
+      const rel = card.querySelector('.ic-rel');
+      if (lbl) lbl.textContent = `Medicine due · ${fmt.untilOrAgo(next.due)}`;
+      if (rel) rel.textContent = fmt.untilOrAgo(next.due);
+    } else {
+      const n = derive.nextForType(type);
+      const c = TYPES[type] || { label: type };
+      const lbl = card.querySelector('.ic-lbl');
+      const rel = card.querySelector('.ic-rel');
+      if (lbl) lbl.textContent = `${c.label} due · ${fmt.untilOrAgo(n.due)}`;
+      if (rel) rel.textContent = fmt.untilOrAgo(n.due);
+    }
+  });
+}
+
 export function bathDaysSinceLabel(iso) {
   if (!iso) return 'Never';
   const midnight = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
