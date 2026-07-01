@@ -674,7 +674,16 @@ function connectEvents() {
 }
 
 window.addEventListener('online', syncOnce);
-setInterval(syncOnce, 30000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  syncOnce();
+  if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+    eventSource?.close();
+    eventSource = null;
+    connectEvents();
+  }
+});
+setInterval(syncOnce, 15000);
 setSyncTrigger(() => { drainOutbox(); syncOnce(); });
 
 document.addEventListener('DOMContentLoaded', init);
