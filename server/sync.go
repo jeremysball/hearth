@@ -68,20 +68,20 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		rows, err := db.Query(`SELECT payload_json, deleted_at, updated_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
+		rows, err := db.Query(`SELECT payload_json, created_by, deleted_at, updated_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
-				var payload, updatedAt string
+				var payload, createdBy, updatedAt string
 				var deletedAt sql.NullString
-				if err := rows.Scan(&payload, &deletedAt, &updatedAt); err != nil {
+				if err := rows.Scan(&payload, &createdBy, &deletedAt, &updatedAt); err != nil {
 					log.Printf("sync: scan log_entries family=%s: %v", session.FamilyID, err)
 					continue
 				}
 				if !changedAfter(updatedAt, since) {
 					continue
 				}
-				resp.Entries = append(resp.Entries, tombstoneOrPayload(payload, deletedAt))
+				resp.Entries = append(resp.Entries, tombstoneOrPayload(payload, deletedAt, createdBy))
 			}
 		}
 
@@ -148,7 +148,7 @@ func changedAfter(updatedAt, since string) bool {
 	return updatedAt > since
 }
 
-func tombstoneOrPayload(payload string, deletedAt sql.NullString) json.RawMessage {
+func tombstoneOrPayload(payload string, deletedAt sql.NullString, caregiverID string) json.RawMessage {
 	if deletedAt.Valid && deletedAt.String != "" {
 		var withID struct {
 			ID string `json:"id"`
@@ -157,7 +157,13 @@ func tombstoneOrPayload(payload string, deletedAt sql.NullString) json.RawMessag
 		b, _ := json.Marshal(map[string]string{"id": withID.ID, "deletedAt": deletedAt.String})
 		return b
 	}
-	return json.RawMessage(payload)
+	var obj map[string]any
+	if err := json.Unmarshal([]byte(payload), &obj); err != nil {
+		return json.RawMessage(payload)
+	}
+	obj["caregiverId"] = caregiverID
+	b, _ := json.Marshal(obj)
+	return b
 }
 
 func nullFloatOrNil(f sql.NullFloat64) any {

@@ -83,8 +83,12 @@ export function state() { return _state; }
 
 // ---------- log helpers ----------
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function currentCaregiverId() {
+  return _state.currentCaregiverId || '';
+}
 export function addEntry(e) {
   e.id = e.id || uid();
+  if (!e.caregiverId) e.caregiverId = currentCaregiverId();
   _state.log.push(e);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   save();
@@ -103,6 +107,7 @@ export function removeEntry(id) {
 export function updateEntry(id, patch) {
   const e = _state.log.find((x) => x.id === id);
   if (e) {
+    if (!patch.caregiverId && !e.caregiverId) patch.caregiverId = currentCaregiverId();
     Object.assign(e, patch);
     _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
     save();
