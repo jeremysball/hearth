@@ -1123,11 +1123,19 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* ---- timeline ---- */
 .tl-hd { display: flex; align-items: center; gap: 10px; }
 .tl-back { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent-tint); color: var(--accent-ink); }
-.tl-chipbar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.tl-chipbar::-webkit-scrollbar { display: none; }
-.tl-chip { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--soft); background: color-mix(in oklch, var(--accent-tint) 60%, transparent); }
+.tl-filter-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.tl-chipbar { display: flex; align-items: center; gap: 6px; overflow: hidden; padding: 4px 0 0; }
+.tl-chip { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 7px 9px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--soft); background: color-mix(in oklch, var(--accent-tint) 60%, transparent); }
+.tl-chip[hidden], .tl-more[hidden], .tl-filter-menu[hidden] { display: none; }
 .tl-chip .icon { width: 15px; height: 15px; }
 .tl-chip.on { color: var(--accent-ink); background: var(--surface); box-shadow: 0 1px 3px var(--mat-cast); }
+.tl-more { all: unset; cursor: pointer; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-ink); background: var(--accent-tint); }
+.tl-more .icon { width: 17px; height: 17px; transition: transform .16s ease; }
+.tl-more.on .icon { transform: rotate(180deg); }
+.tl-filter-menu { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border-radius: 18px; background: var(--surface); box-shadow: 0 1px 3px var(--mat-cast); }
+@media (max-width: 340px) {
+  .tl-chip { padding-inline: 7px; }
+}
 .tl-day { margin-bottom: 18px; }
 .tl-day-hd { font-family: var(--font-sans); font-size: 14px; font-weight: 800; color: var(--soft); margin: 6px 2px 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tl-day-ct { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; }

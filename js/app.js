@@ -13,7 +13,7 @@ import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
-import { timeline, toggleFilter } from './timeline.js';
+import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
 
 let current = 'home';
@@ -82,6 +82,7 @@ export const router = {
     if (!$('#view')) { router.boot(); }
     $('#view').innerHTML = VIEWS[view]();
     initThumbs($('#view'));
+    if (view === 'timeline') initTimelineFilters();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
     if (view === 'trends') enterTrends();
@@ -89,7 +90,7 @@ export const router = {
     else if (view === 'growth') enterGrowth();
   },
   refresh() {
-    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); }
+    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); if (current === 'timeline') initTimelineFilters(); }
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
   }
 };
@@ -161,6 +162,7 @@ document.addEventListener('click', (ev) => {
       Promise.all([loadCaregivers(), loadMe()]).then(() => { if (current === 'profile') router.refresh(); });
     },
     'nav:timeline': () => router.go('timeline'),
+    'timeline:more': () => { toggleFilterMenu(); router.refresh(); },
     'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
     'log:more': () => openTypeChooser(),
