@@ -4,6 +4,7 @@ screenshots/
 .prettierrc
 .env
 *.db
+*.db-journal
 .thumbnail
 node_modules/
 hearth-server
