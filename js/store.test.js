@@ -14,7 +14,7 @@ globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry,
+const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog,
   wakePosition, wakeWindowRange, _testHelpers } = await import('./store.js');
 
@@ -479,4 +479,19 @@ test('wakeWindowPrediction with no priorSleepMin returns unadjusted midpoint', (
   const pred = derive.wakeWindowPrediction('middle');
   const predNull = derive.wakeWindowPrediction('middle', null);
   assert.equal(pred.midpoint, predNull.midpoint);
+});
+
+test('todayStats sums bottle and pump amounts into feedVol', () => {
+  reset();
+  const now = new Date().toISOString();
+  state().log = [
+    { id: 'b1', type: 'bottle', start: now, amount: 120 },
+    { id: 'p1', type: 'pump', start: now, amount: 90 },
+    { id: 'd1', type: 'diaper', start: now, amount: 50 },
+  ];
+
+  const stats = derive.todayStats();
+
+  assert.equal(stats.bottleVol, 120);
+  assert.equal(stats.feedVol, 210);
 });
