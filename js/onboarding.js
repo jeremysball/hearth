@@ -12,7 +12,7 @@ export function onboarding() {
   return `<div class="onboard">
     <div class="onb-top">
       <img src="icons/hearth-logo.svg" class="onb-logo" alt="Hearth" />
-      <p class="onb-sub">A calm home for your baby's days and nights.<br>Let's set things up.</p>
+      <p class="onb-sub onb-tagline">A calm home for your baby's days.&nbsp;<br>Let's set things up.</p>
     </div>
 
     <div class="onb-card">
@@ -29,8 +29,10 @@ export function onboarding() {
 
       <div class="fld"><span class="fld-l">Theme</span>
         <div class="theme-pick" style="padding: 8px 0;">
-          <button type="button" class="theme-opt ${t === 'girl' || t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl"><span class="theme-swatch girl"></span><span>Girl</span></button>
-          <button type="button" class="theme-opt ${t === 'boy' || t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
+          <button type="button" class="theme-opt ${t === 'girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="girl"><span class="theme-swatch girl"></span><span>Girl</span></button>
+          <button type="button" class="theme-opt ${t === 'boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
+          <button type="button" class="theme-opt ${t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-girl"><span class="theme-swatch dayjob-girl"></span><span>Warm</span></button>
+          <button type="button" class="theme-opt ${t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-boy"><span class="theme-swatch dayjob-boy"></span><span>Cool</span></button>
         </div>
       </div>
 
@@ -50,7 +52,7 @@ export function onboardTheme(theme) {
   $$('.theme-opt').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const colors = { girl: '#f3eee0', boy: '#eef0e4' };
+    const colors = { girl: '#f3eee0', boy: '#eef0e4', 'dayjob-girl': '#f3ead9', 'dayjob-boy': '#f3ead9' };
     meta.content = colors[theme] || '#f3eee0';
   }
 }
