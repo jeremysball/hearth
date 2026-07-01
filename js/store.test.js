@@ -186,6 +186,9 @@ test('normalizeSettings coerces legacy boolean clock24 to a string option value'
 
 
 test('wakePosition returns correct position for time of day', () => {
+  assert.equal(wakePosition(new Date('2026-01-01T02:45:00')), 'night');  // 2:45am = night
+  assert.equal(wakePosition(new Date('2026-01-01T05:59:00')), 'night');  // just before 6am = still night
+  assert.equal(wakePosition(new Date('2026-01-01T06:00:00')), 'first');  // boundary: 6am is first
   assert.equal(wakePosition(new Date('2026-01-01T09:30:00')), 'first');
   assert.equal(wakePosition(new Date('2026-01-01T10:00:00')), 'middle'); // boundary: 10am is middle
   assert.equal(wakePosition(new Date('2026-01-01T12:00:00')), 'middle');
@@ -235,6 +238,26 @@ test('derive.sweetSpot() from/to match prediction low/high', () => {
     const since = derive.status().since.getTime();
     assert.ok(Math.abs((sp.from.getTime() - since) / MIN - prediction.low) < 1);
     assert.ok(Math.abs((sp.to.getTime() - since) / MIN - prediction.high) < 1);
+  }
+});
+
+test('derive.sweetSpot() returns night mode for wakes before 6am', () => {
+  // Mock global Date so that new Date() without args returns 2:45am.
+  const OrigDate = global.Date;
+  const nightMs = new OrigDate('2026-01-01T02:45:00').getTime();
+  class MockDate extends OrigDate {
+    constructor(...args) { if (args.length === 0) { super(nightMs); } else { super(...args); } }
+    static now() { return nightMs; }
+  }
+  global.Date = MockDate;
+  try {
+    const sp = derive.sweetSpot();
+    assert.equal(sp.night, true, 'should return night mode for 2:45am wake');
+    assert.equal(sp.from, null, 'from should be null in night mode');
+    assert.equal(sp.to, null, 'to should be null in night mode');
+    assert.equal(sp.prediction, null, 'prediction should be null in night mode');
+  } finally {
+    global.Date = OrigDate;
   }
 });
 

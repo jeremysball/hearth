@@ -205,11 +205,15 @@ const WAKE_WINDOW_TABLE = [
 ];
 
 // Infers the position of an awake period in the day from the clock.
-// 'first' = before 10am (before day's first nap), 'last' = 4pm+ (pre-bedtime),
-// 'middle' = everything between. Thresholds are fixed population defaults;
-// Phase 3 will anchor them to the baby's actual morning wake time.
+// 'night'  = midnight–6am (circadian drive still high; not a true wake window)
+// 'first'  = 6am–10am (before day's first nap)
+// 'last'   = 4pm+ (pre-bedtime, longest wake window)
+// 'middle' = 10am–4pm
+// Thresholds are fixed population defaults; Phase 3 will anchor them to the
+// baby's actual morning wake time.
 export function wakePosition(date = new Date()) {
   const h = date.getHours() + date.getMinutes() / 60;
+  if (h < 6)  return 'night';
   if (h < 10) return 'first';
   if (h >= 16) return 'last';
   return 'middle';
@@ -310,6 +314,10 @@ export const derive = {
   sweetSpot() {
     const st = derive.status();
     const pos = wakePosition();
+    // Nighttime arousals are circadian, not homeostatic — adenosine hasn't
+    // built up enough to govern a true nap window. Return night mode so the
+    // UI can show "go back down" instead of a misleading sweet spot rail.
+    if (pos === 'night') return { night: true, napping: false, from: null, to: null, prediction: null };
     const prediction = derive.wakeWindowPrediction(pos);
     if (st.state === 'asleep') {
       const wake = new Date(st.since.getTime() + 70 * MIN);
@@ -517,7 +525,7 @@ export const derive = {
   },
   reminders() {
     const r = _state.settings.reminders, out = [];
-    if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping) out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at: sp.from.getTime() }); }
+    if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at: sp.from.getTime() }); }
     if (r.bottle) { const nb = derive.nextBottle(); out.push({ key: 'bottle', title: 'Bottle due', body: 'Time for the next feed.', at: nb.due.getTime() }); }
     if (r.meds) { derive.nextMeds().forEach((m) => { if (m.due) out.push({ key: 'med-' + m.med.id, title: m.med.name + ' due', body: m.med.dose + (m.med.unit || '') + ' scheduled now.', at: m.due.getTime() }); }); }
     return out.sort((a, b) => a.at - b.at);
