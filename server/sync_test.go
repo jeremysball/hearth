@@ -15,7 +15,7 @@ func TestHandleSyncReturnsEntriesChangedSinceTimestamp(t *testing.T) {
 	reqUp := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`))
 	reqUp.SetPathValue("id", "e1")
 	reqUp = withSession(reqUp, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
-	handleUpsertEntry(db, hub, nil)(httptest.NewRecorder(), reqUp)
+	handleUpsertEntry(db, hub)(httptest.NewRecorder(), reqUp)
 
 	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
@@ -75,7 +75,7 @@ func TestHandleSyncOmitsEntriesOlderThanSince(t *testing.T) {
 	reqUp := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`))
 	reqUp.SetPathValue("id", "e1")
 	reqUp = withSession(reqUp, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
-	handleUpsertEntry(db, hub, nil)(httptest.NewRecorder(), reqUp)
+	handleUpsertEntry(db, hub)(httptest.NewRecorder(), reqUp)
 
 	req := httptest.NewRequest("GET", "/api/sync?since=2099-01-01T00:00:00Z", nil)
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
@@ -97,7 +97,7 @@ func TestHandleSyncIncludesDeletedAsTombstone(t *testing.T) {
 	reqUp := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"id":"e1","type":"sleep","start":"2026-06-23T10:00:00Z"}`))
 	reqUp.SetPathValue("id", "e1")
 	reqUp = withSession(reqUp, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
-	handleUpsertEntry(db, hub, nil)(httptest.NewRecorder(), reqUp)
+	handleUpsertEntry(db, hub)(httptest.NewRecorder(), reqUp)
 
 	reqDel := httptest.NewRequest("DELETE", "/api/entries/e1", nil)
 	reqDel.SetPathValue("id", "e1")
