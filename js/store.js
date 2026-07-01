@@ -83,8 +83,12 @@ export function state() { return _state; }
 
 // ---------- log helpers ----------
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function currentCaregiverId() {
+  return _state.currentCaregiverId || '';
+}
 export function addEntry(e) {
   e.id = e.id || uid();
+  if (!e.caregiverId) e.caregiverId = currentCaregiverId();
   _state.log.push(e);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   save();
@@ -103,6 +107,7 @@ export function removeEntry(id) {
 export function updateEntry(id, patch) {
   const e = _state.log.find((x) => x.id === id);
   if (e) {
+    if (!patch.caregiverId && !e.caregiverId) patch.caregiverId = currentCaregiverId();
     Object.assign(e, patch);
     _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
     save();
@@ -430,8 +435,10 @@ export const derive = {
     // Count naps by start date (not overlap) so overnight sleeps aren't double-counted.
     const naps = inDay.filter((e) => e.type === 'sleep').length;
     let bottleVol = 0;
+    let feedVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
-    return { sleepMin, feeds, diapers, naps, bottleVol };
+    inDay.filter((e) => e.type === 'bottle' || e.type === 'pump').forEach((e) => feedVol += Number(e.amount) || 0);
+    return { sleepMin, feeds, diapers, naps, bottleVol, feedVol };
   },
   // Rolling personal wake window for a given day position, computed from consecutive
   // completed sleeps in the last 21 days. Returns null if fewer than 7 observations.

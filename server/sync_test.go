@@ -182,3 +182,29 @@ func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 		t.Fatalf("currentCaregiverId = %q, want cg1", resp.CurrentCaregiverID)
 	}
 }
+
+func TestHandleSyncInjectsCaregiverIDIntoEntries(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	now := nowISO()
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('e1', 'fam1', 'bottle', '2026-06-30T10:00:00Z', '{"id":"e1","type":"bottle","start":"2026-06-30T10:00:00Z","amount":120}', 'cg1', ?)`, now)
+
+	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
+	req = withSession(req, SessionInfo{CaregiverID: "cg2", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleSync(db)(rec, req)
+
+	var resp syncResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if len(resp.Entries) != 1 {
+		t.Fatalf("entries = %d, body=%s", len(resp.Entries), rec.Body.String())
+	}
+	var entry struct {
+		CaregiverID string `json:"caregiverId"`
+	}
+	json.Unmarshal(resp.Entries[0], &entry)
+	if entry.CaregiverID != "cg1" {
+		t.Fatalf("caregiverId = %q, want cg1", entry.CaregiverID)
+	}
+}

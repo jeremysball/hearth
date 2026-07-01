@@ -132,11 +132,14 @@ function getPath(path) { return path.split('.').reduce((o, k) => (o ? o[k] : und
 function openEntry(id) {
   const e = state().log.find((x) => x.id === id); if (!e) return;
   const s = summary(e);
+  const caregivers = state().caregivers?.length ? state().caregivers : [];
+  const author = caregivers.find((c) => c.id === e.caregiverId);
   sheet.open(`
     <div class="entry-view">
       <span class="ic-ring ${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <div><div class="entry-title">${esc(s.label)}</div><div class="entry-sub">${esc(s.detail)}${s.meta ? ' · ' + esc(s.meta) : ''}</div></div>
     </div>
+    ${author ? `<div class="entry-author">Logged by ${esc(author.displayName)}</div>` : ''}
     ${e.note ? `<div class="entry-note">${esc(e.note)}</div>` : ''}
     <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><svg class="icon"><use href="#pencil"></use></svg> Edit entry</button>
     <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete entry</button>`,

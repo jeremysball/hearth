@@ -907,6 +907,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .entry-view .ic-ring { width: 48px; height: 48px; font-size: 22px; }
 .entry-title { font-family: var(--font-sans); font-size: 18px; font-weight: 700; }
 .entry-sub { font-size: 13px; color: var(--muted); font-weight: 600; }
+.entry-author { margin: -6px 0 10px; color: var(--muted); font-size: 13px; font-weight: 700; }
 .entry-note { background: var(--surface); border-radius: 14px; padding: 13px; font-size: 14px; font-weight: 600; color: var(--soft); }
 
 /* ---- toast ---- */
