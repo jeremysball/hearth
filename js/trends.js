@@ -25,6 +25,7 @@ export function trends() {
   const avgFeeds = week.reduce((a, d) => a + d.feeds, 0) / days;
   const avgDia = week.reduce((a, d) => a + d.diapers, 0) / days;
   const avgBottleVol = week.reduce((a, d) => a + d.bottleVol, 0) / days;
+  const avgFeedVol = week.reduce((a, d) => a + d.feedVol, 0) / days;
   const avgNaps = week.reduce((a, d) => a + d.naps, 0) / days;
 
   return `
@@ -38,6 +39,7 @@ export function trends() {
       <div class="card stat"><div class="stat-k">Avg naps / day</div><div class="stat-v">${avgNaps.toFixed(1)}</div></div>
       <div class="card stat"><div class="stat-k">Avg diapers / day</div><div class="stat-v">${avgDia.toFixed(1)}</div></div>
       <div class="card stat"><div class="stat-k">Avg bottle vol / day</div><div class="stat-v">${fmt.vol(avgBottleVol)}</div></div>
+      <div class="card stat"><div class="stat-k">Avg feed vol / day</div><div class="stat-v">${fmt.vol(avgFeedVol)}</div></div>
     </div>
 
     <div class="card chart-card">
@@ -55,5 +57,9 @@ export function trends() {
     <div class="card chart-card">
       <div class="chart-hd"><h2>Bottle volume</h2><span class="chart-note">volume per day</span></div>
       ${barChart(week, 'bottleVol', 'ml', (v) => fmt.vol(v), 'feed')}
+    </div>
+    <div class="card chart-card">
+      <div class="chart-hd"><h2>Feed volume</h2><span class="chart-note">bottle plus pump</span></div>
+      ${barChart(week, 'feedVol', 'ml', (v) => fmt.vol(v), 'feed')}
     </div>`;
 }

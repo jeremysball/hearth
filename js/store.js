@@ -435,8 +435,10 @@ export const derive = {
     // Count naps by start date (not overlap) so overnight sleeps aren't double-counted.
     const naps = inDay.filter((e) => e.type === 'sleep').length;
     let bottleVol = 0;
+    let feedVol = 0;
     inDay.filter((e) => e.type === 'bottle').forEach((e) => bottleVol += Number(e.amount) || 0);
-    return { sleepMin, feeds, diapers, naps, bottleVol };
+    inDay.filter((e) => e.type === 'bottle' || e.type === 'pump').forEach((e) => feedVol += Number(e.amount) || 0);
+    return { sleepMin, feeds, diapers, naps, bottleVol, feedVol };
   },
   // Rolling personal wake window for a given day position, computed from consecutive
   // completed sleeps in the last 21 days. Returns null if fewer than 7 observations.
