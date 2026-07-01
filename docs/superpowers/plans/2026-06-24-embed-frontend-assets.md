@@ -1,6 +1,6 @@
 # Embed Frontend Assets Implementation Plan
 
-> **Status:** PARTIAL — Tasks 1, 3, 4, 5 landed; Task 2 (embed the static `index.html`/`js/`/`styles.css`/`icons`/`manifest`/`sw.js` via `go:embed`) never shipped. Only `schema.sql` is embedded today; the binary still requires `STATIC_DIR` to serve the frontend.
+> **Status:** COMPLETE — merged to `main`. `assets.go` embeds `index.html`/`js`/`styles.css`/`icons`/`manifest`/`sw.js` via `go:embed`; router serves the embedded FS by default and `STATIC_DIR` overrides to disk. `assets_test.go` and `TestStaticFSContainsFrontendEntrypoint` pass. (Earlier flagged PARTIAL by mistake — `assets.go` lives at the repo root, not under `server/`.)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
