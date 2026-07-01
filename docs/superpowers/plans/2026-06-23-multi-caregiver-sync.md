@@ -1,5 +1,7 @@
 # Multi-Caregiver Backend & Sync Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. Caregivers, invites, SSE (`/api/events`), `currentCaregiverId`, and reconcile are live.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up a self-hosted Go+SQLite backend that lets multiple caregivers share one baby's data via invite links, with offline-first sync over REST+SSE, replacing the current single-device `localStorage`-only app.

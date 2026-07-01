@@ -1,5 +1,7 @@
 # Sonnet Handoff Brief — Fixes/Timeline & Accounts/OAuth
 
+> **Note:** Historical planning brief — both plans it covers (`2026-06-27-fixes-and-timeline.md`, `2026-06-27-accounts-and-oauth.md`) are COMPLETE on `main`. Kept for reference, not actionable.
+
 **Date:** 2026-06-27
 **Planner:** Opus (this session). **Executor-supervisor:** Sonnet (you, next).
 **Plans:**

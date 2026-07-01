@@ -1,5 +1,7 @@
 # Skeuomorphic Redesign Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. Plaster/terracotta gradients, page glow, `--ring-track`/`--good-tint` tokens live in `styles.css`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reskn Hearth from flat-modern to full skeuomorphic using warm plaster & terracotta materials, CSS gradient lighting, ember glow, and 7 custom filled SVG quick-action icons.

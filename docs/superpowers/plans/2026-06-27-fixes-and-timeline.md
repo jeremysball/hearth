@@ -1,5 +1,7 @@
 # Fixes & Timeline Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. Timeline view, bath days-since card, medicine card redesign, segmented slider thumb, and desktop date autofill shipped; `tests/{timeline,segthumb,bathcard,medcard,spinner}.test.js` cover them.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship three bug fixes, two card features (bath days-since, medicine card redesign), and a filterable day-grouped Timeline, sequenced as independent milestones.

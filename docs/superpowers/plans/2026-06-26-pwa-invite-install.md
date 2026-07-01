@@ -1,5 +1,7 @@
 # PWA Invite Install Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. `POST /api/launch-tokens`, `GET /api/launch/{token}`, `installGuideView`, and `launch_tokens_test.go` live.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** After a caregiver joins via invite link in Safari, show them a step-by-step PWA install guide and embed a short-lived launch token in the URL so the installed PWA can authenticate without relying on cookie sharing between Safari and the PWA context.

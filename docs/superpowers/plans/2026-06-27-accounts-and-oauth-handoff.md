@@ -1,5 +1,7 @@
 # Accounts & OAuth — Delegation Handoff
 
+> **Note:** Historical handoff brief — the plan it supervises (`2026-06-27-accounts-and-oauth.md`) is COMPLETE on `main`. Kept for reference, not actionable.
+
 **Verdict: ~90% delegatable.** Three plan bugs were fixed inline before this brief was written. Three items are supervisor-inline; one is human-only. The remainder is exact-edit opencode work.
 
 **Load order for the supervisor:** Load the `delegating-to-opencode` skill before doing anything else.

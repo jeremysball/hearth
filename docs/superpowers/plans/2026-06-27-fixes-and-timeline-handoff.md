@@ -1,5 +1,7 @@
 # Sonnet Handoff Brief — Fixes & Timeline
 
+> **Note:** Historical handoff brief — the plan it supervises (`2026-06-27-fixes-and-timeline.md`) is COMPLETE on `main`. Kept for reference, not actionable.
+
 **Date:** 2026-06-27 · **Planner:** Opus · **Executor-supervisor:** Sonnet (you, next)
 **Plan:** `docs/superpowers/plans/2026-06-27-fixes-and-timeline.md`
 
