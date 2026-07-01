@@ -188,6 +188,12 @@ document.addEventListener('click', (ev) => {
         state().settings.tipMorningLightDismissed = true;
         save();
         router.refresh();
+      } else if (tip) {
+        const s = state().settings;
+        if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
+        if (!s.dismissedTips.includes(tip)) s.dismissedTips.push(tip);
+        save();
+        router.refresh();
       }
     },
     'regression:dismiss': () => {
