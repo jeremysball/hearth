@@ -27,7 +27,13 @@ async function startServer(port = 18787) {
   proc.stderr.on('data', (d) => { if (process.env.DEBUG) process.stderr.write('[srv] ' + d); });
   const base = 'http://127.0.0.1:' + port;
   await waitForServer(base, 20000);
-  return { proc, base, dbPath, close() { proc.kill('SIGTERM'); rmSync(dbPath, { force: true }); } };
+  return { proc, base, dbPath, close() {
+      if (!proc.killed) proc.kill('SIGTERM');
+      const killTimer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch {} }, 2000);
+      killTimer.unref();
+      proc.once('exit', () => clearTimeout(killTimer));
+      rmSync(dbPath, { force: true });
+    } };
 }
 
 function waitForServer(base, timeoutMs) {
