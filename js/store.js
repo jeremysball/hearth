@@ -56,6 +56,7 @@ export function normalizeSettings(s) {
   else if (s.clock24 !== '24h' && s.clock24 !== '12h') s.clock24 = '12h';
   if (typeof s.tipMorningLightDismissed !== 'boolean') s.tipMorningLightDismissed = false;
   if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
+  if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   return s;
 }
 
@@ -181,6 +182,10 @@ function ageMonths() {
   const b = new Date(_state.baby.birthdate), now = new Date();
   return Math.max(0, (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth()));
 }
+export function ageWeeks() {
+  if (!_state.baby.birthdate) return null;
+  return Math.floor((Date.now() - new Date(_state.baby.birthdate).getTime()) / (7 * DAY));
+}
 export function ageLabel() {
   const m = ageMonths();
   if (m < 1) {
@@ -281,6 +286,29 @@ const REGRESSION_TABLE = [
     mechanism: 'Language explosion — vocabulary acquisition interferes with sleep.' },
 ];
 
+// Age-staged educational tips. minW/maxW are weeks (inclusive/exclusive).
+// body() receives the already-escaped baby name and returns plain text.
+const STAGE_TIPS = [
+  { id: 'newborn-cues',       minW: 0,  maxW: 6,  icon: 'baby',       title: 'Following tired cues',
+    body: (n) => `${n} sets the rhythm right now — no schedule needed. Watch for yawning, eye-rubs, or a brief look away. Those are the signals to settle.` },
+  { id: 'day-night-contrast', minW: 0,  maxW: 10, icon: 'moon-star',  title: 'Day vs. night',
+    body: (n) => `Keep days bright and active, nights dim and quiet. ${n}'s brain is beginning to link light cues with sleep — contrast is the earliest foundation of a sleep clock.` },
+  { id: 'morning-light-early', minW: 6, maxW: 20, icon: 'sunrise',    title: 'Morning light',
+    body: (n) => `Morning light within 30 minutes of ${n}'s first wake helps anchor the developing sleep clock. Open curtains or step outside — it is the highest-leverage habit at this age.` },
+  { id: 'night-stretch-protect', minW: 6, maxW: 20, icon: 'moon',     title: 'Protect night stretches',
+    body: (n) => `${n}'s longest sleep stretches are shifting to night. Keep night wakings dark, quiet, and brief — save stimulation for daytime.` },
+  { id: 'window-position',    minW: 10, maxW: 30, icon: 'layers',     title: 'Last wake window is longest',
+    body: (n) => `The wake window before bed is typically 20-30% longer than morning windows. A longer awake stretch in the evening is normal — it is how ${n}'s sleep pressure peaks for the night.` },
+  { id: 'early-bedtime',      minW: 20, maxW: 48, icon: 'moon',       title: 'Earlier bedtime, better night',
+    body: (n) => `Research supports a 6:30-7pm bedtime for babies ${n}'s age. Overtired babies take longer to settle and wake more at night. An earlier bedtime usually means more overnight sleep, not less.` },
+  { id: 'last-nap-budget',    minW: 20, maxW: 48, icon: 'chart-bar',  title: 'Last nap affects bedtime',
+    body: (n) => `A nap ending after 4pm tends to push ${n}'s bedtime later and borrow from night sleep. Aim for the last nap to end by 3:30-4pm to protect an early bedtime.` },
+  { id: 'three-to-two',       minW: 28, maxW: 48, icon: 'layers',     title: '3-to-2 nap readiness',
+    body: (n) => `Watch for ${n} consistently fighting the third nap, taking 30+ minutes to fall for it, or bedtime getting later. Most babies drop to two naps between 6-9 months.` },
+  { id: 'two-to-one',         minW: 52, maxW: 80, icon: 'layers',     title: '2-to-1 nap readiness',
+    body: (n) => `Signs ${n} is ready for one nap: resisting one of the two naps or taking 30+ minutes to settle. Most babies consolidate to one midday nap between 13-18 months. The transition takes 4-6 weeks.` },
+];
+
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
 
@@ -318,6 +346,10 @@ export const derive = {
     // built up enough to govern a true nap window. Return night mode so the
     // UI can show "go back down" instead of a misleading sweet spot rail.
     if (pos === 'night') return { night: true, napping: false, from: null, to: null, prediction: null };
+    // Under 6 weeks: no circadian rhythm and no reliable wake windows.
+    // Show cue-following guidance instead of a sweet spot rail.
+    const w = ageWeeks();
+    if (w !== null && w < 6) return { newborn: true, napping: false, from: null, to: null, prediction: null };
     const prediction = derive.wakeWindowPrediction(pos);
     if (st.state === 'asleep') {
       const wake = new Date(st.since.getTime() + 70 * MIN);
@@ -496,6 +528,14 @@ export const derive = {
       to:   new Date(baseMs + halfRange * MIN),
       confidence: anchor.confidence,
     };
+  },
+  // Returns the first non-dismissed stage tip appropriate for the baby's age,
+  // or null if none applies or the birthdate is unset.
+  stageTip() {
+    const w = ageWeeks();
+    if (w === null) return null;
+    const dismissed = state().settings.dismissedTips || [];
+    return STAGE_TIPS.find((t) => w >= t.minW && w < t.maxW && !dismissed.includes(t.id)) || null;
   },
   // Returns the approaching or active regression for the current baby age,
   // or null if none applies or the regression has been dismissed.

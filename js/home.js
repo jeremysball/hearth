@@ -112,6 +112,17 @@ function regressionBanner() {
   </div>`;
 }
 
+function stageTipCard() {
+  const tip = derive.stageTip();
+  if (!tip) return '';
+  const name = esc(state().baby.name || 'Your baby');
+  return `<div class="card tip-card">
+    <div class="tip-hd">${icon(tip.icon)} ${esc(tip.title)}</div>
+    <p>${tip.body(name)}</p>
+    <button class="tip-dismiss" data-action="tip:dismiss" data-tip="${esc(tip.id)}">Got it</button>
+  </div>`;
+}
+
 function heroCard() {
   const st = derive.status();
   const sp = derive.sweetSpot();
@@ -150,6 +161,18 @@ function heroCard() {
       <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
       <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
       <div class="hero-sub">Nighttime wake — circadian drive is still high. Settle back to sleep now.</div>
+    </div>`;
+  }
+
+  // Under 6 weeks: no reliable wake windows or circadian rhythm.
+  // Show cue-following guidance instead of the sleep pressure rail.
+  if (sp.newborn) {
+    const name = esc(state().baby.name || 'Baby');
+    return `<div class="card hero" data-state="awake" data-newborn>
+      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+      <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
+      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
+      <div class="hero-sub">Watch for tired cues — yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>
     </div>`;
   }
 
@@ -353,6 +376,7 @@ export function home() {
     ${heroCard()}
     ${regressionBanner()}
     ${morningLightTip()}
+    ${stageTipCard()}
     ${bedtimeBanner()}
     ${cardEditMode ? '<div class="cards-hd"><a data-action="cards:edit-done">Done</a></div>' : ''}
     <div class="info-stack" data-longpress="cards"${cardEditMode ? ' data-card-edit' : ''}>
