@@ -194,13 +194,13 @@ function parseDateOnlyLocal(value) {
 }
 export function ageWeeks() {
   if (!_state.baby.birthdate) return null;
-  return Math.floor((Date.now() - new Date(_state.baby.birthdate).getTime()) / (7 * DAY));
+  return Math.floor((Date.now() - parseDateOnlyLocal(_state.baby.birthdate).getTime()) / (7 * DAY));
 }
 export function ageLabel() {
   const m = ageMonths();
   if (m < 1) {
     if (!_state.baby.birthdate) return 'newborn';
-    const wks = Math.floor((Date.now() - new Date(_state.baby.birthdate)) / (7 * DAY));
+    const wks = Math.floor((Date.now() - parseDateOnlyLocal(_state.baby.birthdate)) / (7 * DAY));
     return wks + (wks === 1 ? ' week old' : ' weeks old');
   }
   if (m < 24) return m + (m === 1 ? ' month old' : ' months old');
