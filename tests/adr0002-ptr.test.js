@@ -23,6 +23,12 @@ async function touchPtrEvent(page, type, clientX, clientY, pointerId = 1) {
   }, { type, clientX, clientY, pointerId });
 }
 
+// Wait for at least one requestAnimationFrame callback to flush, so
+// ptrUpdate() (which arms the refresh via rAF) has run before pointerup.
+async function waitForRaf(page) {
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r())));
+}
+
 async function runSuite(base) {
   const browser = await launchBrowser();
   const page = await browser.newPage();
@@ -108,6 +114,19 @@ async function runSuite(base) {
     return y;
   }
 
+  // Poll a boolean page predicate until true or deadline. Replaces fixed
+  // waitForTimeout waits for async outcomes (sync dispatch, class toggles)
+  // that race the event loop under load and flake on slower hosts.
+  async function pollTrue(fn, timeoutMs = 4000) {
+    const deadline = Date.now() + timeoutMs;
+    let ok = await page.evaluate(fn);
+    while (Date.now() < deadline && !ok) {
+      await page.waitForTimeout(20);
+      ok = await page.evaluate(fn);
+    }
+    return ok;
+  }
+
   // Pull 30px (below PTR_THRESHOLD of 70px).
   await touchPtrEvent(page, 'pointerdown', cx, cy, 1);
   await touchPtrEvent(page, 'pointermove', cx, cy + 20, 1);
@@ -141,13 +160,14 @@ async function runSuite(base) {
     await touchPtrEvent(page, 'pointermove', cx, cy + dy, 2);
     await page.waitForTimeout(15);
   }
+  await waitForRaf(page);
   const vibsAtThreshold = await page.evaluate(() => window.__vibrations);
   console.log('  vibrations while pulling (should be 1 at threshold crossing):', vibsAtThreshold);
   check('vibrate(12) fires exactly once at threshold crossing', vibsAtThreshold.length === 1 && vibsAtThreshold[0] === 12, vibsAtThreshold.join(','));
 
+  await waitForRaf(page);
   await touchPtrEvent(page, 'pointerup', cx, cy + 120, 2);
-  await page.waitForTimeout(400);
-  const syncCalledFull = await page.evaluate(() => window.__syncCalled);
+  const syncCalledFull = await pollTrue(() => window.__syncCalled);
   check('sync triggered after full pull release', syncCalledFull);
 
   // Indicator should collapse after sync
@@ -193,10 +213,9 @@ async function runSuite(base) {
     await touchPtrEvent(page, 'pointermove', cx, cy + dy, 4);
     await page.waitForTimeout(10);
   }
+  await waitForRaf(page);
   await touchPtrEvent(page, 'pointerup', cx, cy + 120, 4);
-  await page.waitForTimeout(200);
-
-  const ptrSpinning = await page.evaluate(() => document.getElementById('ptr')?.classList.contains('ptr-spinning'));
+  const ptrSpinning = await pollTrue(() => document.getElementById('ptr')?.classList.contains('ptr-spinning'));
   console.log('  ptr-spinning class present while sync hangs:', ptrSpinning);
   check('#ptr has ptr-spinning class while sync is in-flight', ptrSpinning);
 
