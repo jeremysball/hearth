@@ -133,6 +133,25 @@ function heroCard() {
   const asleep = st.state === 'asleep';
   const N = 16; // coals in the ember bed
 
+  // Night hours (midnight–6am): suppress the sweet spot rail entirely.
+  // Overnight sleep is not a nap; arousals are circadian, not homeostatic.
+  if (sp.night) {
+    if (asleep) {
+      return `<div class="card hero" data-state="asleep" data-night>
+        <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+        <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
+        <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
+        <div class="hero-sub">Resting peacefully.</div>
+      </div>`;
+    }
+    return `<div class="card hero" data-state="awake" data-night>
+      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+      <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
+      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
+      <div class="hero-sub">Nighttime wake — circadian drive is still high. Settle back to sleep now.</div>
+    </div>`;
+  }
+
   if (asleep) {
     // Banked overnight embers — coals warm left→right by nap progress, low and slow.
     const pct = Math.min(100, (elapsed / 70) * 100);
@@ -150,17 +169,6 @@ function heroCard() {
         <div class="sh-bed banked">${coals}</div>
         <div class="sh-rail-cap"><span>asleep</span><span>~70m typical nap</span></div>
       </div>
-    </div>`;
-  }
-
-  // Nighttime arousals (midnight–6am) are circadian, not homeostatic.
-  // Sleep pressure hasn't built — the baby should go back down now.
-  if (sp.night) {
-    return `<div class="card hero" data-state="awake" data-night>
-      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
-      <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Nighttime wake — circadian drive is still high. Settle back to sleep now.</div>
     </div>`;
   }
 
