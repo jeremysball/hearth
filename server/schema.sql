@@ -104,14 +104,3 @@ CREATE TABLE IF NOT EXISTS pending_auth (
   current_caregiver_id TEXT NOT NULL,
   created_at           TEXT NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-  id           TEXT PRIMARY KEY,
-  caregiver_id TEXT NOT NULL REFERENCES caregivers(id),
-  endpoint     TEXT NOT NULL,
-  p256dh       TEXT NOT NULL,
-  auth         TEXT NOT NULL,
-  created_at   TEXT NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
-CREATE INDEX IF NOT EXISTS idx_push_subscriptions_caregiver ON push_subscriptions(caregiver_id);

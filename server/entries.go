@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func handleUpsertEntry(db *sql.DB, hub *Hub, pushes *pushScheduler) http.HandlerFunc {
+func handleUpsertEntry(db *sql.DB, hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
 		id := r.PathValue("id")
@@ -42,9 +42,6 @@ func handleUpsertEntry(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handler
 			return
 		}
 		hub.Broadcast(session.FamilyID)
-		if pushes != nil {
-			pushes.ScheduleFamily(session.FamilyID)
-		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
