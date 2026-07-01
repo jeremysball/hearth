@@ -90,6 +90,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 | `invites.go` | Invite-link create/join endpoints |
 | `family.go` | Family record endpoints |
 | `me.go` | `/api/me` — current user/session info |
+| `push.go` | Web Push subscription endpoints and reminder scheduler |
 | `reconcile.go` | Data-safe conflict reconciliation during OAuth link/restore |
 | `config.go` | `loadConfig()` — reads env vars into `Config` struct |
 | `testutil_test.go` | `newTestDB()` — in-memory SQLite for Go tests |
