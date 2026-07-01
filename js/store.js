@@ -22,7 +22,8 @@ const DEFAULT = () => ({
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
     clock24: '12h',
-    darkMode: 'auto'
+    darkMode: 'auto',
+    seenChangelog: ''
   },
   log: [],
   growth: [],
@@ -59,6 +60,7 @@ export function normalizeSettings(s) {
   if (typeof s.tipMorningLightDismissed !== 'boolean') s.tipMorningLightDismissed = false;
   if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
+  if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
   return s;
 }
 
@@ -181,8 +183,14 @@ const MIN = 60000, HR = 3600000, DAY = 86400000;
 export function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 function ageMonths() {
   if (!_state.baby.birthdate) return 4;
-  const b = new Date(_state.baby.birthdate), now = new Date();
+  const b = parseDateOnlyLocal(_state.baby.birthdate), now = new Date();
   return Math.max(0, (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth()));
+}
+
+function parseDateOnlyLocal(value) {
+  const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return new Date(value);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 export function ageWeeks() {
   if (!_state.baby.birthdate) return null;

@@ -1,6 +1,7 @@
 // profile.js — baby details, reminders, units, caregivers, reset.
-import { state } from './store.js';
+import { state, save } from './store.js';
 import { esc } from './ui.js';
+import { currentVersion, renderChangelog } from './changelog.js';
 import { notifsGranted } from './reminders.js';
 import { accountSection } from './account.js';
 
@@ -21,6 +22,11 @@ function segBind(path, opts, val) {
 
 export function profile() {
   const b = state().baby, s = state().settings;
+  const version = currentVersion();
+  if (version && s.seenChangelog !== version) {
+    s.seenChangelog = version;
+    save();
+  }
   const themeActive = s.theme || b.theme || 'girl';
   const thOpt = (id, sw, lbl) => `<button type="button" class="theme-opt${themeActive === id ? ' on' : ''}" data-action="theme:pick" data-theme="${id}"><span class="theme-swatch ${sw}"></span><span>${lbl}</span></button>`;
   return `
@@ -85,6 +91,9 @@ export function profile() {
       ${caregiversSnapshot().length ? caregiversSnapshot().map(caregiverRow).join('') : `<p class="empty-note">Just you so far.</p>`}
       <button class="add-row" data-action="cg:invite"><svg class="icon"><use href="#plus"></use></svg> Invite a caregiver</button>
     </div>
+
+    <div class="sec-label">What's new</div>
+    ${renderChangelog()}
 
     <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="#undo-2"></use></svg> Reset app & start over</button>
     <div class="foot-note">Hearth · prototype · data stored on this device · ${buildStamp()}</div>`;

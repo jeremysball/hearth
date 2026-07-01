@@ -14,6 +14,7 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
+import { currentVersion } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
 
 let current = 'home';
@@ -63,11 +64,22 @@ function enterGrowth() {
   });
 }
 
+function hasUnseenChangelog() {
+  const version = currentVersion();
+  return !!version && state().settings.seenChangelog !== version;
+}
+
+function scrollToChangelog() {
+  const view = $('#view');
+  const card = $('#changelog-card');
+  if (view && card) view.scrollTo({ top: card.offsetTop - 12, behavior: 'smooth' });
+}
+
 function shell() {
   return `<main class="phone app">
     <div id="ptr" class="ptr-wrap"><svg class="icon ptr-spinner"><use href="#refresh-cw"></use></svg></div>
     <div id="view" class="screen"></div>
-    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg></button>`).join('')}</nav>
+    <nav class="tabbar">${TABS.map((t) => `<button class="tab" data-action="nav:${t.v}" data-tab="${t.v}" aria-label="${t.label}"><svg class="icon"><use href="#${t.icon}"></use></svg>${t.v === 'profile' && hasUnseenChangelog() ? '<span class="tab-badge"></span>' : ''}</button>`).join('')}</nav>
   </main>`;
 }
 
@@ -85,6 +97,11 @@ export const router = {
     if (view === 'timeline') initTimelineFilters();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
+    $$('.tab[data-tab="profile"]').forEach((t) => {
+      const badge = t.querySelector('.tab-badge');
+      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
+      else if (!hasUnseenChangelog() && badge) badge.remove();
+    });
     if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
@@ -92,6 +109,11 @@ export const router = {
   refresh() {
     if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); if (current === 'timeline') initTimelineFilters(); }
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
+    $$('.tab[data-tab="profile"]').forEach((t) => {
+      const badge = t.querySelector('.tab-badge');
+      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
+      else if (!hasUnseenChangelog() && badge) badge.remove();
+    });
   }
 };
 
@@ -158,8 +180,14 @@ document.addEventListener('click', (ev) => {
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
     'nav:profile': () => {
+      const scrollAfterOpen = hasUnseenChangelog();
       router.go('profile');
-      Promise.all([loadCaregivers(), loadMe()]).then(() => { if (current === 'profile') router.refresh(); });
+      Promise.all([loadCaregivers(), loadMe()]).then(() => {
+        if (current === 'profile') {
+          router.refresh();
+          if (scrollAfterOpen) setTimeout(scrollToChangelog, 50);
+        }
+      });
     },
     'nav:timeline': () => router.go('timeline'),
     'timeline:more': () => { toggleFilterMenu(); router.refresh(); },

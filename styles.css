@@ -172,7 +172,7 @@ body {
   .seg-thumb { transition: transform 0.12s ease, width 0.12s ease; }
 }
 
-.screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; }
 .screen::-webkit-scrollbar { display: none; }
 
 .tabbar {
@@ -195,7 +195,8 @@ body {
   animation-delay: 0s, 0s, 0s;
 }
 @media (display-mode: standalone) { .tabbar { padding-bottom: max(8px, env(safe-area-inset-bottom)); } }
-.tab { all: unset; cursor: pointer; font-size: 23px; color: var(--muted); padding: 6px 18px; border-radius: 14px; transition: color .15s; }
+.tab { all: unset; position: relative; cursor: pointer; font-size: 23px; color: var(--muted); padding: 6px 18px; border-radius: 14px; transition: color .15s; }
+.tab-badge { position: absolute; top: 8px; right: 18px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
 .tab.on { color: var(--accent); }
 
 /* ---- header ---- */
@@ -717,6 +718,12 @@ body[data-mode="dark"] {
 .add-row { all: unset; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 13px 0; color: var(--accent-ink); font-weight: 700; font-size: 13px; width: 100%; }
 .btn-ghost { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 16px; color: var(--soft); font-weight: 700; font-size: 14px; }
 .btn-ghost.danger { color: oklch(0.55 0.13 25); background: oklch(0.95 0.03 25); margin-top: 6px; }
+.changelog-card { gap: 12px; }
+.changelog-card h2 { margin: 0; font-size: 18px; }
+.change-entry { display: grid; gap: 6px; }
+.change-date { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .03em; }
+.change-entry ul { margin: 0; padding-left: 18px; color: var(--soft); }
+.change-entry li { margin: 4px 0; }
 .foot-note { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0 8px; }
 .notif-row { align-items: flex-start; padding: 13px 0; }
 .notif-txt { display: flex; flex-direction: column; gap: 2px; }
