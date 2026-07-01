@@ -262,11 +262,12 @@ function icEdit(key) {
 
 function bottleCard() {
   const nb = derive.nextBottle();
-  const overdue = nb.due < new Date();
+  const overdue = nb.due <= new Date();
+  const lbl = overdue ? `Bottle due · ${fmt.untilOrAgo(nb.due)}` : `Next bottle · every ${state().settings.bottleIntervalH}h`;
   return `<div class="info-card ${overdue ? 'due' : ''}" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="bottle" data-card="bottle">
     <div class="ic-ring feed"><svg class="icon"><use href="#${icon('baby-bottle')}"></use></svg></div>
     <div class="ic-txt">
-      <div class="ic-lbl">Next bottle · every ${state().settings.bottleIntervalH}h</div>
+      <div class="ic-lbl">${lbl}</div>
       <div class="ic-val">${fmt.clock(nb.due)} <span class="ic-rel">${fmt.untilOrAgo(nb.due)}</span></div>
     </div>
     ${icEdit('bottle')}
@@ -289,9 +290,11 @@ function medicineCard() {
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${fmt.untilOrAgo(next.due)}</span>`;
   }
-  return `<div class="info-card" ${action} data-card="medicine">
+  const overdue = next.due && next.due <= new Date();
+  const top = overdue ? `Medicine due · ${fmt.untilOrAgo(next.due)}` : 'Next medicine';
+  return `<div class="info-card ${overdue ? 'due' : ''}" ${action} data-card="medicine">
     <div class="ic-ring med"><svg class="icon"><use href="#${icon('pill')}"></use></svg></div>
-    <div class="ic-txt"><div class="ic-lbl">Next medicine</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
+    <div class="ic-txt"><div class="ic-lbl">${top}</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
     ${icEdit('medicine')}
   </div>`;
 }
@@ -300,11 +303,12 @@ function medicineCard() {
 function genericCard(type) {
   const c = TYPES[type] || { label: type, tone: 'note', icon: 'note-pencil' };
   const n = derive.nextForType(type);
-  const overdue = n.due < new Date();
+  const overdue = n.due <= new Date();
+  const lbl = overdue ? `${esc(c.label)} due · ${fmt.untilOrAgo(n.due)}` : `Next ${esc(c.label.toLowerCase())} · every ${n.intervalH}h`;
   return `<div class="info-card ${overdue ? 'due' : ''}" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="${type}" data-card="${type}">
     <div class="ic-ring tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></div>
     <div class="ic-txt">
-      <div class="ic-lbl">Next ${esc(c.label.toLowerCase())} · every ${n.intervalH}h</div>
+      <div class="ic-lbl">${lbl}</div>
       <div class="ic-val">${fmt.clock(n.due)} <span class="ic-rel">${fmt.untilOrAgo(n.due)}</span></div>
     </div>
     ${icEdit(type)}
