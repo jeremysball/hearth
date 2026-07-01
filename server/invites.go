@@ -77,8 +77,8 @@ func handleJoinInvite(db *sql.DB) http.HandlerFunc {
 
 		caregiverID := newID()
 		now := nowISO()
-		if _, err := db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES (?, ?, ?, 'Partner', ?)`,
-			caregiverID, familyID, caregiverName, now); err != nil {
+		if _, err := db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, ?, 'Partner', ?, ?)`,
+			caregiverID, familyID, caregiverName, now, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}

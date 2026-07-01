@@ -49,7 +49,7 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 		if _, e = tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, '', '', 'girl', ?)`, newBaby, newFamily, now); e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES (?, ?, 'Parent', 'Parent', ?)`, newCare, newFamily, now); e != nil {
+		if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, 'Parent', 'Parent', ?, ?)`, newCare, newFamily, now, now); e != nil {
 			return ReconcileResult{}, e
 		}
 		if _, e = tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,

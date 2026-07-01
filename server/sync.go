@@ -9,11 +9,13 @@ import (
 )
 
 type syncResponse struct {
-	ServerTime string            `json:"serverTime"`
-	Baby       json.RawMessage   `json:"baby,omitempty"`
-	Settings   json.RawMessage   `json:"settings,omitempty"`
-	Entries    []json.RawMessage `json:"entries"`
-	Growth     []json.RawMessage `json:"growth"`
+	ServerTime         string            `json:"serverTime"`
+	Baby               json.RawMessage   `json:"baby,omitempty"`
+	Settings           json.RawMessage   `json:"settings,omitempty"`
+	Entries            []json.RawMessage `json:"entries"`
+	Growth             []json.RawMessage `json:"growth"`
+	Caregivers         []json.RawMessage `json:"caregivers"`
+	CurrentCaregiverID string            `json:"currentCaregiverId"`
 }
 
 func handleSync(db *sql.DB) http.HandlerFunc {
@@ -22,7 +24,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		since := r.URL.Query().Get("since")
 		lowerBound := syncLowerBound(since)
 
-		resp := syncResponse{ServerTime: nowISO(), Entries: []json.RawMessage{}, Growth: []json.RawMessage{}}
+		resp := syncResponse{ServerTime: nowISO(), Entries: []json.RawMessage{}, Growth: []json.RawMessage{}, Caregivers: []json.RawMessage{}, CurrentCaregiverID: session.CaregiverID}
 
 		var name, birthdate, theme string
 		var photo sql.NullString
@@ -47,6 +49,23 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 				"cards":           json.RawMessage(cardsJSON),
 			})
 			resp.Settings = s
+		}
+
+		caregiverRows, err := db.Query(`SELECT id, display_name, role, photo, updated_at FROM caregivers WHERE family_id = ? AND updated_at > ? ORDER BY created_at`, session.FamilyID, lowerBound)
+		if err == nil {
+			defer caregiverRows.Close()
+			for caregiverRows.Next() {
+				var id, displayName, role, photo, updatedAt string
+				if err := caregiverRows.Scan(&id, &displayName, &role, &photo, &updatedAt); err != nil {
+					log.Printf("sync: scan caregivers family=%s: %v", session.FamilyID, err)
+					continue
+				}
+				if !changedAfter(updatedAt, since) {
+					continue
+				}
+				b, _ := json.Marshal(caregiverInfo{ID: id, DisplayName: displayName, Role: role, Photo: photo})
+				resp.Caregivers = append(resp.Caregivers, b)
+			}
 		}
 
 		rows, err := db.Query(`SELECT payload_json, deleted_at, updated_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)

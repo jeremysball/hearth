@@ -97,16 +97,22 @@ export async function loadCaregivers() {
     const res = await fetch('/api/caregivers', { credentials: 'include' });
     if (!res.ok) return;
     cachedCaregivers = await res.json();
+    state().caregivers = cachedCaregivers;
   } catch (e) {
     // offline; keep showing whatever was cached from the last successful load
   }
 }
 
-export function caregiversSnapshot() { return cachedCaregivers; }
+export function caregiversSnapshot() { return cachedCaregivers.length ? cachedCaregivers : (state().caregivers || []); }
 
 function caregiverRow(c) {
+  const initial = esc((c.displayName || 'C')[0].toUpperCase());
+  const avatar = c.photo
+    ? `<span class="avatar cg-avatar" style="background-image:url('${esc(c.photo)}')"></span>`
+    : `<span class="avatar cg-avatar">${initial}</span>`;
+  const mine = c.id === state().currentCaregiverId;
   return `<div class="cg-row">
-    <svg class="icon"><use href="#circle-user"></use></svg>
+    ${mine ? `<button class="cg-photo" data-action="cg:photo" data-id="${esc(c.id)}" aria-label="Change ${esc(c.displayName)} photo">${avatar}<span class="photo-edit mini"><svg class="icon"><use href="#camera"></use></svg></span></button>` : avatar}
     <span class="cg-display"><b>${esc(c.displayName)}</b><span class="fld-l">${esc(c.role)}</span></span>
   </div>`;
 }

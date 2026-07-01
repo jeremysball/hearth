@@ -227,6 +227,7 @@ document.addEventListener('click', (ev) => {
     'baby:photo': () => openBabyPhoto(),
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
+    'cg:photo': () => caregiverPhoto(d.id),
     'cg:invite': () => inviteCaregiver(),
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
@@ -525,6 +526,37 @@ async function inviteCaregiver() {
     toast('Could not reach the server — check your connection');
   }
 }
+function caregiverPhoto(caregiverId) {
+  if (!caregiverId || caregiverId !== state().currentCaregiverId) return toast('You can change your own photo');
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        const sz = 240, cv = document.createElement('canvas'); cv.width = sz; cv.height = sz;
+        const cx = cv.getContext('2d'); const s = Math.min(img.width, img.height);
+        cx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, sz, sz);
+        const photo = cv.toDataURL('image/jpeg', 0.82);
+        const caregivers = caregiversSnapshot().map((c) => c.id === caregiverId ? { ...c, photo } : c);
+        state().caregivers = caregivers;
+        save();
+        router.refresh();
+        try {
+          const res = await fetch('/api/caregivers/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ photo }) });
+          if (!res.ok) toast('Could not sync caregiver photo');
+        } catch (e) {
+          toast('Caregiver photo saved on this device');
+        }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  };
+  inp.click();
+}
+
 function profilePhoto() {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
   inp.onchange = () => {
