@@ -5,6 +5,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   const browser = await launchBrowser();
   const page = await browser.newPage();
   try {
+    await page.setViewportSize({ width: 320, height: 800 });
     await page.goto(srv.base + '/');
     await onboard(page);
     // Log a couple of entries so the timeline has content.
@@ -24,6 +25,12 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('timeline groups under a Today header', todayInfo && todayInfo.label === 'Today', JSON.stringify(todayInfo));
     check('timeline shows the Today entry count', todayInfo && Number(todayInfo.count) >= 1, JSON.stringify(todayInfo));
 
+    const backIconExists = await page.$eval('.tl-back use', (use) => {
+      const href = use.getAttribute('href');
+      return Boolean(href && document.querySelector(href));
+    });
+    check('timeline back button icon resolves', backIconExists);
+
     const backUsesAccentTint = await page.$eval('.tl-back', (el) => {
       const st = getComputedStyle(el);
       const temp = document.createElement('div');
@@ -35,12 +42,26 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       return st.backgroundColor === computedAccent;
     });
     check('timeline back button uses accent tint', backUsesAccentTint, 'expected .tl-back background to match var(--accent-tint)');
+
+    await page.waitForFunction(() => document.querySelector('.tl-chipbar')?.dataset.ready === 'true');
+    const visibleFilters = await page.$$eval('.tl-chipbar .tl-chip:not([hidden])', (els) => els.map((el) => el.textContent.trim()));
+    check('timeline keeps bottle sleep medicine visible', visibleFilters.slice(0, 3).join(',') === 'Bottle,Sleep,Medicine', visibleFilters.join(','));
+    const hiddenFilters = await page.$$eval('.tl-chipbar .tl-chip[hidden][data-optional="true"]', (els) => els.map((el) => el.dataset.type));
+    check('timeline hides overflow filters behind chevron', hiddenFilters.length > 0, hiddenFilters.join(','));
+    const moreVisible = await page.$eval('.tl-more', (el) => !el.hidden);
+    check('timeline overflow chevron appears', moreVisible);
+    const chipbarDoesNotOverflow = await page.$eval('.tl-chipbar', (el) => el.scrollWidth <= el.clientWidth + 1);
+    check('timeline chipbar does not drag horizontally', chipbarDoesNotOverflow);
+    await page.click('.tl-more');
+    await page.waitForSelector('.tl-filter-menu:not([hidden])');
+    const menuFilters = await page.$$eval('.tl-filter-menu .tl-chip:not([hidden])', (els) => els.map((el) => el.dataset.type));
+    check('timeline overflow menu exposes hidden filters', hiddenFilters.every((type) => menuFilters.includes(type)), JSON.stringify({ hiddenFilters, menuFilters }));
     // Filter to a type with no entries → filtered-empty state.
-    await page.click('.tl-chip[data-type="note"]');
+    await page.click('.tl-filter-menu .tl-chip[data-type="note"]');
     await page.waitForSelector('.tl-empty');
     check('filtering to an absent type shows the filtered-empty state', true);
     // Back returns to Home.
-    await page.click('.tl-chip[data-type="note"]'); // clear filter
+    await page.click('.tl-filter-menu .tl-chip[data-type="note"]'); // clear filter
     await page.waitForTimeout(300);
     await page.click('.tl-back');
     await page.waitForSelector('.actions');
