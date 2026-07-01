@@ -9,3 +9,12 @@ node_modules/
 hearth-server
 test-results/
 .superpowers/
+.claude/
+_screenshot.js
+books/
+docs/superpowers/plans/
+docs/research-books-extracted*.md
+docs/research-plan-books.md
+hearth
+server/server
+todo-*.txt

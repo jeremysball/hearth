@@ -1,7 +1,7 @@
 # Hearth — Notifications, Sync, and Reminder Polish
 
 **Date:** 2026-06-30
-**Status:** Approved
+**Status:** Approved — partially landed (see per-section notes)
 
 ---
 
@@ -21,7 +21,18 @@ Three factors combine:
 
 3. **`showNotification` from page context is unreliable on iOS.** iOS WebKit only reliably displays notifications triggered from a `push` event inside the service worker. `notify()` (`js/reminders.js:21`) calls `reg.showNotification()` from page context, which iOS drops when the PWA is not in the foreground.
 
-### Fix
+### Landed
+
+**`7f89098` fix(reminders): fire past-due bottle and medicine reminders**
+
+- Removed the `delay < 0` guard that silently dropped past-due reminders.
+- Clamps `setTimeout` delay to `Math.max(0, delay)` so past-due reminders fire immediately on the next `scheduleReminders` call.
+- Added a `notified` set (backed by `localStorage` under `hearth.notified.v1`) keyed by `rem.key + ':' + rem.at`. A reminder that already fired is skipped on re-arm; entries older than 12h are pruned on every save.
+- Covers root causes: any reminder that comes due while the app is foregrounded (or comes due while backgrounded and is caught on next foreground) now fires once and only once.
+
+Root cause 1 (iOS background timer kill) and root cause 3 (`showNotification` from page context) are **not yet addressed** — those require Web Push.
+
+### Remaining Fix
 
 Replace page-timer scheduling with Web Push so the server triggers notifications at due time.
 
@@ -34,7 +45,6 @@ Replace page-timer scheduling with Web Push so the server triggers notifications
    - `push` event: `e.waitUntil(self.registration.showNotification(data.title, { body: data.body, icon, badge, data: { key: data.key } }))`.
    - `notificationclick` event: focus an existing client or `clients.openWindow`, then `notification.close()`.
 3. Retain `scheduleReminders` for foreground catch-up. Remove the quiet hours check for medicine entries specifically (medicine always fires).
-4. Add a `visibilitychange` listener: on becoming visible, call `scheduleReminders()` and immediately fire any reminder whose `at` is past and not in `notified`.
 
 **Server changes:**
 
@@ -77,8 +87,26 @@ The server broadcasts on every entry upsert via SSE (`server/sse.go`, `entries.g
 
 1. **No `visibilitychange` sync.** `js/app.js` attaches an `online` listener and a 30s `setInterval` to `syncOnce` but no `visibilitychange` listener. When the partner foregrounds the app, nothing triggers a pull until the next 30s tick.
 2. **SSE dies in the background and reconnects only on foreground.** iOS drops `EventSource` sockets when backgrounded. The missed broadcast is never replayed — the server sends only a level trigger, not a payload. The `since` cursor means the next pull recovers all missed entries, but that pull never happens until a restart forces re-init.
+3. **Server `since` comparison was lexical, not temporal.** An entry with `updated_at = "...05.1234Z"` compared lexically against `since = "...05.123Z"` sorted _before_ it and was omitted from the sync response, silently dropping the entry.
 
-### Fix
+### Landed
+
+**`83df1d0` feat(sync): drain outbox immediately on log entry**
+
+- Wires a `_syncTrigger` callback (set by `app.js` via `setSyncTrigger`) into `addEntry`, `removeEntry`, and `updateEntry` in `store.js`.
+- On every mutation, `drainOutbox()` + `syncOnce()` fires immediately rather than waiting up to 30s.
+- Covers the send side: the logging device pushes its entry to the server right away.
+
+**`299b1ed` fix(sync): compare sync timestamps as times**
+
+- `changedAfter(updatedAt, since)` in `server/sync.go` parses both values as `time.Time` and uses `.After()` for comparison, falling back to lexical only if parsing fails.
+- `syncLowerBound(since)` truncates `since` to second precision for the SQL `WHERE updated_at > ?` clause, ensuring same-second entries are fetched and then filtered correctly in Go.
+- `nowISO()` in `server/db.go` now formats with a fixed nanosecond layout (`"2006-01-02T15:04:05.000000000Z"`) rather than `time.RFC3339Nano`, ensuring consistent formatting across all server-written timestamps.
+- Covers root cause 3: no more silently dropped entries from fractional-second timestamp ordering.
+
+Root causes 1 and 2 (no `visibilitychange` listener, SSE not reconnecting on foreground) are **not yet addressed**.
+
+### Remaining Fix
 
 Add to `js/app.js` beside the `online` listener (`js/app.js:665`):
 
@@ -109,17 +137,21 @@ Also shorten the passive poll interval from 30s to 15s. No server change require
 
 Reminder cards on Home show a future clock time and a relative "in Xh" span. Once the due moment passes, the label still reads "Next bottle" and the relative text updates only on the 60s view tick — up to a minute stale with no visual shift.
 
-### Design
+### Landed
 
-When `due <= now`, render the card label as `"${label} · ${fmt.elapsed(due)}"` and tick it live every 15s.
+**`1d0d099` fix(home): show elapsed time on overdue reminders**
 
-1. **`fmt.elapsed(date)`** — new helper in `js/ui.js` near `untilOrAgo` (line 36). Returns `"X min ago"` under 60 minutes, `"Xh Xm ago"` over. Distinct from `fmt.dur` which omits "ago".
-2. **Card label update** — in `bottleCard` (`js/home.js:221`), `medicineCard` (line 233), and `genericCard` (line 258): when overdue, set `ic-lbl` to `"${label} · ${fmt.elapsed(nb.due)}"`. Keep `"Next bottle · every 3h"` form when not overdue.
-3. **Live tick** — add a 15s interval in `js/app.js` beside `tick` (line 551). When `current === 'home'` and no sheet is open, call a new `refreshOverdueLabels()` exported from `js/home.js`. It updates only `.ic-lbl` and `.ic-rel` text nodes of overdue cards by re-reading derive values — no full re-render.
+- Removed the `overdue ? 'due now' : fmt.untilOrAgo(nb.due)` ternary from `bottleCard`, `medicineCard`, and `genericCard`. The `ic-rel` span now always renders `fmt.untilOrAgo(due)`.
+- `fmt.untilOrAgo` already returns `"X min ago"` / `"Xh Xm ago"` for past dates, so the elapsed time is now visible in the `ic-rel` span.
+- The `ic-lbl` ("Next bottle · every 3h") does not yet change when overdue, and there is no dedicated 15s refresh tick.
+
+### Remaining Fix
+
+1. **Card label update** — in `bottleCard` (`js/home.js`), `medicineCard`, and `genericCard`: when `due <= now`, set `ic-lbl` to `"${label} · ${fmt.untilOrAgo(due)}"`. Keep the `"Next bottle · every 3h"` form when not overdue. No new `fmt.elapsed` helper needed — `fmt.untilOrAgo` already produces the right string.
+2. **Live tick** — add a 15s interval in `js/app.js` beside `tick`. When `current === 'home'` and no sheet is open, call a new `refreshOverdueLabels()` exported from `js/home.js`. It updates only `.ic-lbl` and `.ic-rel` text nodes of overdue cards by re-reading derive values — no full re-render.
 
 ### Touched Code
 
-- `js/ui.js`: `fmt.elapsed` near `untilOrAgo`.
 - `js/home.js`: `bottleCard`, `medicineCard`, `genericCard` overdue branch; new `refreshOverdueLabels`.
 - `js/app.js`: 15s interval calling `refreshOverdueLabels`.
 
