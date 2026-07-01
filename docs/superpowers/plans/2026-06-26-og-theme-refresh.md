@@ -1,5 +1,7 @@
 # OG Theme Refresh Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. Hanken Grotesk body font, frosted-glass light cards, and OG (girl/boy) theme polish shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Apply four polish items to the OG (girl/boy) themes: Hanken Grotesk body font, richer surface chroma, frosted-glass cards in light mode, and fire-synced specular glare on hero/toks/FAB/avatar.

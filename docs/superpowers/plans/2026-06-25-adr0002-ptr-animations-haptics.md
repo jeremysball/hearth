@@ -1,5 +1,7 @@
 # ADR-0002 Implementation Plan: Pull-to-refresh, Chart Enter Animations, Spinner Haptics
 
+> **Status:** COMPLETE — merged to `main`. `tests/adr0002-{ptr,animations,haptics}.test.js` pass; `.ptr-wrap`/`.ptr-spinner` and spinner haptics live.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the three interaction-polish features from ADR 0002 — spinner per-row haptics, chart enter animations, and pull-to-refresh.

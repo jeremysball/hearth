@@ -1,5 +1,7 @@
 # Accounts & OAuth Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. `identities` + `pending_auth` tables, `resolve.go`, `/api/me`, `/api/auth/signout`, conflict resolution, and `docs/oauth-setup.md` live.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add opt-in, OAuth-backed accounts (Google + Apple) that anchor an existing anonymous caregiver to a durable identity for multi-device restore, with data-safe reconciliation and never any silent data loss.

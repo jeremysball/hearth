@@ -1,5 +1,7 @@
 # Onboarding and Timeline Polish Implementation Plan
 
+> **Status:** COMPLETE — merged to `main` as PR #27 (`380ce4e`). Onboarding theme picker, dayjob themes, Playfair italic tagline, and timeline day-group polish shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Align onboarding with the full Hearth theme palette and polish the Timeline view presentation.

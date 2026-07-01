@@ -1,5 +1,7 @@
 # Hearth Sleep Model Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. `js/sleep.js`, `WAKE_WINDOW_TABLE`, `wakeWindowRange`/`wakePosition`, `derive.sweetSpot`/`wakeWindowPrediction`/`circadianAnchor` shipped. (A latent `ageMonths` UTC-parse bug slipped through; fixed in the `ui-polish-design` worktree — see `2026-06-30-ui-polish.md` and the remaining-work doc.)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the single-number awake window with a scientifically-grounded, self-personalizing sleep prediction system — population ranges → personal medians → circadian anchoring → regression alerts — with zero new logging burden on parents.

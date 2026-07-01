@@ -1,5 +1,7 @@
 # Notifications Sync and Reminder Polish Implementation Plan
 
+> **Status:** PARTIAL — Task 1 (web push subscriptions + server reminder scheduler) is NOT started: no `server/push.go`, no VAPID, no `push_subscriptions` table. Tasks 2 (foreground sync recovery) and 3 (live overdue reminder labels) were split into the separate `2026-06-30-sync-foreground-overdue-labels.md` plan and are tracked there.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make bottle and medicine reminders reliable on mobile, recover sync promptly on foreground, and keep overdue reminder labels live.

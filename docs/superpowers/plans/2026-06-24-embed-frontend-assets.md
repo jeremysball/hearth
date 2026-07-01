@@ -1,5 +1,7 @@
 # Embed Frontend Assets Implementation Plan
 
+> **Status:** PARTIAL — Tasks 1, 3, 4, 5 landed; Task 2 (embed the static `index.html`/`js/`/`styles.css`/`icons`/`manifest`/`sw.js` via `go:embed`) never shipped. Only `schema.sql` is embedded today; the binary still requires `STATIC_DIR` to serve the frontend.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the `hearth-server` binary self-contained by embedding the PWA frontend (`index.html`, `js/`, `styles.css`, `icons/`, `manifest.webmanifest`, `sw.js`) into it via `go:embed`, while keeping a `STATIC_DIR` env var as an explicit developer escape hatch that serves the same files live from disk so editing the frontend still needs no rebuild.

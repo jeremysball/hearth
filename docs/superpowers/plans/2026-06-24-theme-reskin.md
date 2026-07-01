@@ -1,5 +1,7 @@
 # Hearth Theme Reskin Implementation Plan
 
+> **Status:** COMPLETE — merged to `main`. Archivo + Playfair fonts, Lucide sprite, warm-olive/cool-sage/earthen/dark palettes shipped in `styles.css`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **This plan will be executed by a different, less capable model than the one that wrote it, running unattended via `opencode` in a tmux session.** Every step below is therefore maximally explicit and mechanical on purpose: exact file content for new files, exact before/after text for edits, exact commands with exact expected output. Do not improvise beyond what a step says. If a step's "before" text does not match what's actually in the file, stop and report the mismatch instead of guessing — do not proceed past a step you can't match exactly.
