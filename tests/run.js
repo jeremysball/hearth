@@ -39,11 +39,15 @@ function buildServer() {
   );
 
   let exitCode = 0;
+  let totalPass = 0, totalFail = 0;
   for (const { output, code } of results) {
     process.stdout.write(output);
     if (code !== 0 && exitCode === 0) exitCode = code;
+    const m = output.match(/(\d+) pass, (\d+) fail/);
+    if (m) { totalPass += Number(m[1]); totalFail += Number(m[2]); }
   }
 
+  process.stdout.write('\n=== ALL SUITES DONE === ' + totalPass + ' pass, ' + totalFail + ' fail, exit ' + exitCode + '\n');
   process.exit(exitCode);
 })().catch((e) => { console.error(e); process.exit(1); });
 
