@@ -226,12 +226,18 @@ test('wakeWindowRange first window is shorter than middle for infants', () => {
     `first midpoint (${f.midpoint}) should be less than middle midpoint (${m.midpoint})`);
 });
 
-test('derive.sweetSpot() from/to match prediction low/high', () => {
+test('derive.sweetSpot() from/to match prediction low/high outside night mode', () => {
   // Close any ongoing sleeps left by prior tests
   const MIN = 60000;
   state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: new Date(Date.now() - MIN).toISOString() }); });
   const sp = derive.sweetSpot();
   assert.ok('prediction' in sp, 'sweetSpot should include prediction object');
+  if (sp.night) {
+    assert.equal(sp.prediction, null);
+    assert.equal(sp.from, null);
+    assert.equal(sp.to, null);
+    return;
+  }
   const { prediction } = sp;
   assert.ok(typeof prediction.low === 'number' && typeof prediction.high === 'number');
   if (!sp.napping) {
