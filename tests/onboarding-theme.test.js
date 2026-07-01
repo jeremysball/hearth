@@ -35,6 +35,9 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     check('tagline copy is concise', tagline.text === "A calm home for your baby's days.\u00A0Let's set things up.", tagline.text);
     check('tagline uses Playfair Display', tagline.family.includes('Playfair Display'), tagline.family);
     check('tagline is italic', tagline.fontStyle === 'italic', tagline.fontStyle);
+
+    const playfairHref = await page.$eval('link[href*="Playfair+Display"]', (el) => el.href);
+    check('Playfair italic 400 is loaded', playfairHref.includes('ital,wght@') && playfairHref.includes('1,400'), playfairHref);
   } catch (e) {
     check('onboarding theme test ran without throwing', false, e.message);
   } finally {
