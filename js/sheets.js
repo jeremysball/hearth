@@ -29,29 +29,65 @@ export function openSpinner(id) {
   const max = el.dataset.max !== '' ? parseFloat(el.dataset.max) : Infinity;
   let val = parseFloat(el.dataset.value) || 0;
 
-  const ITEM_H = 44;       // drag pixels per step (matches rendered row height)
-  const OFF = 7;           // items rendered above/below center
-  const ANGLE_PER_ITEM = 20; // degrees between adjacent items on the virtual cylinder
-  const CYLINDER_R = 120;  // cylinder radius in px
-  const PERSPECTIVE = 800; // perspective distance in px
+  const ITEM_H = 44;
+  const OFF = 7;
+  const ANGLE_PER_ITEM = 20;
+  const CYLINDER_R = 120;
+  const PERSPECTIVE = 800;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
+  // These closures always reference the current `val` — callers must not cache
+  // the result across a commit() call that changes val.
   const pxToVal = (px) => val - (px / ITEM_H) * step;
   const valToPx = (v) => (val - v) / step * ITEM_H;
 
   let lastCenter = val;
+  let offsetY = 0;
+  let dragging = false, pid = null, dragged = false, downY = 0, dragY = 0;
+  let velSamples = [];
+  let rafId = 0;
+  let renderPending = false;
+  let curVel = 0;   // px/ms during momentum, for buzz gating
+  let lastBuzz = 0;
+  let snapTimeout = 0; // failsafe: commits within 500ms even if rAF is throttled
 
-  function commit(v) {
-    v = Math.round(v * 1e6) / 1e6;
-    if (v < min) v = min; else if (v > max) v = max;
-    // Keep offsetY valid after val shifts so an interrupted animation's
-    // position carries forward correctly into the next drag.
+  // --- Helpers ---
+
+  function clampValue(v) {
+    return Math.min(max, Math.max(min, Math.round(v * 1e6) / 1e6));
+  }
+
+  function clampOffset(offset) {
+    if (min !== -Infinity) offset = Math.min(valToPx(min), offset);
+    if (max !== Infinity)  offset = Math.max(valToPx(max), offset);
+    return offset;
+  }
+
+  // Rubber-band: allow a decaying overshoot past the boundary during drag/momentum.
+  function softClamp(offset) {
+    if (min !== -Infinity) {
+      const bound = valToPx(min);
+      if (offset > bound) offset = bound + (offset - bound) * 0.25;
+    }
+    if (max !== Infinity) {
+      const bound = valToPx(max);
+      if (offset < bound) offset = bound + (offset - bound) * 0.25;
+    }
+    return offset;
+  }
+
+  // commit() advances val to v, adjusting offsetY so the visible drum position
+  // is unchanged — essential for interrupt-on-pointerdown to work without a jump.
+  function commit(v, silent = false) {
+    v = clampValue(Math.round(v / step) * step);
     offsetY += (v - val) / step * ITEM_H;
     val = v;
     el.dataset.value = val;
     el.textContent = fmtVal(val);
     el.setAttribute('aria-valuenow', val);
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    if (state().settings.sound !== false) tick();
+    if (!silent) {
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      if (state().settings.sound !== false) tick();
+    }
   }
 
   function trackHTML(center) {
@@ -65,23 +101,7 @@ export function openSpinner(id) {
     return html;
   }
 
-  // Positions items on a virtual cylinder using 2D transforms computed from 3D geometry.
-  // drumAngle (degrees) is the current rotation of the cylinder — positive = top toward viewer.
-  function updateDrum(drumAngle) {
-    items.querySelectorAll('.spinner-item').forEach((el, idx) => {
-      const i = idx - OFF; // offset from center (-OFF … +OFF)
-      const effRad = (i * ANGLE_PER_ITEM - drumAngle) * Math.PI / 180;
-      const cosA = Math.cos(effRad);
-      const sinA = Math.sin(effRad);
-      const z = CYLINDER_R * cosA;
-      const y = CYLINDER_R * sinA;
-      const ps = PERSPECTIVE / (PERSPECTIVE - z); // perspective scale
-      const vy = y * ps;
-      const sY = Math.max(0, cosA * ps); // vertical foreshortening + perspective
-      el.style.transform = `translateY(${vy.toFixed(2)}px) scaleY(${sY.toFixed(4)})`;
-      el.style.opacity = Math.max(0, cosA).toFixed(3);
-    });
-  }
+  // --- DOM setup ---
 
   const overlay = document.createElement('div');
   overlay.className = 'spinner-overlay';
@@ -93,24 +113,79 @@ export function openSpinner(id) {
   </div>`;
 
   const items = overlay.querySelector('#spinner-items');
+  // Cached node list — avoids re-querying the DOM inside the animation loop.
+  let itemEls = Array.from(items.querySelectorAll('.spinner-item'));
+
+  function rebuildItemEls() {
+    itemEls = Array.from(items.querySelectorAll('.spinner-item'));
+  }
+
+  // Update label text in place — no DOM rebuild, no node churn.
+  function updateLabels(center) {
+    for (let idx = 0; idx < itemEls.length; idx++) {
+      const i = idx - OFF;
+      const v = center + i * step;
+      itemEls[idx].textContent = (v >= min && v <= max) ? fmtVal(v) : '';
+      itemEls[idx].classList.toggle('on', i === 0);
+    }
+  }
+
+  // Positions items on a virtual cylinder using 2D transforms computed from 3D geometry.
+  // drumAngle (degrees): rotation of the cylinder — positive = top toward viewer.
+  function updateDrum(drumAngle) {
+    for (let idx = 0; idx < itemEls.length; idx++) {
+      const i = idx - OFF;
+      const effRad = (i * ANGLE_PER_ITEM - drumAngle) * Math.PI / 180;
+      const cosA = Math.cos(effRad);
+      const sinA = Math.sin(effRad);
+      const z = CYLINDER_R * cosA;
+      const y = CYLINDER_R * sinA;
+      const ps = PERSPECTIVE / (PERSPECTIVE - z);
+      const vy = y * ps;
+      const sY = Math.max(0, cosA * ps);
+      itemEls[idx].style.transform = `translate3d(0,${vy.toFixed(2)}px,0) scaleY(${sY.toFixed(4)})`;
+      itemEls[idx].style.opacity = Math.max(0, cosA).toFixed(3);
+    }
+  }
+
+  // Suppress haptics during fast fling; throttle to one buzz per 40 ms.
+  function maybeBuzz() {
+    if (Math.abs(curVel) > 0.9) return;
+    const t = performance.now();
+    if (t - lastBuzz > 40) { buzz(3); lastBuzz = t; }
+  }
 
   function render(offset) {
-    const raw = pxToVal(offset);
-    const center = Math.round(raw / step) * step;
+    const center = Math.round(pxToVal(offset) / step) * step;
     if (center !== lastCenter) {
       lastCenter = center;
-      items.innerHTML = trackHTML(center);
-      buzz(3);
+      updateLabels(center);
+      maybeBuzz();
     }
-    // Residual must be measured from the rendered `center` (chosen by
-    // rounding), not `offset % ITEM_H` — that modulo implicitly floors
-    // toward zero, which disagrees with the rounding for the back half of
-    // every step and snaps the track a full row out of place mid-drag.
+    // Residual must be measured from the rounded `center`, not offset % ITEM_H —
+    // that modulo floors toward zero, which disagrees with rounding for the back
+    // half of every step and snaps the track a full row out of place mid-drag.
     const residual = offset - valToPx(center);
     updateDrum(-(residual / ITEM_H) * ANGLE_PER_ITEM);
-    items.style.transition = 'none';
     return center;
   }
+
+  function scheduleRender() {
+    if (renderPending) return;
+    renderPending = true;
+    rafId = requestAnimationFrame(() => { renderPending = false; rafId = 0; render(offsetY); });
+  }
+
+  // Force a render synchronously (before computing release velocity in onUp,
+  // or before committing on interrupt in onDown).
+  function flushRender() {
+    if (!renderPending) return;
+    cancelAnimationFrame(rafId);
+    renderPending = false; rafId = 0;
+    render(offsetY);
+  }
+
+  // --- Event handlers ---
 
   function close() {
     overlay._closed = true;
@@ -120,106 +195,183 @@ export function openSpinner(id) {
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  let dragging = false, pid = null, dragged = false;
-  let offsetY = 0, dragY = 0;
-  let velSamples = [];
-  let rafId = 0;
-
-  function clampOffset(offset) {
-    if (min !== -Infinity) {
-      const maxDown = valToPx(min); // most positive offset allowed
-      offset = Math.min(maxDown, offset);
-    }
-    if (max !== Infinity) {
-      const maxUp = valToPx(max); // most negative offset allowed
-      offset = Math.max(maxUp, offset);
-    }
-    return offset;
-  }
-
   function onDown(e) {
     if (e.target.closest('.spinner-type')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragging) return;
-    cancelAnimationFrame(rafId);
+
+    // Commit whatever is currently displayed before cancelling any in-flight
+    // animation. This rebases `val` to the visible center so the next flick's
+    // steps and targetOffset are anchored to the actual displayed position —
+    // without this, rapid spam flicks leave val frozen while offsetY drifts
+    // hundreds of pixels, and the ±30-step cap causes backward settle (reset).
+    clearTimeout(snapTimeout); snapTimeout = 0;
+    if (rafId || renderPending) {
+      flushRender();
+      cancelAnimationFrame(rafId); rafId = 0; renderPending = false;
+      const center = Math.round(pxToVal(offsetY) / step) * step;
+      if (center !== val) commit(center, true);
+    }
+
     dragging = true; pid = e.pointerId; dragged = false;
-    dragY = e.clientY;
-    velSamples = [{ y: e.clientY, t: performance.now() }];
+    downY = dragY = e.clientY;
+    curVel = 0;
+    velSamples = [{ y: e.clientY, t: e.timeStamp || performance.now() }];
     items.setPointerCapture(pid);
-    items.style.transition = 'none';
   }
 
   function onMove(e) {
     if (!dragging || e.pointerId !== pid) return;
     e.preventDefault();
-    const dy = e.clientY - dragY;
-    dragY = e.clientY;
-    offsetY += dy;
-    if (Math.abs(offsetY) > 3) dragged = true;
 
-    velSamples.push({ y: e.clientY, t: performance.now() });
-    if (velSamples.length > 5) velSamples.shift();
+    // getCoalescedEvents gives all raw samples between frames on 120Hz panels,
+    // avoiding the velocity spike from a single large jump per frame.
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) {
+      const dy = ev.clientY - dragY;
+      dragY = ev.clientY;
+      offsetY += dy;
+      velSamples.push({ y: ev.clientY, t: ev.timeStamp || performance.now() });
+    }
 
-    offsetY = clampOffset(offsetY);
-    render(offsetY);
+    // Keep velocity window to ~120 ms
+    const now = performance.now();
+    while (velSamples.length > 2 && now - velSamples[0].t > 120) velSamples.shift();
+    if (velSamples.length > 12) velSamples.shift();
+
+    if (Math.abs(e.clientY - downY) > 3) dragged = true;
+    offsetY = softClamp(offsetY);
+    scheduleRender();
+  }
+
+  function releaseVelocity() {
+    const n = velSamples.length;
+    if (n < 2) return 0;
+    // Use a reference sample ~80 ms old rather than the oldest to avoid
+    // velocity inflation when the finger paused before lifting.
+    const last = velSamples[n - 1];
+    let ref = velSamples[0];
+    for (let i = n - 1; i >= 0; i--) {
+      if (last.t - velSamples[i].t > 80) { ref = velSamples[i]; break; }
+    }
+    const dt = Math.max(1, last.t - ref.t);
+    const v = (last.y - ref.y) / dt; // px/ms
+    return Math.max(-4.2, Math.min(4.2, v));
+  }
+
+  // Project the landing using the exponential decay integral (d = v0·τ), snap to
+  // the nearest step with a critically-damped spring seeded with the release
+  // velocity. This avoids simulating hundreds of near-zero frames: the integral
+  // gives the exact total coast distance in O(1), and the spring commits within
+  // ~250 ms regardless of fling speed.
+  // Frame-by-frame exponential decay: v(t) = v0·e^(-t/τ). Cap at 300ms so
+  // the residual handed to startSnap is always <½ step — spring settles in
+  // <50ms rather than the 500ms+ a full-amplitude spring would need.
+  function startMomentum(v0) {
+    const tau = (0.30 + Math.min(Math.abs(v0) / 9, 0.18)) * 1000; // ms
+    const tStart = performance.now();
+    let lastT = tStart;
+    function tick(now) {
+      if (overlay._closed) return;
+      const dt = Math.min(now - lastT, 32); lastT = now; // ms
+      v0 *= Math.exp(-dt / tau);
+      offsetY = softClamp(offsetY + v0 * dt);
+      render(offsetY);
+      if (now - tStart < 300 && Math.abs(v0) > 0.02) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        curVel = 0;
+        startSnap(); // spring corrects the small residual (<½ step)
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Critically-damped spring onto targetVal (defaults to nearest step from
+  // current offsetY). initVelMs carries the release velocity so the spring
+  // continues smoothly from any preceding momentum phase.
+  function startSnap(initVelMs = 0, targetVal = null) {
+    if (overlay._closed) return;
+    if (targetVal === null) {
+      targetVal = clampValue(Math.round(pxToVal(offsetY) / step) * step);
+    }
+    const targetPx = clampOffset(valToPx(targetVal));
+
+    let pos = offsetY;
+    let vel = initVelMs * 1000; // px/ms → px/s; spring math uses seconds
+    const k = 360, c = 2 * Math.sqrt(k) * 0.92; // slightly under-critical for subtle bounce
+    let lastT = performance.now();
+
+    function frame(now) {
+      if (overlay._closed) return;
+      const dt = Math.min((now - lastT) / 1000, 0.032); lastT = now; // seconds
+      const acc = -k * (pos - targetPx) - c * vel;
+      vel += acc * dt;
+      pos += vel * dt;
+      offsetY = clampOffset(pos);
+      render(offsetY);
+
+      if (Math.abs(vel) < 2 && Math.abs(pos - targetPx) < 0.5) {
+        clearTimeout(snapTimeout); snapTimeout = 0;
+        offsetY = targetPx;
+        render(offsetY);
+        commit(targetVal);
+        curVel = 0; rafId = 0;
+        return;
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
   }
 
   function onUp(e) {
     if (!dragging || e.pointerId !== pid) return;
+    flushRender();
     dragging = false; pid = null;
 
     if (!dragged) {
-      // tap without drag — enter type mode on the centered value
       const onItem = items.querySelector('.spinner-item.on');
       if (onItem) { enterTypeMode(onItem); return; }
     }
 
-    // velocity from recent samples (px/ms → momentum mapper). Measured as
-    // net position change over the exact span it's timed against — summing
-    // per-event dy over a window whose dt only covers (n-1) of the n
-    // intervals overstates speed by n/(n-1), worst for short flings.
-    let vel = 0;
-    if (velSamples.length > 1) {
-      const first = velSamples[0], last = velSamples[velSamples.length - 1];
-      const dt = last.t - first.t;
-      if (dt > 0) vel = ((last.y - first.y) / dt) * 100;
+    const v0 = releaseVelocity(); // px/ms
+    if (Math.abs(v0) < 0.04) {
+      startSnap();
+    } else {
+      startMomentum(v0);
     }
-    const momentum = offsetY + vel;
-    let steps = Math.max(-30, Math.min(30, Math.round(momentum / ITEM_H)));
-    // Any intentional swipe should advance at least one step in its direction.
-    if (dragged && steps === 0 && momentum !== 0) steps = Math.sign(momentum);
-    const targetOffset = clampOffset(steps * ITEM_H);
+    // Fallback: if rAF is throttled (e.g. parallel headless tests), commit within
+    // 500ms rather than relying on rAF alone. clearTimeout in startSnap's natural
+    // commit path and in onDown cancel this before it fires in normal operation.
+    snapTimeout = setTimeout(() => {
+      snapTimeout = 0;
+      if (dragging || overlay._closed || !rafId) return;
+      cancelAnimationFrame(rafId); rafId = 0;
+      const sv = clampValue(Math.round(pxToVal(offsetY) / step) * step);
+      offsetY = clampOffset(valToPx(sv));
+      render(offsetY); commit(sv); curVel = 0;
+    }, 500);
+  }
 
-    // Animate the entire distance so all crossing steps are smooth.
-    const startOffset = offsetY;
-    const distance = targetOffset - startOffset;
-    const duration = Math.min(Math.abs(distance) * 3 + 180, 500);
-    const startTime = performance.now();
-
-    function animate() {
-      if (overlay._closed) return;
-      const t = Math.min(1, (performance.now() - startTime) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic — fast start, settle
-      offsetY = clampOffset(startOffset + distance * eased);
-      render(offsetY);
-      if (t < 1) {
-        rafId = requestAnimationFrame(animate);
-      } else {
-        // Final settle: snap to exact step boundary and commit
-        const final = pxToVal(targetOffset);
-        const snapped = Math.min(max, Math.max(min, Math.round(final / step) * step));
-        offsetY = clampOffset(valToPx(snapped));
-        render(offsetY);
-        commit(snapped);
-      }
-    }
-    rafId = requestAnimationFrame(animate);
+  function onCancel(e) {
+    if (!dragging || e.pointerId !== pid) return;
+    flushRender();
+    dragging = false; pid = null;
+    startSnap();
+    snapTimeout = setTimeout(() => {
+      snapTimeout = 0;
+      if (dragging || overlay._closed || !rafId) return;
+      cancelAnimationFrame(rafId); rafId = 0;
+      const sv = clampValue(Math.round(pxToVal(offsetY) / step) * step);
+      offsetY = clampOffset(valToPx(sv));
+      render(offsetY); commit(sv); curVel = 0;
+    }, 500);
   }
 
   items.addEventListener('pointerdown', onDown);
   items.addEventListener('pointermove', onMove);
   items.addEventListener('pointerup', onUp);
-  items.addEventListener('pointercancel', onUp);
+  items.addEventListener('pointercancel', onCancel);
 
   // tap-to-type: tapping the centered value opens an inline input
   items.addEventListener('click', (e) => {
@@ -243,9 +395,10 @@ export function openSpinner(id) {
       const raw = inp.value.trim();
       const num = Number(raw);
       if (raw === '' || isNaN(num)) { exitTypeMode(onItem); return; }
-      const snapped = Math.min(max, Math.max(min, Math.round(num / step) * step));
+      const snapped = clampValue(Math.round(num / step) * step);
       commit(snapped);
       items.innerHTML = trackHTML(snapped);
+      rebuildItemEls();
       updateDrum(0);
       offsetY = 0; lastCenter = snapped;
     }
@@ -259,6 +412,7 @@ export function openSpinner(id) {
   function exitTypeMode(onItem) {
     if (!onItem || !onItem.querySelector('input')) return;
     items.innerHTML = trackHTML(lastCenter);
+    rebuildItemEls();
     updateDrum(0);
   }
 
