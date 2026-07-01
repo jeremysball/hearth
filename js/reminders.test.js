@@ -62,11 +62,29 @@ globalThis.Notification = {
   requestPermission: async () => 'granted',
 };
 
+const fetchCalls = [];
+globalThis.fetch = async (url, opts = {}) => {
+  fetchCalls.push({ url: String(url), opts });
+  if (String(url) === '/api/push/public-key') {
+    return { ok: true, json: async () => ({ publicKey: 'BAECAwQ' }) };
+  }
+  return { ok: true, json: async () => ({}) };
+};
+
 // ---------- navigator ----------
 Object.defineProperty(globalThis, 'navigator', {
   value: {
     serviceWorker: {
-      ready: Promise.resolve({ showNotification: () => Promise.resolve() }),
+      ready: Promise.resolve({
+        showNotification: () => Promise.resolve(),
+        pushManager: {
+          subscribe: async () => ({
+            endpoint: 'https://push.example/sub',
+            keys: { p256dh: 'p256dh-key', auth: 'auth-key' },
+            toJSON() { return { endpoint: this.endpoint, keys: this.keys }; },
+          }),
+        },
+      }),
       register: () => Promise.resolve().catch(() => {}),
       controller: null,
       addEventListener: () => {},
@@ -113,7 +131,8 @@ localStorage.setItem('hearth.state.v1', JSON.stringify(initialState));
 
 // ---------- Import modules ----------
 const { scheduleReminders, enableNotifs } = await import('./reminders.js');
-const { addEntry } = await import('./store.js');
+const { addEntry, state, setSyncTrigger } = await import('./store.js');
+setSyncTrigger(null);
 
 // ---------- Helpers ----------
 function timeoutForBottle() {
@@ -122,6 +141,10 @@ function timeoutForBottle() {
 
 function resetTimeouts() {
   timeoutCalls.length = 0;
+}
+
+function resetFetches() {
+  fetchCalls.length = 0;
 }
 
 // ---------- Tests ----------
@@ -149,6 +172,19 @@ test('Past-due reminder fires once', async () => {
   assert.ok(found, 'notified set should contain a bottle key');
 });
 
+test('Enable notifications subscribes browser push with server key', async () => {
+  resetFetches();
+
+  await enableNotifs();
+
+  assert.ok(fetchCalls.find((c) => c.url === '/api/push/public-key'), 'should fetch VAPID public key');
+  const subscribeCall = fetchCalls.find((c) => c.url === '/api/push/subscribe');
+  assert.ok(subscribeCall, 'should post push subscription');
+  assert.equal(subscribeCall.opts.method, 'POST');
+  assert.equal(subscribeCall.opts.credentials, 'include');
+  assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
+});
+
 test('Does not re-fire on second call', () => {
   // notified key is already in localStorage from test 1
   resetTimeouts();
@@ -170,3 +206,14 @@ test('New bottle re-arms when due time changes', () => {
   assert.ok(call.delay <= 0, `delay should be <= 0, got ${call.delay}`);
 });
 
+test('Medicine reminders schedule during quiet hours', async () => {
+  state().settings.reminders = { naps: false, bottle: false, meds: true, lead: 0, quietStart: '00:00', quietEnd: '23:59' };
+  state().settings.meds = [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 0 }];
+  state().log = [{ id: 'med1', type: 'medicine', medId: 'm1', start: new Date().toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+
+  await enableNotifs();
+
+  assert.ok(timeoutCalls.find((c) => c.delay <= 0), 'medicine reminder should schedule despite quiet hours');
+});

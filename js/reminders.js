@@ -8,6 +8,22 @@ let _scheduled = {};
 
 const NOTIFIED_KEY = 'hearth.notified.v1';
 
+function urlBase64ToUint8Array(base64) {
+  const pad = '='.repeat((4 - base64.length % 4) % 4);
+  const data = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...data].map((ch) => ch.charCodeAt(0)));
+}
+
+async function subscribePush(reg) {
+  if (!reg?.pushManager) return false;
+  const keyRes = await fetch('/api/push/public-key', { credentials: 'include' });
+  if (!keyRes.ok) return false;
+  const { publicKey } = await keyRes.json();
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+  const res = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(sub) });
+  return res.ok;
+}
+
 function loadNotified() {
   try { return new Map(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]')); }
   catch { return new Map(); }
@@ -33,7 +49,13 @@ export async function enableNotifs() {
   if (!('Notification' in window)) { toast('Notifications not supported in this browser'); return; }
   const perm = await Notification.requestPermission();
   _granted = perm === 'granted';
-  if (_granted) { toast('Reminders enabled ✓'); scheduleReminders(); router.refresh(); }
+  if (_granted) {
+    const reg = await navigator.serviceWorker.ready;
+    await subscribePush(reg).catch(() => false);
+    toast('Reminders enabled ✓');
+    scheduleReminders();
+    router.refresh();
+  }
   else toast('Permission denied — enable in browser settings');
 }
 
@@ -55,7 +77,7 @@ export function scheduleReminders() {
     if (notified.has(notifiedKey)) return;
     const delay = rem.at - now;
     if (delay > 12 * 3600000) return;  // keep the 12h future cap
-    if (isQuiet(rem.at, quietStart, quietEnd)) return;
+    if (!rem.key.startsWith('med-') && isQuiet(rem.at, quietStart, quietEnd)) return;
     _scheduled[rem.key] = setTimeout(() => {
       notify(rem.title, rem.body);
       delete _scheduled[rem.key];
