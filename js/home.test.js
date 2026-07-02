@@ -8,9 +8,22 @@ globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { bathDaysSinceLabel } = await import('./home.js');
+const { bathDaysSinceLabel, home } = await import('./home.js');
+const { reset } = await import('./store.js');
 
 const atDaysAgo = (n) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - n); return d.toISOString(); };
+
+function withMockedNow(iso, fn) {
+  const OrigDate = global.Date;
+  const nowMs = new OrigDate(iso).getTime();
+  class MockDate extends OrigDate {
+    constructor(...args) { super(...(args.length ? args : [nowMs])); }
+    static now() { return nowMs; }
+  }
+  global.Date = MockDate;
+  try { return fn(); }
+  finally { global.Date = OrigDate; }
+}
 
 test('bathDaysSinceLabel returns Never for no entry', () => {
   assert.equal(bathDaysSinceLabel(null), 'Never');
@@ -23,4 +36,12 @@ test('bathDaysSinceLabel returns Yesterday for one calendar day ago', () => {
 });
 test('bathDaysSinceLabel returns N days ago for older entries', () => {
   assert.equal(bathDaysSinceLabel(atDaysAgo(3)), '3 days ago');
+});
+
+test('home hero rail renders a prediction source info button while awake', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => home());
+
+  assert.match(html, /data-action="prediction:info"/);
+  assert.match(html, /class="src-info-btn src-generic"/);
 });

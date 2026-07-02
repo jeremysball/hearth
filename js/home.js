@@ -2,6 +2,7 @@
 import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
+import { predictionSourceInfo } from './sleep.js';
 
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
@@ -262,7 +263,7 @@ function heroCard() {
     <div class="sh-sweet-lbl">${sweetLabel}${clockTimeNote}</div>
     <div class="sh-rail-wrap">
       <div class="sh-bed">${coals}</div>
-      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}</span></div>
+      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}<button class="src-info-btn ${predictionSourceInfo(sp.prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button></span></div>
     </div>
   </div>`;
 }
