@@ -8,10 +8,15 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.goto(srv.base + '/');
     await onboard(page);
     await page.click('[data-action="log:open"][data-type="sleep"]');
-    await page.waitForSelector('#f-time');
-    const val = await page.$eval('#f-time', el => el.value);
-    // datetime-local value must be a full YYYY-MM-DDTHH:MM, date portion non-empty.
-    check('sleep sheet #f-time has a full datetime value', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val), val);
+    await page.waitForSelector('#f-time-date');
+    const dateVal = await page.$eval('#f-time-date', el => el.value);
+    const timeVal = await page.$eval('#f-time-time', el => el.value);
+    check('sleep sheet #f-time-date has a full date value', /^\d{4}-\d{2}-\d{2}$/.test(dateVal), dateVal);
+    check('sleep sheet #f-time-time has a full time value', /^\d{2}:\d{2}$/.test(timeVal), timeVal);
+    const endDateVal = await page.$eval('#f-end-date', el => el.value);
+    const endTimeVal = await page.$eval('#f-end-time', el => el.value);
+    check('sleep sheet #f-end-date starts blank', endDateVal === '', endDateVal);
+    check('sleep sheet #f-end-time starts blank', endTimeVal === '', endTimeVal);
   } catch (e) {
     check('datetime test ran without throwing', false, e.message);
   } finally {

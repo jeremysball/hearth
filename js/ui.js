@@ -211,10 +211,10 @@ if (window.matchMedia) {
 // ---------- toast ----------
 let toastTimer;
 let _undo = null;
-export function toast(msg, undo) {
+export function toast(msg, undo, label = 'Undo') {
   let el = $('#toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
-  el.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button data-action="toast:undo">Undo</button>` : '');
+  el.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button data-action="toast:undo">${esc(label)}</button>` : '');
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), undo ? 4500 : 2200);
