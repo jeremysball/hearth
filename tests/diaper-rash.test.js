@@ -8,9 +8,13 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.goto(srv.base + '/');
     await onboard(page);
 
-    // Log a diaper entry with the rash toggle on.
+    // A fresh diaper form starts with the rash switch off.
     await page.click('[data-action="log:open"][data-type="diaper"]');
     await page.waitForSelector('#f-rash');
+    const startsOff = await page.$eval('#f-rash', (el) => !el.classList.contains('on'));
+    check('a fresh diaper form starts with the rash switch off', startsOff);
+
+    // Log a diaper entry with the rash toggle on.
     await page.click('#f-rash');
     await page.click('[data-action="log:save"][data-type="diaper"]');
     await page.waitForTimeout(300);
@@ -21,6 +25,9 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       return e ? e.rash : undefined;
     });
     check('diaper entry saves rash: true when toggled on', savedRash === true, savedRash);
+
+    const metaShowsRash = await page.$eval('.row .meta', (el) => el.textContent.includes('Rash'));
+    check('home card meta shows Rash when the entry has rash', metaShowsRash);
 
     // Reopen for edit: the switch should reflect the saved state.
     const entryId = await page.evaluate(() => {
@@ -44,6 +51,36 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       return e ? e.rash : undefined;
     });
     check('clearing the rash toggle and saving persists rash: false', clearedRash === false, clearedRash);
+
+    // Clearing an entry's note on edit must persist, not just be omitted from the patch
+    // (same Object.assign-never-deletes bug class the rash fix above addresses).
+    await page.click(`[data-id="${entryId}"]`);
+    await page.waitForSelector('[data-action="entry:edit"]');
+    await page.click('[data-action="entry:edit"]');
+    await page.waitForSelector('#f-note');
+    await page.fill('#f-note', 'Looked a little irritated');
+    await page.click('[data-action="log:save"][data-type="diaper"]');
+    await page.waitForTimeout(300);
+    const savedNote = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
+      const e = st.log.find((x) => x.type === 'diaper');
+      return e ? e.note : undefined;
+    });
+    check('diaper entry saves a note', savedNote === 'Looked a little irritated', savedNote);
+
+    await page.click(`[data-id="${entryId}"]`);
+    await page.waitForSelector('[data-action="entry:edit"]');
+    await page.click('[data-action="entry:edit"]');
+    await page.waitForSelector('#f-note');
+    await page.fill('#f-note', '');
+    await page.click('[data-action="log:save"][data-type="diaper"]');
+    await page.waitForTimeout(300);
+    const clearedNote = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
+      const e = st.log.find((x) => x.type === 'diaper');
+      return e ? e.note : undefined;
+    });
+    check('clearing the note field and saving persists an empty note', !clearedNote, clearedNote);
   } catch (e) {
     check('diaper rash test ran without throwing', false, e.message);
   } finally {
