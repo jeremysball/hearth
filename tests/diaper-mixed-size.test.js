@@ -23,6 +23,13 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('selecting Mixed hides the single size selector', singleHiddenAfterMixed);
     check('selecting Mixed shows the wet/dirty size selectors', mixedVisibleAfterMixed);
 
+    // The revealed wet/dirty seg-thumbs must have a real pill width, not the
+    // 0px they'd get from being positioned while still hidden.
+    const wetThumbWidth = await page.$eval('[data-seg="wetSize"] .seg-thumb', (el) => parseFloat(el.style.width) || 0);
+    const dirtyThumbWidth = await page.$eval('[data-seg="dirtySize"] .seg-thumb', (el) => parseFloat(el.style.width) || 0);
+    check('the wetSize thumb has a nonzero pill width when Mixed is revealed', wetThumbWidth > 0, wetThumbWidth);
+    check('the dirtySize thumb has a nonzero pill width when Mixed is revealed', dirtyThumbWidth > 0, dirtyThumbWidth);
+
     // Pick distinct wet/dirty sizes and save.
     await page.click('[data-seg="wetSize"] .seg-opt[data-val="Small"]');
     await page.click('[data-seg="dirtySize"] .seg-opt[data-val="Large"]');
@@ -84,6 +91,63 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     const wetMixedHidden = await page.$eval('#diaper-size-mixed', (el) => el.hidden);
     check('editing a Wet entry shows the single size selector', wetSingleVisible);
     check('editing a Wet entry hides the split size selectors', wetMixedHidden);
+    await page.click('[data-action="sheet:close"]');
+    await page.waitForTimeout(200);
+
+    // Dirty shares the single-selector branch with Wet — cover it directly
+    // rather than relying on Wet coverage to stand in for it.
+    await page.click('[data-action="log:open"][data-type="diaper"]');
+    await page.waitForSelector('[data-seg="kind"]');
+    await page.click('[data-seg="kind"] .seg-opt[data-val="Dirty"]');
+    await page.click('[data-seg="size"] .seg-opt[data-val="Large"]');
+    await page.click('[data-action="log:save"][data-type="diaper"]');
+    await page.waitForTimeout(300);
+    const savedDirty = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
+      // st.log is sorted newest-first, so the just-saved entry is at index 0.
+      return st.log.find((x) => x.type === 'diaper' && x.kind === 'Dirty');
+    });
+    check('a Dirty diaper entry saves the single size', savedDirty.kind === 'Dirty' && savedDirty.size === 'Large', JSON.stringify(savedDirty));
+    check('a Dirty diaper entry clears wetSize/dirtySize', savedDirty.wetSize === null && savedDirty.dirtySize === null, JSON.stringify(savedDirty));
+
+    // Mixed entries combine with rash in the home card meta.
+    await page.click('[data-action="log:open"][data-type="diaper"]');
+    await page.waitForSelector('[data-seg="kind"]');
+    await page.click('[data-seg="kind"] .seg-opt[data-val="Mixed"]');
+    await page.click('[data-seg="wetSize"] .seg-opt[data-val="Small"]');
+    await page.click('[data-seg="dirtySize"] .seg-opt[data-val="Large"]');
+    await page.click('#f-rash');
+    await page.click('[data-action="log:save"][data-type="diaper"]');
+    await page.waitForTimeout(300);
+    const rashMixedId = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
+      const e = st.log.find((x) => x.type === 'diaper' && x.kind === 'Mixed' && x.rash === true);
+      return e ? e.id : null;
+    });
+    const rashMixedMeta = rashMixedId ? await page.$eval(`[data-id="${rashMixedId}"] .meta`, (el) => el.textContent) : '';
+    check('a Mixed entry with rash shows both the size split and Rash in the meta', rashMixedMeta.includes('Small/Large') && rashMixedMeta.includes('Rash'), rashMixedMeta);
+
+    // Legacy data: a Mixed entry logged before this feature only has `size`.
+    // Loading it must not lose that size, and editing it must not silently
+    // overwrite it with the Medium default.
+    await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
+      st.log.unshift({ id: 'legacy-mixed', type: 'diaper', kind: 'Mixed', size: 'Large', start: new Date().toISOString() });
+      localStorage.setItem('hearth.state.v1', JSON.stringify(st));
+    });
+    await page.reload();
+    await page.waitForSelector('[data-id="legacy-mixed"]');
+    const legacyMeta = await page.$eval('[data-id="legacy-mixed"] .meta', (el) => el.textContent);
+    check('a legacy Mixed entry with only `size` still shows a size in its meta', legacyMeta.includes('Large'), legacyMeta);
+
+    await page.click('[data-id="legacy-mixed"]');
+    await page.waitForSelector('[data-action="entry:edit"]');
+    await page.click('[data-action="entry:edit"]');
+    await page.waitForSelector('[data-seg="wetSize"]');
+    const legacyWet = await page.$eval('[data-seg="wetSize"] .seg-opt.on', (el) => el.dataset.val).catch(() => null);
+    const legacyDirty = await page.$eval('[data-seg="dirtySize"] .seg-opt.on', (el) => el.dataset.val).catch(() => null);
+    check('editing a legacy Mixed entry preselects its migrated wetSize, not the Medium default', legacyWet === 'Large', legacyWet);
+    check('editing a legacy Mixed entry preselects its migrated dirtySize, not the Medium default', legacyDirty === 'Large', legacyDirty);
   } catch (e) {
     check('diaper mixed-size test ran without throwing', false, e.message);
   } finally {

@@ -1,6 +1,6 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep } from './store.js';
-import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
+import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes } from './home.js';
@@ -521,6 +521,13 @@ function setSeg(group, val) {
   const g = $(`[data-seg="${group}"]`); if (!g || val == null) return;
   $$('.seg-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
+export function syncDiaperSizeVisibility(kind) {
+  const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
+  if (!single || !mixed) return;
+  const isMixed = kind === 'Mixed';
+  single.hidden = isMixed; mixed.hidden = !isMixed;
+  $$('.segctl', isMixed ? mixed : single).forEach(positionThumb);
+}
 function prefill(type, e) {
   if ($('#f-time')) $('#f-time').value = isoToLocalDT(e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
@@ -533,8 +540,7 @@ function prefill(type, e) {
   } else if (type === 'diaper') {
     setSeg('kind', e.kind); setSeg('size', e.size);
     setSeg('wetSize', e.wetSize); setSeg('dirtySize', e.dirtySize);
-    const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
-    if (single && mixed) { const isMixed = e.kind === 'Mixed'; single.hidden = isMixed; mixed.hidden = !isMixed; }
+    syncDiaperSizeVisibility(e.kind);
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
