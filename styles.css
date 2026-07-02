@@ -1187,15 +1187,43 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.48rem;
 }
-.tip-hd {
-  font-weight: 600;
+.tip-top {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
+  color: var(--ink-2);
+}
+.tip-icon {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-tint);
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.tip-icon .icon { width: 0.95rem; height: 0.95rem; }
+.tip-kicker {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tip-title {
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
 }
 .tip-card p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2); }
+.tip-source {
+  margin-top: 0.08rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
 .tip-dismiss {
   align-self: flex-start;
   background: none;
@@ -1234,11 +1262,5 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 }
 
 .regression-banner {
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
   border-left: 3px solid var(--accent);
 }
-.regression-banner p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2); }
-.reg-hd { font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
