@@ -4,8 +4,37 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+func TestValidateVAPIDEnvRequiresAllKeys(t *testing.T) {
+	t.Setenv("VAPID_PUBLIC_KEY", "")
+	t.Setenv("VAPID_PRIVATE_KEY", "")
+	t.Setenv("VAPID_SUBJECT", "")
+
+	err := validateVAPIDEnv()
+
+	if err == nil {
+		t.Fatal("validateVAPIDEnv() error = nil, want setup instructions")
+	}
+	msg := err.Error()
+	for _, want := range []string{"VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT", "go run github.com/SherClockHolmes/webpush-go"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("error %q missing %q", msg, want)
+		}
+	}
+}
+
+func TestValidateVAPIDEnvPassesWithAllKeys(t *testing.T) {
+	t.Setenv("VAPID_PUBLIC_KEY", "public")
+	t.Setenv("VAPID_PRIVATE_KEY", "private")
+	t.Setenv("VAPID_SUBJECT", "mailto:test@example.com")
+
+	if err := validateVAPIDEnv(); err != nil {
+		t.Fatalf("validateVAPIDEnv() = %v, want nil", err)
+	}
+}
 
 func TestHandlePushPublicKeyRequiresEnv(t *testing.T) {
 	t.Setenv("VAPID_PUBLIC_KEY", "")

@@ -196,6 +196,8 @@ test('Does not re-fire on second call', () => {
 
 test('New bottle re-arms when due time changes', () => {
   // Add a newer feed (4h ago) so nextBottle().due changes to now-1h
+  state().settings.reminders.quietStart = '00:00';
+  state().settings.reminders.quietEnd = '00:00';
   addEntry({ type: 'bottle', start: new Date(NOW - 4 * HR).toISOString() });
 
   resetTimeouts();

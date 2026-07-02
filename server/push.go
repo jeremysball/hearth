@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +21,19 @@ type pushSubscriptionRequest struct {
 		P256DH string `json:"p256dh"`
 		Auth   string `json:"auth"`
 	} `json:"keys"`
+}
+
+func validateVAPIDEnv() error {
+	missing := []string{}
+	for _, key := range []string{"VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"} {
+		if os.Getenv(key) == "" {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with `cd server && go run github.com/SherClockHolmes/webpush-go`, then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
 }
 
 func handlePushPublicKey() http.HandlerFunc {
