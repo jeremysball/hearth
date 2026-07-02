@@ -9,6 +9,17 @@ export const CHANGELOG = [
     ]
   },
   {
+    date: '2026-07-01',
+    version: '2026-07-01',
+    changes: [
+      'Added push reminders for naps, bottles, and meds.',
+      'Added caregiver names to shared log entries.',
+      'Added a feed volume chart to Trends.',
+      'Fixed birthdates showing a day early in some time zones.',
+      'Fixed caregiver updates not appearing in real time.'
+    ]
+  },
+  {
     date: '2026-06-30',
     version: '2026-06-30',
     changes: [
