@@ -102,7 +102,7 @@ function chipHTML(t, opts = {}) {
 function rowHTML(e) {
   const s = summary(e);
   const detail = [s.detail, s.meta].filter(Boolean).join(' · ');
-  const noteDot = hasUnshownNote(e, s) ? '<span class="row-note-dot" aria-label="Has note"></span>' : '';
+  const noteDot = hasUnshownNote(e) ? '<span class="row-note-dot" role="img" aria-label="Has note"></span>' : '';
   return `<div class="tl-row" data-action="entry:edit" data-id="${e.id}">
     <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
     <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(detail)}</span></span>
