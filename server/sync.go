@@ -52,19 +52,21 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 			resp.Settings = s
 		}
 
-		caregiverRows, err := db.Query(`SELECT id, display_name, role, photo, updated_at FROM caregivers WHERE family_id = ? AND updated_at > ? ORDER BY created_at`, session.FamilyID, lowerBound)
+		adminID := ""
+		db.QueryRow(`SELECT id FROM caregivers WHERE family_id = ? AND removed_at = '' ORDER BY created_at LIMIT 1`, session.FamilyID).Scan(&adminID)
+		caregiverRows, err := db.Query(`SELECT id, display_name, role, photo, updated_at, removed_at FROM caregivers WHERE family_id = ? AND updated_at > ? ORDER BY created_at`, session.FamilyID, lowerBound)
 		if err == nil {
 			defer caregiverRows.Close()
 			for caregiverRows.Next() {
-				var id, displayName, role, photo, updatedAt string
-				if err := caregiverRows.Scan(&id, &displayName, &role, &photo, &updatedAt); err != nil {
+				var id, displayName, role, photo, updatedAt, removedAt string
+				if err := caregiverRows.Scan(&id, &displayName, &role, &photo, &updatedAt, &removedAt); err != nil {
 					log.Printf("sync: scan caregivers family=%s: %v", session.FamilyID, err)
 					continue
 				}
 				if !changedAfter(updatedAt, since) {
 					continue
 				}
-				b, _ := json.Marshal(caregiverInfo{ID: id, DisplayName: displayName, Role: role, Photo: photo})
+				b, _ := json.Marshal(caregiverInfo{ID: id, DisplayName: displayName, Role: role, Photo: photo, RemovedAt: removedAt, IsAdmin: removedAt == "" && id == adminID})
 				resp.Caregivers = append(resp.Caregivers, b)
 			}
 		}

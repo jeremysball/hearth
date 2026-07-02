@@ -268,7 +268,6 @@ document.addEventListener('click', (ev) => {
     'toggle': () => toggle(el, d.path),
     'form:toggle': () => { el.classList.toggle('on'); el.setAttribute('aria-checked', el.classList.contains('on')); },
     'cg:photo': () => caregiverPhoto(d.id),
-    'cg:role': () => changeCaregiverRole(d.id, el.value),
     'cg:remove': () => removeCaregiver(d.id, d.name),
     'cg:invite': () => inviteCaregiver(),
     'cg:invite-share': () => shareInviteLink(d.url),
@@ -517,6 +516,8 @@ document.addEventListener('pointermove', (e) => {
 document.addEventListener('change', (ev) => {
   const b = ev.target.closest('[data-bind]');
   if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme' || b.dataset.bind === 'settings.theme') applyTheme(); }
+  const role = ev.target.closest('[data-cg-role]');
+  if (role) changeCaregiverRole(role.dataset.cgRole, role.value);
 });
 
 function toggle(el, path) {
