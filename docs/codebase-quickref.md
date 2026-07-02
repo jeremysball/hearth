@@ -59,8 +59,8 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `fmt.clock(d)`, `fmt.dur(min)`, `fmt.rel(d)`, `fmt.vol(ml)`: formatters
 - `sheet.open(html, opts)`, `sheet.close()`: bottom drawer
 - `toast(msg, undoFn?)`: transient toast notification
-- `nowLocalDT()`: returns `YYYY-MM-DDTHH:MM` in local time (for `<input type="datetime-local">`)
-- `dtToISO(local)`, `isoToLocalDT(iso)`: datetime conversion helpers
+- `nowLocalDT()`: returns `YYYY-MM-DDTHH:MM` in local time
+- `dtToISO(local)`, `isoToLocalDT(iso)`: datetime conversion helpers; `sheets.js` splits/joins this combined string across a paired `<input type="date">` + `<input type="time">` (see `dtPair`/`readDT`/`writeDT` in `sheets.js`) rather than using a single `datetime-local` input
 - `initThumbs(container)`: initialise all `.seg-thumb` elements under container
 - `positionThumb(group)`: position a single segmented-control thumb
 - `applyTheme()`: read `state().baby.theme` and set CSS vars
