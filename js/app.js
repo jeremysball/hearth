@@ -487,7 +487,13 @@ document.addEventListener('pointermove', (e) => {
     ptrArmed = false;
     ptrSyncing = true;
     const ptr = document.getElementById('ptr');
-    if (ptr) { ptr.style.transition = 'none'; ptr.style.transform = 'translateY(0)'; ptr.classList.add('ptr-spinning'); }
+    if (ptr) {
+      ptr.style.transition = 'transform .3s ease-out';
+      ptr.style.transform = 'translateY(0)';
+      const spinner = ptr.querySelector('.ptr-spinner');
+      if (spinner) spinner.style.transform = '';
+      ptr.classList.add('ptr-spinning');
+    }
     ptrTimeout = setTimeout(ptrCollapse, 4000);
     syncOnce().then(ptrCollapse);
   } else {
