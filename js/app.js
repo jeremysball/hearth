@@ -1,11 +1,11 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSync, setLastSync, syncChangeCount } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
 import { trends } from './trends.js';
-import { sleep } from './sleep.js';
+import { sleep, predictionSourceInfo } from './sleep.js';
 import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
@@ -149,6 +149,13 @@ function openEntry(id) {
     { title: 'Entry' });
 }
 
+function openPredictionInfo() {
+  const prediction = derive.sweetSpot().prediction;
+  if (!prediction) return;
+  const info = predictionSourceInfo(prediction);
+  sheet.open(`<p>${esc(info.body)}</p>`, { title: info.heading });
+}
+
 function openBabyPhoto() {
   const b = state().baby;
   sheet.open(`
@@ -264,6 +271,7 @@ document.addEventListener('click', (ev) => {
     'onboard:finish': () => onboardFinish(),
     'profile:photo': () => profilePhoto(),
     'baby:photo': () => openBabyPhoto(),
+    'prediction:info': () => openPredictionInfo(),
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
     'form:toggle': () => { el.classList.toggle('on'); el.setAttribute('aria-checked', el.classList.contains('on')); },

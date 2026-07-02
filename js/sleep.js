@@ -5,6 +5,30 @@ import { fmt } from './ui.js';
 const MIN = 60000;
 function hoursInto(d, dayStart) { return (new Date(d) - dayStart) / 3600000; }
 
+export function predictionSourceInfo(prediction) {
+  const name = state().baby.name || 'your baby';
+  const n = prediction?.sampleSize || 0;
+  if (prediction?.source === 'personal') {
+    return {
+      cls: 'src-personal',
+      heading: `Personalized to ${name}`,
+      body: `Based on ${name}'s own nap pattern from the last 21 days (${n} naps logged).`,
+    };
+  }
+  if (prediction?.source === 'blend') {
+    return {
+      cls: 'src-learning',
+      heading: `Learning ${name}'s pattern`,
+      body: `Blending ${name}'s own naps with typical ranges for this age (${n} nap${n === 1 ? '' : 's'} logged in the last 21 days). Personalizes further as you log more.`,
+    };
+  }
+  return {
+    cls: 'src-generic',
+    heading: 'Generic estimate',
+    body: `Not enough naps logged yet, so this window uses typical timing for this age. Log a few more naps to personalize it.`,
+  };
+}
+
 export function sleep() {
   const dayStart = startOfDay(Date.now());
   const now = new Date();
@@ -124,7 +148,10 @@ export function sleep() {
     </div>
 
     <div class="sched-card card">
-      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction?.label || 'sleep clock active'}</span></div>
+      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${(() => {
+        const pred = derive.sweetSpot().prediction;
+        return `${pred?.label || 'sleep clock active'}${pred ? `<button class="src-info-btn ${predictionSourceInfo(pred).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button>` : ''}`;
+      })()}</span></div>
       ${schedHTML || `<div class="empty-log">Past today's nap windows.</div>`}
     </div>
 

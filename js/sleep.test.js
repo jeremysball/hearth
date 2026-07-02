@@ -13,8 +13,8 @@ globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { addEntry, derive, reset } = await import('./store.js');
-const { sleep } = await import('./sleep.js');
+const { addEntry, derive, reset, state } = await import('./store.js');
+const { sleep, predictionSourceInfo } = await import('./sleep.js');
 
 function withMockedNow(iso, fn) {
   const OrigDate = global.Date;
@@ -58,4 +58,51 @@ test('sleep schedule fails closed when sweetSpotSchedule is unavailable', () => 
   } finally {
     derive.sweetSpotSchedule = original;
   }
+});
+
+test('predictionSourceInfo: population source reads as generic estimate', () => {
+  reset();
+  const info = predictionSourceInfo({ source: 'population', sampleSize: 0 });
+  assert.equal(info.cls, 'src-generic');
+  assert.equal(info.heading, 'Generic estimate');
+  assert.match(info.body, /typical timing for this age/);
+});
+
+test('predictionSourceInfo: blend source reads as learning and reports sample size', () => {
+  reset();
+  state().baby.name = 'Rae';
+  const info = predictionSourceInfo({ source: 'blend', sampleSize: 9 });
+  assert.equal(info.cls, 'src-learning');
+  assert.equal(info.heading, "Learning Rae's pattern");
+  assert.match(info.body, /9 naps logged/);
+});
+
+test('predictionSourceInfo: blend source uses singular "nap" for sampleSize of 1', () => {
+  reset();
+  const info = predictionSourceInfo({ source: 'blend', sampleSize: 1 });
+  assert.match(info.body, /1 nap logged/);
+  assert.doesNotMatch(info.body, /1 naps logged/);
+});
+
+test('predictionSourceInfo: personal source reads as personalized and reports sample size', () => {
+  reset();
+  state().baby.name = 'Rae';
+  const info = predictionSourceInfo({ source: 'personal', sampleSize: 32 });
+  assert.equal(info.cls, 'src-personal');
+  assert.equal(info.heading, "Personalized to Rae");
+  assert.match(info.body, /32 naps logged/);
+});
+
+test('predictionSourceInfo: missing/unknown source falls back to generic', () => {
+  reset();
+  const info = predictionSourceInfo({});
+  assert.equal(info.cls, 'src-generic');
+});
+
+test('sleep view renders a prediction source info button in the SweetSpot schedule header', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => sleep());
+
+  assert.match(html, /data-action="prediction:info"/);
+  assert.match(html, /class="src-info-btn src-generic"/);
 });
