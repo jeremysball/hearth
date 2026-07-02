@@ -467,7 +467,7 @@ function gather(type) {
   if (type === 'sleep') {
     base.quality = segVal('quality');
     const end = $('#f-end').value;
-    if (end) base.end = dtToISO(end);
+    base.end = end ? dtToISO(end) : null;
   } else if (type === 'feed') {
     base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
