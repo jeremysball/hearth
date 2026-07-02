@@ -710,16 +710,21 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     refreshing = true;
     window.location.reload();
   };
+  const reloadWhenSafe = () => {
+    pendingReload = true;
+    if ($('#scrim.show') || $('#toast.show')) return;
+    reloadNow();
+  };
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadController) { hadController = true; return; }
     if ($('#scrim.show')) {
       pendingReload = true;
-      toast('Update ready', reloadNow, 'Refresh');
+      toast('Update ready', reloadWhenSafe, 'Refresh');
     } else {
       reloadNow();
     }
   });
-  setInterval(() => { if (pendingReload && !$('#scrim.show')) reloadNow(); }, 3000);
+  setInterval(() => { if (pendingReload && !$('#scrim.show') && !$('#toast.show')) reloadNow(); }, 3000);
 }
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
