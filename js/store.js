@@ -1,4 +1,4 @@
-// store.js — Hearth state, persistence, derived data, seeding.
+// store.js: Hearth state, persistence, derived data, seeding.
 import { enqueue, mergeById } from './sync.js';
 import { log } from './log.js';
 
@@ -164,7 +164,7 @@ export function undoAutoCloseSleep(closed) {
   closed.forEach((c) => updateEntry(c.id, { end: null }));
 }
 
-// Exported for unit tests only — do not use in application code.
+// Exported for unit tests only: do not use in application code.
 export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev };
 
 // ---------- growth helpers ----------
@@ -248,7 +248,7 @@ export function wakeWindowRange(position = 'middle') {
   return { low, high, midpoint: Math.round((low + high) / 2), source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
 }
 
-// Compatibility shim — returns the population midpoint for the middle position.
+// Compatibility shim: returns the population midpoint for the middle position.
 // Internal code should prefer wakeWindowRange() or derive.wakeWindowPrediction().
 export function awakeWindowMin() { return wakeWindowRange('middle').midpoint; }
 
@@ -290,7 +290,7 @@ function stdDev(values) {
 // The banner fires when the baby is within onsetWeeksBefore weeks of minMonths.
 const REGRESSION_TABLE = [
   { id: '4m',  name: '4-month sleep change', onsetRange: [3.5, 5],   onsetWeeksBefore: 4,
-    mechanism: 'Brain cycling through adult sleep stages — architecture changes, sleep gets lighter.' },
+    mechanism: 'Brain cycling through adult sleep stages, architecture changes, sleep gets lighter.' },
   { id: '6m',  name: '6-month sleep change', onsetRange: [5.5, 7],   onsetWeeksBefore: 3,
     mechanism: 'Increased cognitive load from a developmental leap.' },
   { id: '810m', name: '8–10-month sleep change', onsetRange: [7.5, 10.5], onsetWeeksBefore: 3,
@@ -298,22 +298,22 @@ const REGRESSION_TABLE = [
   { id: '12m', name: '12-month sleep change', onsetRange: [11, 13],  onsetWeeksBefore: 3,
     mechanism: 'Nap transition pressure plus walking milestone cortisol.' },
   { id: '18m', name: '18-month sleep change', onsetRange: [17, 19],  onsetWeeksBefore: 3,
-    mechanism: 'Language explosion — vocabulary acquisition interferes with sleep.' },
+    mechanism: 'Language explosion: vocabulary acquisition interferes with sleep.' },
 ];
 
 // Age-staged educational tips. minW/maxW are weeks (inclusive/exclusive).
 // body() receives the already-escaped baby name and returns plain text.
 const STAGE_TIPS = [
   { id: 'newborn-cues',       minW: 0,  maxW: 6,  icon: 'baby',       title: 'Following tired cues',
-    body: (n) => `${n} sets the rhythm right now — no schedule needed. Watch for yawning, eye-rubs, or a brief look away. Those are the signals to settle.` },
+    body: (n) => `${n} sets the rhythm right now, no schedule needed. Watch for yawning, eye-rubs, or a brief look away. Those are the signals to settle.` },
   { id: 'day-night-contrast', minW: 0,  maxW: 10, icon: 'moon-star',  title: 'Day vs. night',
-    body: (n) => `Keep days bright and active, nights dim and quiet. ${n}'s brain is beginning to link light cues with sleep — contrast is the earliest foundation of a sleep clock.` },
+    body: (n) => `Keep days bright and active, nights dim and quiet. ${n}'s brain is beginning to link light cues with sleep: contrast is the earliest foundation of a sleep clock.` },
   { id: 'morning-light-early', minW: 6, maxW: 20, icon: 'sunrise',    title: 'Morning light',
-    body: (n) => `Morning light within 30 minutes of ${n}'s first wake helps anchor the developing sleep clock. Open curtains or step outside — it is the highest-leverage habit at this age.` },
+    body: (n) => `Morning light within 30 minutes of ${n}'s first wake helps anchor the developing sleep clock. Open curtains or step outside: it is the highest-leverage habit at this age.` },
   { id: 'night-stretch-protect', minW: 6, maxW: 20, icon: 'moon',     title: 'Protect night stretches',
-    body: (n) => `${n}'s longest sleep stretches are shifting to night. Keep night wakings dark, quiet, and brief — save stimulation for daytime.` },
+    body: (n) => `${n}'s longest sleep stretches are shifting to night. Keep night wakings dark, quiet, and brief. Save stimulation for daytime.` },
   { id: 'window-position',    minW: 10, maxW: 30, icon: 'layers',     title: 'Last wake window is longest',
-    body: (n) => `The wake window before bed is typically 20-30% longer than morning windows. A longer awake stretch in the evening is normal — it is how ${n}'s sleep pressure peaks for the night.` },
+    body: (n) => `The wake window before bed is typically 20-30% longer than morning windows. A longer awake stretch in the evening is normal: it is how ${n}'s sleep pressure peaks for the night.` },
   { id: 'early-bedtime',      minW: 20, maxW: 48, icon: 'moon',       title: 'Earlier bedtime, better night',
     body: (n) => `Research supports a 6:30-7pm bedtime for babies ${n}'s age. Overtired babies take longer to settle and wake more at night. An earlier bedtime usually means more overnight sleep, not less.` },
   { id: 'last-nap-budget',    minW: 20, maxW: 48, icon: 'chart-bar',  title: 'Last nap affects bedtime',
@@ -357,7 +357,7 @@ export const derive = {
   sweetSpot() {
     const st = derive.status();
     const pos = wakePosition();
-    // Nighttime arousals are circadian, not homeostatic — adenosine hasn't
+    // Nighttime arousals are circadian, not homeostatic: adenosine hasn't
     // built up enough to govern a true nap window. Return night mode so the
     // UI can show "go back down" instead of a misleading sweet spot rail.
     if (pos === 'night') return { night: true, napping: false, from: null, to: null, prediction: null };
@@ -503,7 +503,7 @@ export const derive = {
     return { low, high, midpoint, source, sampleSize: n, label };
   },
   // Recency-weighted median morning wake time. Confidence is gated by sample
-  // size and standard deviation — variable schedules cap at 'low'.
+  // size and standard deviation: variable schedules cap at 'low'.
   circadianAnchor() {
     const wakes = morningWakes();
     if (wakes.length < 5) return null;

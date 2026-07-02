@@ -1,4 +1,4 @@
-// app.js — shell, router, event delegation, binders, PWA.
+// app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger } from './store.js';
 import { drainOutbox, getLastSync, setLastSync, syncChangeCount } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
@@ -387,7 +387,7 @@ document.addEventListener('pointermove', (e) => {
   });
   if (!over) return;
   // Direction-based insertion: dragging down → place after over; dragging up → place before.
-  // No midpoint threshold — avoids the dead zone that trapped the first card.
+  // No midpoint threshold: avoids the dead zone that trapped the first card.
   stack.insertBefore(dragging, dragIdx < cards.indexOf(over) ? over.nextSibling : over);
 });
 ['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
@@ -400,7 +400,7 @@ document.addEventListener('pointermove', (e) => {
 }));
 
 // ---------- pull-to-refresh ----------
-// Permanent non-passive listener — pointermove fires before touchmove, so by the
+// Permanent non-passive listener: pointermove fires before touchmove, so by the
 // time this runs ptrPulling already reflects direction. Zero cost on normal scroll.
 function blockScroll(e) { if ((ptrActive && ptrPulling) || dragKey) e.preventDefault(); }
 document.addEventListener('touchmove', blockScroll, { passive: false });
@@ -544,7 +544,7 @@ async function inviteCaregiver() {
       res = await fetch('/api/invites', { method: 'POST', credentials: 'include' });
     }
     if (res.status === 401) return toast('Finish setup sync before inviting');
-    if (!res.ok) return toast('Server error creating the invite — try again');
+    if (!res.ok) return toast('Server error creating the invite, try again');
     const { token } = await res.json();
     const url = location.origin + '/join/' + token;
     sheet.open(`
@@ -554,7 +554,7 @@ async function inviteCaregiver() {
       { title: 'Invite a caregiver' });
   } catch (e) {
     log.warn('invite', 'inviteCaregiver failed', e.message);
-    toast('Could not reach the server — check your connection');
+    toast('Could not reach the server, check your connection');
   }
 }
 function caregiverPhoto(caregiverId) {
@@ -637,7 +637,7 @@ async function init() {
     if (!state().setup) {
       const res = await fetch('/api/launch/' + launch, { credentials: 'include' });
       if (!res.ok) {
-        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Install link expired</h1><p class="onb-sub">This install link has expired — ask to be invited again.</p></div></div>`;
+        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Install link expired</h1><p class="onb-sub">This install link has expired. Ask to be invited again.</p></div></div>`;
         return;
       }
       const syncRes = await fetch('/api/sync', { credentials: 'include' });
@@ -665,7 +665,7 @@ async function init() {
         const syncRes = await fetch('/api/sync', { credentials: 'include' });
         if (syncRes.ok) applySyncResponse(await syncRes.json());
         state().setup = true; save();
-      } catch (e) { /* offline — proceed with empty state */ }
+      } catch (e) { /* offline: proceed with empty state */ }
       router.boot(); router.go('home');
       syncOnce(); connectEvents();
       toast('Signed in');
@@ -711,7 +711,7 @@ async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
   const drained = await drainOutbox(fetch);
-  if (!drained) { log.warn('sync', 'outbox drain failed — aborting pull'); return; }
+  if (!drained) { log.warn('sync', 'outbox drain failed, aborting pull'); return; }
   try {
     const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSync()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
@@ -719,7 +719,7 @@ async function syncOnce() {
     const n = syncChangeCount(data);
     applySyncResponse(data);
     setLastSync(data.serverTime);
-    log.info('sync', `OK — ${n} row${n !== 1 ? 's' : ''} from server`);
+    log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) router.refresh();
   } catch (e) {
     log.warn('sync', 'syncOnce failed', e.message);
@@ -732,7 +732,7 @@ function connectEvents() {
   log.info('sync', 'SSE connecting…');
   eventSource = new EventSource('/api/events');
   eventSource.onopen = () => log.info('sync', 'SSE connected');
-  eventSource.onmessage = () => { log.info('sync', 'SSE push — syncing'); syncOnce(); };
+  eventSource.onmessage = () => { log.info('sync', 'SSE push, syncing'); syncOnce(); };
   eventSource.onerror = () => { log.warn('sync', 'SSE error, reconnecting in 5s'); eventSource.close(); eventSource = null; setTimeout(connectEvents, 5000); };
 }
 

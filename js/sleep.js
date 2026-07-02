@@ -1,4 +1,4 @@
-// sleep.js — 24h ring, naps, SweetSpot schedule, night summary.
+// sleep.js: 24h ring, naps, SweetSpot schedule, night summary.
 import { state, derive, startOfDay, wakePosition } from './store.js';
 import { fmt } from './ui.js';
 
@@ -24,7 +24,7 @@ export function sleep() {
       stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${off}" />`;
   }).join('');
 
-  // awake arcs — complement of sleep within [dayStart, now], drawn under sleep arcs
+  // awake arcs: complement of sleep within [dayStart, now], drawn under sleep arcs
   const nowMs = now.getTime();
   const dayStartMs = dayStart.getTime();
   const sortedSleeps = [...todaySleeps].sort((a, b) => a.s - b.s);
@@ -51,7 +51,7 @@ export function sleep() {
   const totalMin = derive.todayStats().sleepMin;
   const tb = fmt.durBig(totalMin);
 
-  // naps list — ascending order with interleaved awake gaps
+  // naps list: ascending order with interleaved awake gaps
   const napsAsc = [...todaySleeps].sort((a, b) => a.s - b.s);
   let napsHTML;
   if (!napsAsc.length) {
@@ -88,7 +88,7 @@ export function sleep() {
     napsHTML = rows.join('');
   }
 
-  // SweetSpot schedule — project remaining naps today
+  // SweetSpot schedule: project remaining naps today
   const sched = [];
   const st = derive.status();
   let priorSleepMin = null;
