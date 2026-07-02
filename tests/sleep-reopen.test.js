@@ -24,8 +24,9 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.click('[data-id="sleep-test"]');
     await page.waitForSelector('[data-action="entry:edit"][data-id="sleep-test"]');
     await page.click('[data-action="entry:edit"][data-id="sleep-test"]');
-    await page.waitForSelector('#f-end');
-    await page.fill('#f-end', '');
+    await page.waitForSelector('#f-end-date');
+    await page.fill('#f-end-date', '');
+    await page.fill('#f-end-time', '');
     await page.click('[data-action="log:save"]');
     await page.waitForTimeout(300);
 

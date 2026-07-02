@@ -421,14 +421,33 @@ export function openSpinner(id) {
   requestAnimationFrame(() => overlay.classList.add('show'));
   el._closeSpinner = close;
 }
-const timeRow = () => field('Time', `<input type="datetime-local" id="f-time" value="${nowLocalDT()}" />`);
+function splitDT(localDT) {
+  const [date, time] = (localDT || '').split('T');
+  return { date: date || '', time: time || '' };
+}
+function dtPair(prefix, localDT) {
+  const { date, time } = splitDT(localDT);
+  return `<div class="dt-row"><input type="date" id="${prefix}-date" value="${date}" /><input type="time" id="${prefix}-time" value="${time}" /></div>`;
+}
+function readDT(prefix) {
+  const d = $(`#${prefix}-date`), t = $(`#${prefix}-time`);
+  if (!d || !t || !d.value || !t.value) return '';
+  return `${d.value}T${t.value}`;
+}
+function writeDT(prefix, iso) {
+  const d = $(`#${prefix}-date`), t = $(`#${prefix}-time`);
+  if (!d || !t) return;
+  const { date, time } = splitDT(isoToLocalDT(iso));
+  d.value = date; t.value = time;
+}
+const timeRow = () => field('Time', dtPair('f-time', nowLocalDT()));
 const noteRow = () => field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…"></textarea>`);
 const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); return el ? el.dataset.val : null; };
 
 const FORMS = {
   sleep: () => `
-    ${field('Fell asleep', `<input type="datetime-local" id="f-time" value="${nowLocalDT()}" />`)}
-    ${field('Woke (leave blank if still asleep)', `<input type="datetime-local" id="f-end" />`)}
+    ${field('Fell asleep', dtPair('f-time', nowLocalDT()))}
+    ${field('Woke (leave blank if still asleep)', dtPair('f-end', ''))}
     ${field('Quality', seg('quality', ['Restless', 'Okay', 'Good', 'Great'], 'Good'))}
     ${noteRow()}`,
   feed: () => `
@@ -470,14 +489,15 @@ const FORMS = {
 };
 
 function gather(type) {
-  const time = $('#f-time') ? dtToISO($('#f-time').value) : new Date().toISOString();
+  const timeLocal = readDT('f-time');
+  const time = timeLocal ? dtToISO(timeLocal) : new Date().toISOString();
   const note = $('#f-note') ? $('#f-note').value.trim() : '';
   const base = { type, start: time };
   base.note = note || null;
   if (type === 'sleep') {
     base.quality = segVal('quality');
-    const end = $('#f-end').value;
-    base.end = end ? dtToISO(end) : null;
+    const endLocal = readDT('f-end');
+    base.end = endLocal ? dtToISO(endLocal) : null;
   } else if (type === 'feed') {
     base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
@@ -504,6 +524,31 @@ function gather(type) {
   return base;
 }
 
+const DRAFT_KEY = 'hearth:log-draft';
+const DRAFT_MAX_AGE_MS = 5 * 60 * 1000;
+
+function saveDraft() {
+  const saveBtn = $('#scrim.show [data-action="log:save"]');
+  if (!saveBtn || saveBtn.dataset.id) return;
+  try {
+    const type = saveBtn.dataset.type;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ type, savedAt: Date.now(), entry: gather(type) }));
+  } catch (e) { /* private browsing / quota: draft persistence is best-effort */ }
+}
+function loadDraft(type) {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.type !== type || Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS) return null;
+    return parsed.entry;
+  } catch (e) { return null; }
+}
+function clearDraft() {
+  try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+}
+['input', 'change', 'click'].forEach((evt) => document.addEventListener(evt, saveDraft));
+
 export function openLog(type, entry) {
   const cfg = TYPES[type];
   const editing = entry && entry.id;
@@ -512,8 +557,13 @@ export function openLog(type, entry) {
       (editing ? `<button class="btn-ghost danger" data-action="entry:delete" data-id="${entry.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete</button>` : ''),
     { title: (editing ? 'Edit ' : 'Log ') + cfg.label.toLowerCase(), size: 'sheet-form' }
   );
-  if (editing) prefill(type, entry);
-  else if ($('#f-time')) $('#f-time').value = nowLocalDT();
+  if (editing) {
+    prefill(type, entry);
+  } else {
+    writeDT('f-time', new Date().toISOString());
+    const draft = loadDraft(type);
+    if (draft) prefill(type, draft);
+  }
   $$('.segctl').forEach(bindDragSeg);
 }
 
@@ -529,9 +579,9 @@ export function syncDiaperSizeVisibility(kind) {
   $$('.segctl', isMixed ? mixed : single).forEach(positionThumb);
 }
 function prefill(type, e) {
-  if ($('#f-time')) $('#f-time').value = isoToLocalDT(e.start);
+  writeDT('f-time', e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
-  if (type === 'sleep') { setSeg('quality', e.quality); if (e.end && $('#f-end')) $('#f-end').value = isoToLocalDT(e.end); }
+  if (type === 'sleep') { setSeg('quality', e.quality); if (e.end) writeDT('f-end', e.end); }
   else if (type === 'feed') { setSeg('side', e.side); const fdur = $('#f-dur'); if (fdur) { fdur.dataset.value = e.duration || 0; fdur.textContent = e.duration || 0; } }
   else if (type === 'bottle' || type === 'pump') {
     setSeg('side', e.side); setSeg('contents', e.contents);
@@ -549,6 +599,7 @@ function prefill(type, e) {
 
 export function saveLog(type, id) {
   const e = gather(type);
+  clearDraft();
   if (id) {
     updateEntry(id, e);
     sheet.close(); toast(TYPES[type].label + ' updated'); router.refresh();
