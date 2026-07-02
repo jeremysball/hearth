@@ -1,6 +1,6 @@
 # Sync Foreground Catch-Up and Overdue Reminder Labels Implementation Plan
 
-> **Status:** IN PROGRESS — branch `fix/sync-foreground-overdue-labels` (worktree `.worktrees/sync-overdue-labels`, HEAD `b75f03b`). Tasks 1 (overdue card labels) and 2 (live 15s tick) are committed and `tests/overdue-labels.test.js` passes (5/5). Task 3 (`visibilitychange` + 15s poll) is fully implemented in `js/app.js` and `tests/visibility-sync.test.js` is written (38 lines) but both sit **uncommitted** in the worktree. Task 4 (full-suite verification + push) remains.
+> **Status:** COMPLETE — merged to `main`. Task 1 (overdue card labels) landed in `9c39674`, Task 2 (live 15s tick) in `8422c6a`, and Task 3 (`visibilitychange` sync + shorter poll) in `63c45d6`. `tests/overdue-labels.test.js` and `tests/visibility-sync.test.js` both exist and pass. The worktree referenced below no longer exists.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

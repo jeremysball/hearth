@@ -1,6 +1,6 @@
 # Notifications Sync and Reminder Polish Implementation Plan
 
-> **Status:** PARTIAL — Task 1 (web push subscriptions + server reminder scheduler) is NOT started: no `server/push.go`, no VAPID, no `push_subscriptions` table. Tasks 2 (foreground sync recovery) and 3 (live overdue reminder labels) were split into the separate `2026-06-30-sync-foreground-overdue-labels.md` plan and are tracked there.
+> **Status:** COMPLETE — merged to `main`. Task 1 (web push subscriptions + server reminder scheduler) shipped in `bbd0473`/`4ef52af`/`d02a570`: `server/push.go`, VAPID config, and the `push_subscriptions` table all exist. Tasks 2 (foreground sync recovery) and 3 (live overdue reminder labels) were split into `2026-06-30-sync-foreground-overdue-labels.md`, also complete.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
