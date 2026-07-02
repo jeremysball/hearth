@@ -219,6 +219,52 @@ async function runSuite(base) {
   console.log('  ptr-spinning class present while sync hangs:', ptrSpinning);
   check('#ptr has ptr-spinning class while sync is in-flight', ptrSpinning);
 
+  // ---------- Armed release eases into the docked position (no instant snap) ----------
+  const ptrTransitionAfterRelease = await page.$eval('#ptr', el => el.style.transition);
+  console.log('  #ptr transition right after armed release:', ptrTransitionAfterRelease);
+  check('#ptr uses an eased transition on armed release', ptrTransitionAfterRelease.includes('ease-out'), ptrTransitionAfterRelease);
+
+  // Behavioral check that the transition actually animates (not just declared): sample
+  // #ptr's rendered Y twice, ~150ms apart, partway through the .3s transition. An instant
+  // snap would already read 0 on the first sample.
+  const readPtrComputedY = () => page.$eval('#ptr', el => {
+    const m = getComputedStyle(el).transform.match(/matrix\([-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, ([-0-9.]+)\)/);
+    return m ? parseFloat(m[1]) : 0;
+  });
+  const ptrYEarly = await readPtrComputedY();
+  await page.waitForTimeout(150);
+  const ptrYLater = await readPtrComputedY();
+  console.log('  #ptr computed Y during release transition: early', ptrYEarly, 'later (150ms)', ptrYLater);
+  check('#ptr transition actually animates toward 0 (not an instant snap)',
+    ptrYEarly < -1 && ptrYLater > ptrYEarly && ptrYLater < 0, `${ptrYEarly} -> ${ptrYLater}`);
+
+  // ---------- Spinner completes a continuous rotation, no restart jump-back ----------
+  // Regression check: the spin keyframe animation must not silently reuse a leftover
+  // inline rotate() from the pull gesture as its implicit start on every loop, which
+  // produces a repeating backward jump instead of a smooth continuous spin.
+  const readSpinnerAngle = async () => {
+    const t = await page.$eval('.ptr-spinner', (el) => getComputedStyle(el).transform);
+    const m = t.match(/matrix\(([-0-9.]+), ([-0-9.]+),/);
+    if (!m) return 0;
+    const deg = Math.atan2(parseFloat(m[2]), parseFloat(m[1])) * 180 / Math.PI;
+    return deg < 0 ? deg + 360 : deg;
+  };
+  let prevAngle = await readSpinnerAngle();
+  let sawBackwardJump = false;
+  // Sample for ~1.6s (two full 0.8s cycles) so a loop boundary is crossed with margin,
+  // rather than relying on exactly one boundary-straddling sample pair.
+  for (let i = 0; i < 16; i++) {
+    await page.waitForTimeout(100);
+    const angle = await readSpinnerAngle();
+    let delta = angle - prevAngle;
+    if (delta < -180) delta += 360; // expected forward wrap past 360 -> 0
+    if (delta > 180) delta -= 360;  // symmetric case: sample landed exactly on a cycle boundary
+    if (delta < -10) sawBackwardJump = true; // real regression: animation restarted from a stale angle
+    prevAngle = angle;
+  }
+  console.log('  spinner angle after sampling loop:', prevAngle, 'saw backward jump:', sawBackwardJump);
+  check('spinner rotation has no backward jump between samples', !sawBackwardJump);
+
   // Wait past the 4s timeout
   await page.waitForTimeout(4400);
   const ptrAfterTimeout = await page.$eval('#ptr', el => {
