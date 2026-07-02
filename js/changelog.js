@@ -2,6 +2,13 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-02',
+    version: '2026-07-02',
+    changes: [
+      'Fixed the Sleep tab failing to open overnight or for newborns.'
+    ]
+  },
+  {
     date: '2026-06-30',
     version: '2026-06-30',
     changes: [
