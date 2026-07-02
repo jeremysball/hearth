@@ -268,6 +268,7 @@ document.addEventListener('click', (ev) => {
     'toggle': () => toggle(el, d.path),
     'form:toggle': () => { el.classList.toggle('on'); el.setAttribute('aria-checked', el.classList.contains('on')); },
     'cg:photo': () => caregiverPhoto(d.id),
+    'cg:remove': () => removeCaregiver(d.id, d.name),
     'cg:invite': () => inviteCaregiver(),
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
@@ -515,6 +516,8 @@ document.addEventListener('pointermove', (e) => {
 document.addEventListener('change', (ev) => {
   const b = ev.target.closest('[data-bind]');
   if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme' || b.dataset.bind === 'settings.theme') applyTheme(); }
+  const role = ev.target.closest('[data-cg-role]');
+  if (role) changeCaregiverRole(role.dataset.cgRole, role.value);
 });
 
 function toggle(el, path) {
@@ -606,6 +609,38 @@ function caregiverPhoto(caregiverId) {
     reader.readAsDataURL(f);
   };
   inp.click();
+}
+
+async function changeCaregiverRole(caregiverId, role) {
+  if (!caregiverId || !role) return;
+  try {
+    const res = await fetch(`/api/caregivers/${encodeURIComponent(caregiverId)}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ role })
+    });
+    if (!res.ok) return toast('Could not update caregiver role');
+    await loadCaregivers();
+    router.refresh();
+    toast('Caregiver role updated');
+  } catch (e) {
+    toast('Could not reach the server, check your connection');
+  }
+}
+
+async function removeCaregiver(caregiverId, name) {
+  if (!caregiverId) return;
+  if (!confirm(`Remove ${name || 'this caregiver'} from this family? They will lose access, but old entries will keep their name.`)) return;
+  try {
+    const res = await fetch(`/api/caregivers/${encodeURIComponent(caregiverId)}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) return toast('Could not remove caregiver');
+    await loadCaregivers();
+    router.refresh();
+    toast('Caregiver removed');
+  } catch (e) {
+    toast('Could not reach the server, check your connection');
+  }
 }
 
 function profilePhoto() {
