@@ -1,4 +1,4 @@
-/* hearth.css — full app styling (pastel, girl/boy themes) */
+/* hearth.css: full app styling (pastel, girl/boy themes) */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
 input, select, textarea, button { font-family: inherit; }
@@ -27,7 +27,7 @@ body {
   --on-accent: oklch(0.985 0.012 70);
   --good: oklch(0.60 0.10 145); --good-deep: oklch(0.46 0.085 145); --good-halo: oklch(0.87 0.06 142);
   --good-tint: oklch(0.91 0.05 142 / .5); --ring-track: oklch(0.88 0.028 62); --ring-awake: oklch(0.72 0.14 50);
-  /* material system — raking amber light, fired clay */
+  /* material system: raking amber light, fired clay */
   --mat-highlight: oklch(0.86 0.10 58 / 0.40);
   --mat-shadow:    oklch(0.28 0.09 40 / 0.32);
   --mat-cast:      oklch(0.32 0.03 300 / 0.22);
@@ -95,12 +95,12 @@ body {
 }
 @media (min-width: 520px) { .phone { max-width: 560px; } }
 
-/* ---- fire custom properties — animated at :root, inherited by all elements ---- */
+/* ---- fire custom properties: animated at :root, inherited by all elements ---- */
 @property --fire-a { syntax: '<number>'; inherits: true; initial-value: 0.06; }
 @property --fire-b { syntax: '<number>'; inherits: true; initial-value: 0.04; }
 @property --fire-c { syntax: '<number>'; inherits: true; initial-value: 0.08; }
 
-/* ---- hearth fire — three coprime periods, ~140s true repeat ---- */
+/* ---- hearth fire: three coprime periods, ~140s true repeat ---- */
 @keyframes fire-a {
   0%   { --fire-a: 0.06; } 11%  { --fire-a: 0.13; } 23%  { --fire-a: 0.05; }
   34%  { --fire-a: 0.11; } 48%  { --fire-a: 0.15; } 61%  { --fire-a: 0.07; }
@@ -123,7 +123,7 @@ body {
     fire-b 3.1s ease-in-out infinite,
     fire-c 8.7s ease-in-out infinite;
 }
-/* dark mode: double intensities — fire dominates in near-dark room */
+/* dark mode: double intensities, fire dominates in near-dark room */
 @keyframes fire-a-dark {
   0%   { --fire-a: 0.12; } 11%  { --fire-a: 0.26; } 23%  { --fire-a: 0.10; }
   34%  { --fire-a: 0.22; } 48%  { --fire-a: 0.30; } 61%  { --fire-a: 0.14; }
@@ -155,7 +155,7 @@ body {
   opacity: var(--fire-b);
 }
 [data-mode="dark"] .phone::before {
-  mix-blend-mode: screen; /* additive in dark — fire glows ADD light instead of overlay-darkening */
+  mix-blend-mode: screen; /* additive in dark: fire glows ADD light instead of overlay-darkening */
   background: radial-gradient(ellipse 78% 72% at 12% 104%, oklch(0.65 0.24 38), transparent 65%);
   opacity: var(--fire-a);
 }
@@ -512,12 +512,12 @@ body {
   --bg: oklch(0.190 0.068 47); --surface: oklch(0.240 0.060 47);
   --ink: oklch(0.93 0.016 65); --soft: oklch(0.78 0.02 58); --muted: oklch(0.62 0.022 56);
   --hair: oklch(0.32 0.022 50);
-  /* night hearth — walnut dark, firelight from below */
+  /* night hearth: walnut dark, firelight from below */
   --mat-highlight: oklch(0.62 0.22 42 / 0.38);
   --mat-shadow:    oklch(0.06 0.02 38 / 0.70);
   --mat-cast:      oklch(0.14 0.05 42 / 0.60);
   --mat-glow:      oklch(0.55 0.20 44 / 0.35);
-  /* dark ember — fire is dominant light source */
+  /* dark ember: fire is dominant light source */
   --ember-core: oklch(0.88 0.22 56);
   --ember-rim:  oklch(0.82 0.22 50 / 0.65);
   animation:
@@ -625,11 +625,11 @@ body[data-mode="dark"] {
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .sec-label { letter-spacing: 0.12em; }
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .page-sub { letter-spacing: 0.04em; font-weight: 800; text-transform: uppercase; }
 
-/* dayjob card geometry — more angular than OG pastel themes */
+/* dayjob card geometry: more angular than OG pastel themes */
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .card { border-radius: 18px; }
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) .info-card { border-radius: 12px; }
 
-/* dayjob material overrides — neutral silver highlight, no warm amber cast */
+/* dayjob material overrides: neutral silver highlight, no warm amber cast */
 :is([data-theme="dayjob"], [data-theme="dayjob-girl"], [data-theme="dayjob-boy"]) {
   --mat-highlight: oklch(0.96 0.008 220 / 0.32);
   --mat-shadow:    oklch(0.22 0.008 220 / 0.14);
@@ -959,12 +959,12 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .spinner-check { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
 
 /* ---- sleep hero card ---- */
-/* Cue 3 — sweetspot label */
+/* Cue 3: sweetspot label */
 .sh-sweet-lbl { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-top: 14px; color: var(--muted); transition: color 0.6s; }
 [data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
 [data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
 [data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
-/* Ember Bed — the rail IS the fire: coals ignite left→right across the awake window */
+/* Ember Bed: the rail IS the fire, coals ignite left→right across the awake window */
 .sh-rail-wrap { margin-top: 8px; }
 .sh-bed {
   display: flex; gap: 3px; padding: 5px 6px; border-radius: 9px;
@@ -977,13 +977,13 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   box-shadow: inset 0 1px 0 oklch(0.60 0.04 55 / 0.30), inset 0 -1px 1px oklch(0.18 0.02 35 / 0.50);
   transition: background 0.7s ease, box-shadow 0.7s ease, transform 0.4s ease;
 }
-/* dark mode cold-coal base — placed before the state rules so lit/caught/toohot
+/* dark mode cold-coal base: placed before the state rules so lit/caught/toohot
    (equal specificity) still win their colors in dark mode via source order */
 [data-mode="dark"] .coal {
   background: linear-gradient(180deg, oklch(0.30 0.025 40), oklch(0.20 0.02 35));
   box-shadow: inset 0 1px 0 oklch(0.48 0.04 55 / 0.25), inset 0 -1px 1px oklch(0.10 0.01 30 / 0.60);
 }
-/* lit ember — warm, glowing, breathing with the fire vars */
+/* lit ember: warm, glowing, breathing with the fire vars */
 .coal.lit {
   background: linear-gradient(180deg, var(--ember-mid), var(--ember-cool));
   box-shadow:
@@ -991,7 +991,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     inset 0 -1px 2px oklch(0.40 0.14 35 / 0.55),
     0 0 calc(3px + var(--fire-b, 0.06) * 18px) oklch(0.66 0.18 44 / calc(0.30 + var(--fire-b, 0.06) * 1.6));
 }
-/* leading coal — hottest, most active flicker */
+/* leading coal: hottest, most active flicker */
 .coal.front {
   background: linear-gradient(180deg, oklch(0.92 0.16 66), var(--ember-mid));
   box-shadow:
@@ -999,14 +999,14 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     inset 0 -1px 2px oklch(0.45 0.16 38 / 0.55),
     0 0 calc(5px + var(--fire-a, 0.06) * 30px) oklch(0.78 0.20 50 / calc(0.45 + var(--fire-a, 0.06) * 2.2));
 }
-/* sweetspot coal waiting to catch — dim gold rim, the target */
+/* sweetspot coal waiting to catch: dim gold rim, the target */
 .coal.ready {
   background: linear-gradient(180deg, oklch(0.50 0.06 85), oklch(0.38 0.05 80));
   box-shadow:
     inset 0 0 0 1px oklch(0.82 0.12 88 / 0.50),
     inset 0 1px 0 oklch(0.88 0.10 90 / 0.30);
 }
-/* sweetspot coal that has caught — full gold bloom, lifts slightly */
+/* sweetspot coal that has caught: full gold bloom, lifts slightly */
 .coal.caught {
   background: linear-gradient(180deg, oklch(0.90 0.16 92), oklch(0.78 0.15 85));
   box-shadow:
@@ -1015,7 +1015,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     0 0 calc(5px + var(--fire-b, 0.06) * 26px) oklch(0.85 0.16 90 / calc(0.45 + var(--fire-b, 0.06) * 2.0));
   transform: translateY(-1px);
 }
-/* overtired overshoot — too-hot orange-red, hardest flicker */
+/* overtired overshoot: too-hot orange-red, hardest flicker */
 .coal.toohot {
   background: linear-gradient(180deg, oklch(0.66 0.25 30), oklch(0.52 0.22 28));
   box-shadow:
@@ -1023,7 +1023,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     inset 0 -1px 2px oklch(0.40 0.20 25 / 0.60),
     0 0 calc(5px + var(--fire-a, 0.06) * 34px) oklch(0.62 0.26 28 / calc(0.50 + var(--fire-a, 0.06) * 2.6));
 }
-/* banked overnight embers — asleep view, low and slow */
+/* banked overnight embers: asleep view, low and slow */
 .sh-bed.banked .coal.banked {
   background: linear-gradient(180deg, oklch(0.46 0.10 40), oklch(0.34 0.08 35));
   box-shadow:
@@ -1031,7 +1031,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     inset 0 -1px 2px oklch(0.24 0.06 30 / 0.55),
     0 0 calc(2px + var(--fire-c, 0.10) * 10px) oklch(0.52 0.14 38 / calc(0.20 + var(--fire-c, 0.10) * 1.0));
 }
-/* dark mode: deeper trough — lit/caught/toohot embers brighten via --ember-* tokens */
+/* dark mode: deeper trough, lit/caught/toohot embers brighten via --ember-* tokens */
 [data-mode="dark"] .sh-bed {
   background: linear-gradient(180deg, oklch(0.16 0.02 35 / 0.55), oklch(0.10 0.015 30 / 0.65));
   box-shadow: inset 0 2px 6px oklch(0.06 0.01 30 / 0.70), inset 0 -1px 0 oklch(0.70 0.06 60 / 0.12);
@@ -1047,11 +1047,11 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   50% { box-shadow: 0 0 0 2px oklch(0.65 0.18 25 / 0.45), 0 4px 20px oklch(0.60 0.15 25 / 0.18); }
 }
 @media (prefers-reduced-motion: reduce) { .card.hero[data-overtired] { animation: none; } }
-/* Cue 2 — hero card border + glow blooms during sweetspot */
+/* Cue 2: hero card border + glow blooms during sweetspot */
 .card.hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16); }
 .card.hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28); }
 .card.hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12); }
-/* ---- hero card — moon glow ---- */
+/* ---- hero card: moon glow ---- */
 .card.hero { position: relative; }
 .card.hero::before {
   content: '';
@@ -1122,7 +1122,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     backdrop-filter: blur(18px) saturate(1.45);
     -webkit-backdrop-filter: blur(18px) saturate(1.45);
   }
-  /* dayjob dark: lighter, cooler glass — no warm amber cast */
+  /* dayjob dark: lighter, cooler glass, no warm amber cast */
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .info-card,
   :is([data-mode="dark"][data-theme="dayjob"], [data-mode="dark"][data-theme="dayjob-girl"], [data-mode="dark"][data-theme="dayjob-boy"]) .sheet {

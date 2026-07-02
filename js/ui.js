@@ -1,4 +1,4 @@
-// ui.js — formatting, icon map, sheet/modal machinery, toast, theme.
+// ui.js: formatting, icon map, sheet/modal machinery, toast, theme.
 import { state } from './store.js';
 import { log } from './log.js';
 

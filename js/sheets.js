@@ -1,4 +1,4 @@
-// sheets.js — logging bottom sheet (detailed) + card config sheets.
+// sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep } from './store.js';
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
 import { router } from './app.js';
@@ -35,7 +35,7 @@ export function openSpinner(id) {
   const CYLINDER_R = 120;
   const PERSPECTIVE = 800;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
-  // These closures always reference the current `val` — callers must not cache
+  // These closures always reference the current `val`: callers must not cache
   // the result across a commit() call that changes val.
   const pxToVal = (px) => val - (px / ITEM_H) * step;
   const valToPx = (v) => (val - v) / step * ITEM_H;
@@ -76,7 +76,7 @@ export function openSpinner(id) {
   }
 
   // commit() advances val to v, adjusting offsetY so the visible drum position
-  // is unchanged — essential for interrupt-on-pointerdown to work without a jump.
+  // is unchanged: essential for interrupt-on-pointerdown to work without a jump.
   function commit(v, silent = false) {
     v = clampValue(Math.round(v / step) * step);
     offsetY += (v - val) / step * ITEM_H;
@@ -113,14 +113,14 @@ export function openSpinner(id) {
   </div>`;
 
   const items = overlay.querySelector('#spinner-items');
-  // Cached node list — avoids re-querying the DOM inside the animation loop.
+  // Cached node list: avoids re-querying the DOM inside the animation loop.
   let itemEls = Array.from(items.querySelectorAll('.spinner-item'));
 
   function rebuildItemEls() {
     itemEls = Array.from(items.querySelectorAll('.spinner-item'));
   }
 
-  // Update label text in place — no DOM rebuild, no node churn.
+  // Update label text in place: no DOM rebuild, no node churn.
   function updateLabels(center) {
     for (let idx = 0; idx < itemEls.length; idx++) {
       const i = idx - OFF;
@@ -131,7 +131,7 @@ export function openSpinner(id) {
   }
 
   // Positions items on a virtual cylinder using 2D transforms computed from 3D geometry.
-  // drumAngle (degrees): rotation of the cylinder — positive = top toward viewer.
+  // drumAngle (degrees): rotation of the cylinder; positive = top toward viewer.
   function updateDrum(drumAngle) {
     for (let idx = 0; idx < itemEls.length; idx++) {
       const i = idx - OFF;
@@ -162,7 +162,7 @@ export function openSpinner(id) {
       updateLabels(center);
       maybeBuzz();
     }
-    // Residual must be measured from the rounded `center`, not offset % ITEM_H —
+    // Residual must be measured from the rounded `center`, not offset % ITEM_H:
     // that modulo floors toward zero, which disagrees with rounding for the back
     // half of every step and snaps the track a full row out of place mid-drag.
     const residual = offset - valToPx(center);
@@ -202,7 +202,7 @@ export function openSpinner(id) {
 
     // Commit whatever is currently displayed before cancelling any in-flight
     // animation. This rebases `val` to the visible center so the next flick's
-    // steps and targetOffset are anchored to the actual displayed position —
+    // steps and targetOffset are anchored to the actual displayed position:
     // without this, rapid spam flicks leave val frozen while offsetY drifts
     // hundreds of pixels, and the ±30-step cap causes backward settle (reset).
     clearTimeout(snapTimeout); snapTimeout = 0;
@@ -265,7 +265,7 @@ export function openSpinner(id) {
   // gives the exact total coast distance in O(1), and the spring commits within
   // ~250 ms regardless of fling speed.
   // Frame-by-frame exponential decay: v(t) = v0·e^(-t/τ). Cap at 300ms so
-  // the residual handed to startSnap is always <½ step — spring settles in
+  // the residual handed to startSnap is always <½ step: spring settles in
   // <50ms rather than the 500ms+ a full-amplitude spring would need.
   function startMomentum(v0) {
     const tau = (0.30 + Math.min(Math.abs(v0) / 9, 0.18)) * 1000; // ms

@@ -1,4 +1,4 @@
-// onboarding.js — first-run setup (name, birthdate, theme, photo, caregiver).
+// onboarding.js: first-run setup (name, birthdate, theme, photo, caregiver).
 import { state, save, seed, markSynced, enqueueSettingsSync } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';

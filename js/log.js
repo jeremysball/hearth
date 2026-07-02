@@ -1,4 +1,4 @@
-// log.js — gated, namespaced console instrumentation.
+// log.js: gated, namespaced console instrumentation.
 const ON = (() => {
   try { return localStorage.getItem('hearth.debug') === '1' || /[?&]debug\b/.test(location.search); }
   catch (e) { return false; }

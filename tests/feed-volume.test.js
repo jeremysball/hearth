@@ -7,6 +7,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   try {
     await page.goto(srv.base + '/');
     await onboard(page);
+    await page.reload();
     await page.evaluate(() => {
       const raw = localStorage.getItem('hearth.state.v1');
       const st = JSON.parse(raw);

@@ -6,25 +6,25 @@
 
 A free, private baby tracker. No accounts, no ads, no cloud.
 
-Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your device — install it as a PWA and it works offline.
+Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your device: install it as a PWA and it works offline.
 
 ## What it tracks
 
-- **Hero card** — awake timer with age-based nap window predictions
-- **Sleep** — start, end, and quality
-- **Nursing** — side, duration, and time
-- **Bottles** — contents and volume
-- **Diapers** — wet, dirty, or mixed
-- **Medicine** — custom medicines, doses, and interval reminders
-- **Pumping** — side, volume, and time
-- **SweetSpot** — predicts the next ideal nap window
-- **Sharing** — invite caregivers to log together in real time
+- **Hero card**: awake timer with age-based nap window predictions
+- **Sleep**: start, end, and quality
+- **Nursing**: side, duration, and time
+- **Bottles**: contents and volume
+- **Diapers**: wet, dirty, or mixed
+- **Medicine**: custom medicines, doses, and interval reminders
+- **Pumping**: side, volume, and time
+- **SweetSpot**: predicts the next ideal nap window
+- **Sharing**: invite caregivers to log together in real time
 
 ## Install & Run
 
 ### Docker + Tailscale
 
-Hearth uses Tailscale for networking and auth. The `docker-compose.yml` runs two containers — Tailscale joins your tailnet and advertises the hostname `hearth`; the app shares its network namespace. Only devices on your tailnet can reach it. Tailscale handles TLS.
+Hearth uses Tailscale for networking and auth. The `docker-compose.yml` runs two containers: Tailscale joins your tailnet and advertises the hostname `hearth`, and the app shares its network namespace. Only devices on your tailnet can reach it. Tailscale handles TLS.
 
 ```bash
 git clone https://github.com/jeremysball/hearth.git
@@ -50,7 +50,7 @@ cd ..
 ./hearth-server
 ```
 
-`DB_PATH` defaults to a `hearth.db` relative to where you run the binary — pick a stable working directory or set `DB_PATH` to an absolute path.
+`DB_PATH` defaults to a `hearth.db` relative to where you run the binary. Pick a stable working directory, or set `DB_PATH` to an absolute path.
 
 ### systemd
 
@@ -71,7 +71,7 @@ Settings come from environment variables or a `.env` file in the working directo
 | `CERT_FILE`           | *(empty)*   | TLS certificate path |
 | `KEY_FILE`            | *(empty)*   | TLS private key path |
 | `DB_PATH`             | `hearth.db` | SQLite database path |
-| `STATIC_DIR`          | *(empty)*   | Empty: serve the frontend embedded in the binary. Set to `.`: serve files live from disk — edits show up on refresh without a Go rebuild. |
+| `STATIC_DIR`          | *(empty)*   | Empty: serve the frontend embedded in the binary. Set to `.`: serve files live from disk, so edits show up on refresh without a Go rebuild. |
 | `GEOIP_ENABLED`       | `false`     | Set to `true` to enrich request logs from a local MaxMind GeoLite2 City database. |
 | `GEOIP_DB_PATH`       | *(empty)*   | Path to `GeoLite2-City.mmdb`. Required when GeoIP is enabled. |
 | `MAXMIND_LICENSE_KEY` | *(empty)*   | Optional. If set and `GEOIP_DB_PATH` is missing, Hearth downloads and extracts GeoLite2 City on startup. |
@@ -82,7 +82,7 @@ Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HT
 
 ```
 hearth/
-├── server/            # Go backend — API, auth, SQLite, SSE sync
+├── server/            # Go backend: API, auth, SQLite, SSE sync
 ├── js/                # Vanilla JS frontend, no framework
 ├── index.html         # PWA shell
 ├── sw.js              # Service worker
@@ -92,9 +92,9 @@ hearth/
 └── docker-compose.yml # App + Tailscale sidecar
 ```
 
-The Go server owns the API, family-scoped data isolation, and real-time sync over SSE. One family means one baby, any number of caregivers, and shared entries and settings — all keyed by `family_id`. The frontend is a vanilla JS PWA: data lives in localStorage and syncs to the server when connected. SQLite holds the shared state.
+The Go server owns the API, family-scoped data isolation, and real-time sync over SSE. One family means one baby, any number of caregivers, and shared entries and settings, all keyed by `family_id`. The frontend is a vanilla JS PWA: data lives in localStorage and syncs to the server when connected. SQLite holds the shared state.
 
-Tailscale is the auth layer. No login page, no passwords, no token hashing — anyone on your tailnet is trusted.
+Tailscale is the auth layer. It has no login page, no passwords, and no token hashing: anyone on your tailnet is trusted.
 
 ## Development
 
@@ -134,7 +134,7 @@ Output is namespaced and colour-coded: `info` (green), `warn` (amber), `error` (
 
 ## Testing
 
-Browser tests in `tests/` run against a self-spawned server on plain HTTP — no TLS, no Tailscale — so they work in CI.
+Browser tests in `tests/` run against a self-spawned server on plain HTTP, with no TLS and no Tailscale, so they work in CI.
 
 ```bash
 npm install

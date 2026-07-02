@@ -1,4 +1,4 @@
-// fx.js — celebratory confetti, Web Audio sounds, and haptics.
+// fx.js: celebratory confetti, Web Audio sounds, and haptics.
 import { state } from './store.js';
 
 let audioCtx = null;
@@ -13,7 +13,7 @@ function getCtx() {
 
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Cubically-decaying noise burst — simulates the transient snap of a mallet or pick attack.
+// Cubically-decaying noise burst: simulates the transient snap of a mallet or pick attack.
 function noiseSnap(ctx, dest, t, durSec, peakGain) {
   const len = Math.ceil(ctx.sampleRate * durSec);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -33,7 +33,7 @@ export function chime() {
   [1046.5, 1318.51, 1567.98].forEach((freq, i) => {  // C6 – E6 – G6
     const t = now + i * 0.065;
     noiseSnap(ctx, ctx.destination, t, 0.012, 0.14);
-    // Fundamental starts 3% sharp then settles — the pitch "snap" that reads as bounce.
+    // Fundamental starts 3% sharp then settles: the pitch "snap" that reads as bounce.
     const osc = ctx.createOscillator();
     const env = ctx.createGain();
     osc.type = 'sine';
@@ -44,7 +44,7 @@ export function chime() {
     env.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
     osc.connect(env).connect(ctx.destination);
     osc.start(t); osc.stop(t + 0.56);
-    // Inharmonic partial at 2.756× — characteristic marimba overtone, decays 4× faster than fundamental.
+    // Inharmonic partial at 2.756×: characteristic marimba overtone, decays 4× faster than fundamental.
     const osc2 = ctx.createOscillator();
     const env2 = ctx.createGain();
     osc2.type = 'sine';

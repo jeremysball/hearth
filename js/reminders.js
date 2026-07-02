@@ -1,4 +1,4 @@
-// reminders.js — local notification engine using Web Notifications + setTimeout scheduling.
+// reminders.js: local notification engine using Web Notifications + setTimeout scheduling.
 import { state, derive } from './store.js';
 import { toast } from './ui.js';
 import { router } from './app.js';
@@ -7,6 +7,22 @@ let _granted = false;
 let _scheduled = {};
 
 const NOTIFIED_KEY = 'hearth.notified.v1';
+
+function urlBase64ToUint8Array(base64) {
+  const pad = '='.repeat((4 - base64.length % 4) % 4);
+  const data = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...data].map((ch) => ch.charCodeAt(0)));
+}
+
+async function subscribePush(reg) {
+  if (!reg?.pushManager) return false;
+  const keyRes = await fetch('/api/push/public-key', { credentials: 'include' });
+  if (!keyRes.ok) return false;
+  const { publicKey } = await keyRes.json();
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+  const res = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(sub) });
+  return res.ok;
+}
 
 function loadNotified() {
   try { return new Map(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]')); }
@@ -21,7 +37,7 @@ function saveNotified(m) {
 export function notify(title, body) {
   if (!_granted || !('serviceWorker' in navigator)) return Promise.resolve(false);
   // Chrome for Android never implements `new Notification()` (throws "Illegal
-  // constructor" by design) — showNotification() via the SW registration is
+  // constructor" by design). showNotification() via the SW registration is
   // the only path that works everywhere, including there.
   return navigator.serviceWorker.ready
     .then((reg) => reg.showNotification(title, { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' }))
@@ -33,8 +49,14 @@ export async function enableNotifs() {
   if (!('Notification' in window)) { toast('Notifications not supported in this browser'); return; }
   const perm = await Notification.requestPermission();
   _granted = perm === 'granted';
-  if (_granted) { toast('Reminders enabled ✓'); scheduleReminders(); router.refresh(); }
-  else toast('Permission denied — enable in browser settings');
+  if (_granted) {
+    const reg = await navigator.serviceWorker.ready;
+    await subscribePush(reg).catch(() => false);
+    toast('Reminders enabled ✓');
+    scheduleReminders();
+    router.refresh();
+  }
+  else toast('Permission denied, enable in browser settings');
 }
 
 export function notifsGranted() { return _granted; }
@@ -55,14 +77,14 @@ export function scheduleReminders() {
     if (notified.has(notifiedKey)) return;
     const delay = rem.at - now;
     if (delay > 12 * 3600000) return;  // keep the 12h future cap
-    if (isQuiet(rem.at, quietStart, quietEnd)) return;
+    if (!rem.key.startsWith('med-') && isQuiet(rem.at, quietStart, quietEnd)) return;
     _scheduled[rem.key] = setTimeout(() => {
       notify(rem.title, rem.body);
       delete _scheduled[rem.key];
       const n = loadNotified();
       n.set(notifiedKey, rem.at);
       saveNotified(n);
-    }, Math.max(0, delay));  // clamp — fires immediately if past-due
+    }, Math.max(0, delay));  // clamp: fires immediately if past-due
   });
 }
 
