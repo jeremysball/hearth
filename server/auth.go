@@ -67,7 +67,10 @@ func requireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		var familyID, caregiverID string
-		err = db.QueryRow(`SELECT family_id, caregiver_id FROM sessions WHERE token = ?`, cookie.Value).
+		err = db.QueryRow(`
+			SELECT s.family_id, s.caregiver_id
+			FROM sessions s JOIN caregivers c ON c.id = s.caregiver_id
+			WHERE s.token = ? AND c.removed_at = ''`, cookie.Value).
 			Scan(&familyID, &caregiverID)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)

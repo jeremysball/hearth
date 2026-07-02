@@ -88,7 +88,7 @@ export function profile() {
 
     <div class="sec-label">Caregivers & sharing</div>
     <div class="card row-card" id="cg-list">
-      ${caregiversSnapshot().length ? caregiversSnapshot().map(caregiverRow).join('') : `<p class="empty-note">Just you so far.</p>`}
+      ${activeCaregivers().length ? activeCaregivers().map(caregiverRow).join('') : `<p class="empty-note">Just you so far.</p>`}
       <button class="add-row" data-action="cg:invite"><svg class="icon"><use href="#plus"></use></svg> Invite a caregiver</button>
     </div>
 
@@ -103,7 +103,7 @@ let cachedCaregivers = [];
 
 export async function loadCaregivers() {
   try {
-    const res = await fetch('/api/caregivers', { credentials: 'include' });
+    const res = await fetch('/api/caregivers?includeRemoved=1', { credentials: 'include' });
     if (!res.ok) return;
     cachedCaregivers = await res.json();
     state().caregivers = cachedCaregivers;
@@ -114,14 +114,25 @@ export async function loadCaregivers() {
 
 export function caregiversSnapshot() { return cachedCaregivers.length ? cachedCaregivers : (state().caregivers || []); }
 
+function activeCaregivers() { return caregiversSnapshot().filter((c) => !c.removedAt); }
+
 function caregiverRow(c) {
   const initial = esc((c.displayName || 'C')[0].toUpperCase());
-  const avatar = c.photo
+  const baseAvatar = c.photo
     ? `<span class="avatar cg-avatar" style="background-image:url('${esc(c.photo)}')"></span>`
     : `<span class="avatar cg-avatar">${initial}</span>`;
+  const avatar = c.isAdmin ? `<span class="cg-admin-wrap">${baseAvatar}<span class="cg-crown"><svg class="icon"><use href="#crown"></use></svg></span></span>` : baseAvatar;
   const mine = c.id === state().currentCaregiverId;
+  const current = activeCaregivers().find((x) => x.id === state().currentCaregiverId);
+  const canManage = current?.isAdmin && !c.isAdmin;
+  const roles = ['Parent', 'Partner', 'Caregiver'];
+  const roleControl = canManage
+    ? `<select class="cg-role" data-cg-role="${esc(c.id)}">${roles.map((role) => `<option value="${role}" ${role === c.role ? 'selected' : ''}>${role}</option>`).join('')}</select>`
+    : `<span class="fld-l">${esc(c.role)}${c.isAdmin ? ' · Admin' : ''}</span>`;
+  const remove = canManage ? `<button class="cg-remove" data-action="cg:remove" data-id="${esc(c.id)}" data-name="${esc(c.displayName)}" aria-label="Remove ${esc(c.displayName)}"><svg class="icon"><use href="#trash-2"></use></svg></button>` : '';
   return `<div class="cg-row">
     ${mine ? `<button class="cg-photo" data-action="cg:photo" data-id="${esc(c.id)}" aria-label="Change ${esc(c.displayName)} photo">${avatar}<span class="photo-edit mini"><svg class="icon"><use href="#camera"></use></svg></span></button>` : avatar}
-    <span class="cg-display"><b>${esc(c.displayName)}</b><span class="fld-l">${esc(c.role)}</span></span>
+    <span class="cg-display"><b>${esc(c.displayName)}</b>${roleControl}</span>
+    ${remove}
   </div>`;
 }

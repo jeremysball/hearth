@@ -59,6 +59,9 @@ func TestRequireAuthRejectsUnknownToken(t *testing.T) {
 
 func TestRequireAuthAcceptsValidSession(t *testing.T) {
 	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?, ?)`, now, now)
 	token, err := createSession(db, "cg1", "fam1")
 	if err != nil {
 		t.Fatal(err)

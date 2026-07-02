@@ -185,7 +185,8 @@ func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	now := nowISO()
-	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, photo, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', '', ?, ?)`, now, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, photo, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', '', ?, '2026-01-01T00:00:00Z')`, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, photo, updated_at, created_at, removed_at) VALUES ('cg2', 'fam1', 'Dad', 'Partner', '', ?, '2026-01-02T00:00:00Z', ?)`, now, now)
 	db.Exec(`UPDATE caregivers SET photo = 'data:image/jpeg;base64,cg', updated_at = ? WHERE id = 'cg1'`, now)
 
 	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
@@ -198,13 +199,17 @@ func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
-	if len(resp.Caregivers) == 0 {
+	if len(resp.Caregivers) != 2 {
 		t.Fatalf("expected caregivers in sync response, got %s", rec.Body.String())
 	}
-	var cg caregiverInfo
-	json.Unmarshal(resp.Caregivers[0], &cg)
-	if cg.ID != "cg1" || cg.Photo != "data:image/jpeg;base64,cg" {
-		t.Fatalf("caregiver = %+v", cg)
+	var first, removed caregiverInfo
+	json.Unmarshal(resp.Caregivers[0], &first)
+	json.Unmarshal(resp.Caregivers[1], &removed)
+	if first.ID != "cg1" || first.Photo != "data:image/jpeg;base64,cg" || !first.IsAdmin || first.RemovedAt != "" {
+		t.Fatalf("first caregiver = %+v", first)
+	}
+	if removed.ID != "cg2" || removed.RemovedAt == "" || removed.IsAdmin {
+		t.Fatalf("removed caregiver = %+v", removed)
 	}
 	if resp.CurrentCaregiverID != "cg1" {
 		t.Fatalf("currentCaregiverId = %q, want cg1", resp.CurrentCaregiverID)
