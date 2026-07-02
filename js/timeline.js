@@ -1,4 +1,4 @@
-// timeline.js — filterable, day-grouped activity feed opened from Home.
+// timeline.js: filterable, day-grouped activity feed opened from Home.
 import { state } from './store.js';
 import { fmt, esc, icon, TYPES } from './ui.js';
 import { summary } from './home.js';

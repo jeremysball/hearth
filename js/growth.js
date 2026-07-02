@@ -1,4 +1,4 @@
-// growth.js — growth/weight tracker view.
+// growth.js: growth/weight tracker view.
 import { state, ageLabel } from './store.js';
 import { esc } from './ui.js';
 
@@ -8,7 +8,7 @@ const dispW = (kg) => kg == null ? '—' : (weightImperial() ? (kg * 2.2046).toF
 const dispL = (cm) => cm == null ? '—' : (lengthImperial() ? (cm / 2.54).toFixed(1) + ' in' : cm.toFixed(0) + ' cm');
 
 // m.date is a plain 'YYYY-MM-DD' string with no time/offset, which `new
-// Date()` parses as UTC midnight — rendering it via toLocaleDateString()
+// Date()` parses as UTC midnight, so rendering it via toLocaleDateString()
 // then shows the wrong (previous) day in any negative-UTC-offset timezone.
 // Build the Date from local components instead.
 function localDate(ymd) {
@@ -74,6 +74,6 @@ export function growth() {
 
     <div class="today-block">
       <div class="today-hd"><h2>History</h2><button class="today-add" data-action="measure:open" data-id="" aria-label="Add measurement"><svg class="icon"><use href="#plus"></use></svg></button></div>
-      <div class="card log">${g.length ? g.slice().reverse().map((m, i, arr) => measureRow(m, arr[i + 1])).join('') : `<div class="empty-log">No measurements yet — tap the + button to add one.</div>`}</div>
+      <div class="card log">${g.length ? g.slice().reverse().map((m, i, arr) => measureRow(m, arr[i + 1])).join('') : `<div class="empty-log">No measurements yet. Tap the + button to add one.</div>`}</div>
     </div>`;
 }

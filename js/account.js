@@ -1,4 +1,4 @@
-// account.js — OAuth sign-in UI, signed-in state, and conflict resolution.
+// account.js: OAuth sign-in UI, signed-in state, and conflict resolution.
 import { state, save } from './store.js';
 import { esc, sheet, toast } from './ui.js';
 
@@ -26,7 +26,7 @@ export function accountSection() {
         <button class="btn-sm" data-action="auth:signout">Sign out</button>
       </div>`;
   }
-  return `<p class="empty-note">Sign in to back up and sync across devices. Optional — Hearth works without an account.</p>${signInButtons()}`;
+  return `<p class="empty-note">Sign in to back up and sync across devices. Optional: Hearth works without an account.</p>${signInButtons()}`;
 }
 
 export function beginSignIn(provider) {
@@ -59,7 +59,7 @@ export async function handleAuthRedirect(refresh, onSignup) {
       if (refresh) refresh();
     }
   }
-  else if (auth === 'error') { toast('Sign-in failed — please try again'); }
+  else if (auth === 'error') { toast('Sign-in failed, please try again'); }
   else if (auth === 'conflict' && pending) {
     try {
       const res = await fetch('/api/conflict/' + encodeURIComponent(pending), { credentials: 'include' });
@@ -71,7 +71,7 @@ export async function handleAuthRedirect(refresh, onSignup) {
 function openConflictSheet(info, pending) {
   const fam = (f, label) => `<div class="conflict-fam"><b>${label}</b><span class="fld-l">${esc(f.babyName || 'Baby')} · ${f.entryCount} entr${f.entryCount === 1 ? 'y' : 'ies'}</span></div>`;
   sheet.open(`
-    <p class="empty-note">This device has data, and your account already has a family. Nothing is deleted — choose what to do.</p>
+    <p class="empty-note">This device has data, and your account already has a family. Nothing is deleted: choose what to do.</p>
     ${fam(info.current, 'This device')}
     ${fam(info.target, 'Your account')}
     <button class="btn-primary" data-action="auth:resolve" data-choice="merge" data-pending="${esc(pending)}"><svg class="icon"><use href="#check"></use></svg> Merge into my account</button>

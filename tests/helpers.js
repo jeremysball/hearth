@@ -2,7 +2,7 @@
 // and driving Playwright against it.
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-const { existsSync, rmSync } = require('fs');
+const { rmSync } = require('fs');
 const http = require('http');
 const path = require('path');
 
@@ -16,12 +16,23 @@ function buildServer() {
 
 async function startServer(port = 18787) {
   port = Number(process.env.TEST_PORT) || port;
-  if (!existsSync(BIN)) buildServer();
+  buildServer();
   const dbPath = `/tmp/hearth-test-${process.pid}.db`;
   rmSync(dbPath, { force: true });
   const proc = spawn(BIN, [], {
     cwd: ROOT,
-    env: { ...process.env, STATIC_DIR: ROOT, DB_PATH: dbPath, PORT: String(port), HOST: '127.0.0.1', CERT_FILE: '', KEY_FILE: '' },
+    env: {
+      ...process.env,
+      STATIC_DIR: ROOT,
+      DB_PATH: dbPath,
+      PORT: String(port),
+      HOST: '127.0.0.1',
+      CERT_FILE: '',
+      KEY_FILE: '',
+      VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || 'test-public-key',
+      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || 'test-private-key',
+      VAPID_SUBJECT: process.env.VAPID_SUBJECT || 'mailto:test@example.com',
+    },
     stdio: 'pipe',
   });
   proc.stderr.on('data', (d) => { if (process.env.DEBUG) process.stderr.write('[srv] ' + d); });

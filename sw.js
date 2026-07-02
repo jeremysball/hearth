@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-07-01T22:09Z'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-07-02T02:25Z'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -88,4 +88,26 @@ self.addEventListener('fetch', (e) => {
       return res;
     }).catch(() => hit))
   );
+});
+
+self.addEventListener('push', (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = {}; }
+  const title = data.title || 'Hearth';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: data.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    data: { key: data.key || '' }
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if ('focus' in client) return client.focus();
+    }
+    return clients.openWindow('/');
+  }));
 });

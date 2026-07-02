@@ -55,9 +55,12 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	}
 
 	mux := http.NewServeMux()
+	pushes := newPushScheduler(db)
 	mux.HandleFunc("POST /api/family", handleCreateFamily(db))
 	mux.HandleFunc("/api/events", requireAuth(db, handleEvents(hub)))
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
+	mux.HandleFunc("GET /api/push/public-key", requireAuth(db, handlePushPublicKey()))
+	mux.HandleFunc("POST /api/push/subscribe", requireAuth(db, handlePushSubscribe(db)))
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
 	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
@@ -65,7 +68,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	mux.HandleFunc("GET /join/{token}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticFS, "index.html")
 	})
-	mux.HandleFunc("PUT /api/entries/{id}", requireAuth(db, handleUpsertEntry(db, hub)))
+	mux.HandleFunc("PUT /api/entries/{id}", requireAuth(db, handleUpsertEntry(db, hub, pushes)))
 	mux.HandleFunc("DELETE /api/entries/{id}", requireAuth(db, handleDeleteEntry(db, hub)))
 	mux.HandleFunc("PUT /api/growth/{id}", requireAuth(db, handleUpsertGrowth(db, hub)))
 	mux.HandleFunc("DELETE /api/growth/{id}", requireAuth(db, handleDeleteGrowth(db, hub)))

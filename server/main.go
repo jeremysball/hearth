@@ -7,6 +7,9 @@ import (
 
 func main() {
 	cfg := loadConfig()
+	if err := validateVAPIDEnv(); err != nil {
+		log.Fatal(err)
+	}
 	initProviders(cfg)
 
 	log.Printf("Hearth starting up")
