@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
@@ -216,6 +216,10 @@ document.addEventListener('click', (ev) => {
     'med:card': () => openMedCard(),
     'med:dose': () => logMedDose(d.mid),
     'med:remove': () => { const r = $(`.med-edit[data-mid="${d.mid}"]`); if (r) r.remove(); },
+    'playtypes:open': () => openPlayTypes(),
+    'playtype:add': () => addPlayType(),
+    'playtype:remove': () => { const r = el.closest('.playtype-row'); if (r) r.remove(); },
+    'playtypes:save': () => savePlayTypes(),
     'tip:dismiss': () => {
       const tip = el.dataset.tip;
       if (tip === 'morning-light') {
@@ -522,6 +526,11 @@ function addMed() {
   const empty = $('.empty-note', list); if (empty) empty.remove();
   const id = 'm' + Date.now().toString(36);
   list.insertAdjacentHTML('beforeend', medRow({ id, name: '', dose: '1', unit: '', everyH: 24 }));
+}
+function addPlayType() {
+  const list = $('#playtype-list'); if (!list) return;
+  const empty = $('.empty-note', list); if (empty) empty.remove();
+  list.insertAdjacentHTML('beforeend', playTypeRow(''));
 }
 function shareInviteLink(url) {
   if (navigator.share) {

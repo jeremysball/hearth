@@ -76,3 +76,25 @@ func TestHandlePatchSettingsUpdatesFields(t *testing.T) {
 		t.Errorf("units_json = %q, want {\"volume\":\"oz\"}", unitsJSON)
 	}
 }
+
+func TestHandlePatchSettingsUpdatesPlayTypes(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+
+	body := `{"bottleIntervalH":3,"meds":[],"units":{},"reminders":{},"cards":{},"playTypes":["Tummy time","Reading"]}`
+	req := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(body))
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handlePatchSettings(db, hub)(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var playTypesJSON string
+	db.QueryRow(`SELECT playtypes_json FROM settings WHERE family_id = 'fam1'`).Scan(&playTypesJSON)
+	if playTypesJSON != `["Tummy time","Reading"]` {
+		t.Errorf("playtypes_json = %q, want [\"Tummy time\",\"Reading\"]", playTypesJSON)
+	}
+}

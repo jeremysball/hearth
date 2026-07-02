@@ -23,7 +23,10 @@ export function summary(e) {
     label = 'Pump · ' + (e.side || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'note') {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
-  } else if (e.type === 'bath' || e.type === 'play') {
+  } else if (e.type === 'bath') {
+    detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'play') {
+    label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start); meta = e.note || '';
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };

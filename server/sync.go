@@ -37,9 +37,9 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		}
 
 		var bottleIntervalH float64
-		var medsJSON, unitsJSON, remindersJSON, cardsJSON, settingsUpdatedAt string
-		err = db.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at FROM settings WHERE family_id = ?`, session.FamilyID).
-			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &settingsUpdatedAt)
+		var medsJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON, settingsUpdatedAt string
+		err = db.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, playtypes_json, updated_at FROM settings WHERE family_id = ?`, session.FamilyID).
+			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsUpdatedAt)
 		if err == nil && changedAfter(settingsUpdatedAt, since) {
 			s, _ := json.Marshal(map[string]any{
 				"bottleIntervalH": bottleIntervalH,
@@ -47,6 +47,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 				"units":           json.RawMessage(unitsJSON),
 				"reminders":       json.RawMessage(remindersJSON),
 				"cards":           json.RawMessage(cardsJSON),
+				"playTypes":       json.RawMessage(playTypesJSON),
 			})
 			resp.Settings = s
 		}
