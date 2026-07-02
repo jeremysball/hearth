@@ -44,6 +44,16 @@ func (sw *statusWriter) WriteHeader(status int) {
 	sw.ResponseWriter.WriteHeader(status)
 }
 
+// Flush forwards to the wrapped writer so handlers behind logMiddleware can
+// still be recognized as http.Flusher (e.g. handleEvents' SSE stream).
+// Embedding the http.ResponseWriter interface only promotes Header/Write/
+// WriteHeader, not Flush, so without this SSE always 500s here.
+func (sw *statusWriter) Flush() {
+	if f, ok := sw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func (sw *statusWriter) setSession(session SessionInfo) {
 	sw.session = session
 }
