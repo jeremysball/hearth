@@ -261,6 +261,7 @@ document.addEventListener('click', (ev) => {
     'baby:photo': () => openBabyPhoto(),
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
+    'form:toggle': () => { el.classList.toggle('on'); el.setAttribute('aria-checked', el.classList.contains('on')); },
     'cg:photo': () => caregiverPhoto(d.id),
     'cg:invite': () => inviteCaregiver(),
     'cg:invite-share': () => shareInviteLink(d.url),

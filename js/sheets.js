@@ -442,6 +442,7 @@ const FORMS = {
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
     ${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}
+    ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,
   medicine: () => {
     const meds = state().settings.meds;
@@ -478,6 +479,7 @@ function gather(type) {
     base.amount = Math.round(amt); base.unit = 'ml';
   } else if (type === 'diaper') {
     base.kind = segVal('kind'); base.size = segVal('size');
+    base.rash = $('#f-rash') ? $('#f-rash').classList.contains('on') : false;
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
@@ -512,8 +514,11 @@ function prefill(type, e) {
     setSeg('side', e.side); setSeg('contents', e.contents);
     let a = Number(e.amount) || 0; if (state().settings.units.volume === 'oz') a = Math.round((a / 29.5735) * 10) / 10;
     const famt = $('#f-amt'); if (famt) { famt.dataset.value = a; famt.textContent = a; }
-  } else if (type === 'diaper') { setSeg('kind', e.kind); setSeg('size', e.size); }
-  else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
+  } else if (type === 'diaper') {
+    setSeg('kind', e.kind); setSeg('size', e.size);
+    const rashEl = $('#f-rash');
+    if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
+  } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
 }
 
 export function saveLog(type, id) {
