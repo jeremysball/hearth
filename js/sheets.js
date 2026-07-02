@@ -490,8 +490,7 @@ function gather(type) {
     const m = state().settings.meds.find((x) => x.id === id);
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
-    const pt = segVal('playType');
-    if (pt) base.playType = pt;
+    base.playType = segVal('playType') || null;
   }
   return base;
 }

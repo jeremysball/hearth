@@ -692,6 +692,6 @@ export function enqueueSettingsSync() {
   const s = _state.settings;
   enqueue({
     url: '/api/settings', method: 'PATCH',
-    body: { bottleIntervalH: s.bottleIntervalH, meds: s.meds, units: s.units, reminders: s.reminders, cards: s.cards }
+    body: { bottleIntervalH: s.bottleIntervalH, meds: s.meds, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
   });
 }

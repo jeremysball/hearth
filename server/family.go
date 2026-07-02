@@ -131,6 +131,7 @@ type patchSettingsRequest struct {
 	Units           json.RawMessage `json:"units"`
 	Reminders       json.RawMessage `json:"reminders"`
 	Cards           json.RawMessage `json:"cards"`
+	PlayTypes       json.RawMessage `json:"playTypes"`
 }
 
 func rawOrNull(r json.RawMessage) string {
@@ -149,8 +150,8 @@ func handlePatchSettings(db *sql.DB, hub *Hub) http.HandlerFunc {
 			return
 		}
 		now := nowISO()
-		res, err := db.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, updated_at = ? WHERE family_id = ?`,
-			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), now, session.FamilyID)
+		res, err := db.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ? WHERE family_id = ?`,
+			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return

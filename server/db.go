@@ -41,6 +41,9 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(`UPDATE caregivers SET updated_at = created_at WHERE updated_at = ''`); err != nil {
 		return nil, err
 	}
+	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN playtypes_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
 	return db, nil
 }
 

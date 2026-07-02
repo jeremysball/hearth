@@ -434,6 +434,19 @@ test('normalizeSettings initializes dismissedRegressions when missing', async ()
   assert.equal(s.dismissedRegressions.length, 0);
 });
 
+test('normalizeSettings seeds default playTypes for settings saved before the field existed', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  const s = normalizeSettings({ clock24: '12h' });
+  assert.ok(Array.isArray(s.playTypes), 'should have a playTypes array');
+  assert.ok(s.playTypes.length > 0);
+});
+
+test('normalizeSettings leaves an existing playTypes list untouched', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  const s = normalizeSettings({ clock24: '12h', playTypes: ['Sensory bin'] });
+  assert.deepEqual(s.playTypes, ['Sensory bin']);
+});
+
 test('derive.regressionAlert returns null when baby age is far from any regression', () => {
   // Current baby age from prior applySyncResponse calls is ~4 months.
   // The 4-month regression fires at 3.5–5 months → may be in range.
