@@ -1,4 +1,4 @@
-// trends.js — weekly trends with CSS bar charts.
+// trends.js: weekly trends with CSS bar charts.
 import { state, derive } from './store.js';
 import { fmt, esc } from './ui.js';
 

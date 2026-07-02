@@ -1,4 +1,4 @@
-// profile.js — baby details, reminders, units, caregivers, reset.
+// profile.js: baby details, reminders, units, caregivers, reset.
 import { state, save } from './store.js';
 import { esc } from './ui.js';
 import { currentVersion, renderChangelog } from './changelog.js';

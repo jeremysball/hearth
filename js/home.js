@@ -1,4 +1,4 @@
-// home.js — home view + entry summary helper.
+// home.js: home view + entry summary helper.
 import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
@@ -73,7 +73,7 @@ function avatar() {
 }
 
 // One-time morning light tip card. Shown when the circadian anchor reaches
-// medium+ confidence. Dismissed to settings — never shown again after tap.
+// medium+ confidence. Dismissed to settings: never shown again after tap.
 function morningLightTip() {
   if (state().settings.tipMorningLightDismissed) return '';
   const anchor = derive.circadianAnchor();
@@ -85,7 +85,7 @@ function morningLightTip() {
   const timeStr = fmt.clock(todayBase);
   return `<div class="card tip-card">
     <div class="tip-hd">${icon('sunrise')} Morning light</div>
-    <p>${name} wakes around ${timeStr} most mornings. Morning light in the first 30 minutes — open curtains, step outside — helps anchor the sleep clock and makes nap timing more predictable.</p>
+    <p>${name} wakes around ${timeStr} most mornings. Morning light in the first 30 minutes (open curtains, step outside) helps anchor the sleep clock and makes nap timing more predictable.</p>
     <button class="tip-dismiss" data-action="tip:dismiss" data-tip="morning-light">Got it</button>
   </div>`;
 }
@@ -107,7 +107,7 @@ function regressionBanner() {
   const name = esc(state().baby.name || 'Your baby');
   return `<div class="regression-banner card">
     <div class="reg-hd">${icon('info')} ${esc(r.name)}</div>
-    <p>${name} is approaching the ${esc(r.name.toLowerCase())} — one of the most common. ${esc(r.mechanism)} This is normal development, not a problem to fix.</p>
+    <p>${name} is approaching the ${esc(r.name.toLowerCase())}, one of the most common. ${esc(r.mechanism)} This is normal development, not a problem to fix.</p>
     <button class="tip-dismiss" data-action="regression:dismiss" data-rid="${esc(r.id)}" aria-label="Dismiss">Got it</button>
   </div>`;
 }
@@ -148,12 +148,12 @@ function heroCard() {
       <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
       <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
       <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Nighttime wake — circadian drive is still high. Settle back to sleep now.</div>
+      <div class="hero-sub">Nighttime wake: circadian drive is still high. Settle back to sleep now.</div>
     </div>`;
   }
 
   if (asleep) {
-    // Banked overnight embers — coals warm left→right by nap progress, low and slow.
+    // Banked overnight embers: coals warm left→right by nap progress, low and slow.
     const pct = Math.min(100, (elapsed / 70) * 100);
     let coals = '';
     for (let i = 0; i < N; i++) {
@@ -180,7 +180,7 @@ function heroCard() {
       <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
       <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
       <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Watch for tired cues — yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>
+      <div class="hero-sub">Watch for tired cues: yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>
     </div>`;
   }
 
@@ -220,12 +220,12 @@ function heroCard() {
   // gold "good nap window" and the red overtired state don't fire at once.
   const pastWindow = now > sto;
   const healthy = elapsed < sp.prediction.low * 0.85
-    ? 'Sleep pressure building — adenosine is rising.'
+    ? 'Sleep pressure building: adenosine is rising.'
     : now < sf ? 'Nap window opening. Watch for yawning or looking away.'
-    : now <= sto ? 'Sleep pressure is high — good time for a nap.'
+    : now <= sto ? 'Sleep pressure is high, good time for a nap.'
     : 'Past the usual window. Settling may take a little longer.';
 
-  // Ember bed — coals ignite left→right as the awake window elapses.
+  // Ember bed: coals ignite left→right as the awake window elapses.
   let coals = '';
   for (let i = 0; i < N; i++) {
     const c = (i + 0.5) / N * 100;
@@ -233,8 +233,8 @@ function heroCard() {
     const isSweet = bandWidth > 0 && c >= sweetFromPct && c <= sweetToPct;
     let cls;
     if (pastWindow && isLit && c > sweetToPct) cls = 'toohot'; // overshoot past sweetspot burns too hot
-    else if (isSweet && isLit) cls = 'caught';                 // sweetspot coal that has caught — gold
-    else if (isSweet) cls = 'ready';                           // sweetspot ahead — dim gold target
+    else if (isSweet && isLit) cls = 'caught';                 // sweetspot coal that has caught, gold
+    else if (isSweet) cls = 'ready';                           // sweetspot ahead, dim gold target
     else if (isLit) cls = 'lit';                               // ordinary lit ember
     else cls = '';                                             // cool, unlit coal
     const isFront = cls === 'lit' && (i + 1.5) / N * 100 > nowPct; // hottest leading ember
@@ -380,7 +380,7 @@ function renderable(k) {
 }
 function cardHTML(k) { return CARD_RENDER[k] ? CARD_RENDER[k]() : genericCard(k); }
 
-// Types not currently shown as a card — offered in the "Add card" picker.
+// Types not currently shown as a card: offered in the "Add card" picker.
 export function addableCardTypes() {
   const cards = state().settings.cards;
   const shown = (k) => cards[k] !== false && (CARD_RENDER[k] || (cards.intervals || {})[k] != null) && (cards.order || CARD_KEYS).includes(k);
@@ -434,6 +434,6 @@ export function home() {
     </div>
     <div class="today-block">
       <div class="today-hd"><h2>Today</h2>${todayEditMode ? `<a data-action="today:edit-done">Done</a>` : `<a data-action="nav:timeline">Timeline</a>`}</div>
-      <div class="card log" data-longpress="today">${today.length ? today.map(logRow).join('') : `<div class="empty-log">No entries yet today — tap a button above to log.</div>`}</div>
+      <div class="card log" data-longpress="today">${today.length ? today.map(logRow).join('') : `<div class="empty-log">No entries yet today. Tap a button above to log.</div>`}</div>
     </div>`;
 }

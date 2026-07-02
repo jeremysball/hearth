@@ -1,4 +1,4 @@
-// join.js — accepting an invite link to join an existing family as a caregiver.
+// join.js: accepting an invite link to join an existing family as a caregiver.
 import { state, save, applySyncResponse } from './store.js';
 import { $, applyTheme, toast } from './ui.js';
 import { router } from './app.js';
@@ -26,7 +26,7 @@ function installGuideView(ttlMin = 10) {
         <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
         <li>Tap <strong>Add</strong></li>
       </ol>`
-    : `<p class="onb-sub">Chrome will prompt you to install — tap <strong>Install</strong> when it appears, or use the browser menu → <strong>Add to Home Screen</strong>.</p>`;
+    : `<p class="onb-sub">Chrome will prompt you to install: tap <strong>Install</strong> when it appears, or use the browser menu → <strong>Add to Home Screen</strong>.</p>`;
   return `<div class="onboard">
     <div class="onb-top">
       <div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div>
@@ -57,7 +57,7 @@ export async function joinFinish(token) {
     });
     if (!res.ok) throw new Error('join failed: ' + res.status);
   } catch (e) {
-    toast('Could not join — check the link or your connection');
+    toast('Could not join. Check the link or your connection');
     return;
   }
 
@@ -70,7 +70,7 @@ export async function joinFinish(token) {
       if (lt.ttlMin) ttlMin = lt.ttlMin;
       history.replaceState(null, '', '/?launch=' + lt.token);
     } catch (_) {
-      // best-effort — cookie sharing works on iOS 16.4+ even without token
+      // best-effort: cookie sharing works on iOS 16.4+ even without token
     }
     $('#app').innerHTML = installGuideView(ttlMin);
     return;

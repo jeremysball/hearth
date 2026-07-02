@@ -1,4 +1,4 @@
-// reminders.js — local notification engine using Web Notifications + setTimeout scheduling.
+// reminders.js: local notification engine using Web Notifications + setTimeout scheduling.
 import { state, derive } from './store.js';
 import { toast } from './ui.js';
 import { router } from './app.js';
@@ -37,7 +37,7 @@ function saveNotified(m) {
 export function notify(title, body) {
   if (!_granted || !('serviceWorker' in navigator)) return Promise.resolve(false);
   // Chrome for Android never implements `new Notification()` (throws "Illegal
-  // constructor" by design) — showNotification() via the SW registration is
+  // constructor" by design). showNotification() via the SW registration is
   // the only path that works everywhere, including there.
   return navigator.serviceWorker.ready
     .then((reg) => reg.showNotification(title, { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' }))
@@ -56,7 +56,7 @@ export async function enableNotifs() {
     scheduleReminders();
     router.refresh();
   }
-  else toast('Permission denied — enable in browser settings');
+  else toast('Permission denied, enable in browser settings');
 }
 
 export function notifsGranted() { return _granted; }
@@ -84,7 +84,7 @@ export function scheduleReminders() {
       const n = loadNotified();
       n.set(notifiedKey, rem.at);
       saveNotified(n);
-    }, Math.max(0, delay));  // clamp — fires immediately if past-due
+    }, Math.max(0, delay));  // clamp: fires immediately if past-due
   });
 }
 
