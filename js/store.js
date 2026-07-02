@@ -72,6 +72,12 @@ export function normalizeLog(log) {
     if (e && e.type === 'sleep' && e.end && new Date(e.end) < new Date(e.start)) {
       return { ...e, start: e.end, end: e.start };
     }
+    // Mixed diapers logged before the wet/dirty size split only have `size`.
+    // Carry it into both fields rather than losing it, since we can't know
+    // the original split.
+    if (e && e.type === 'diaper' && e.kind === 'Mixed' && e.size && e.wetSize == null && e.dirtySize == null) {
+      return { ...e, wetSize: e.size, dirtySize: e.size };
+    }
     return e;
   });
 }

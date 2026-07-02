@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility } from './sheets.js';
 import { enableNotifs, notify } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
@@ -173,10 +173,7 @@ document.addEventListener('click', (ev) => {
       positionThumb(group);
       const bind = group.dataset.bindSeg;
       if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
-      if (group.dataset.seg === 'kind') {
-        const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
-        if (single && mixed) { const isMixed = opt.dataset.val === 'Mixed'; single.hidden = isMixed; mixed.hidden = !isMixed; }
-      }
+      if (group.dataset.seg === 'kind') syncDiaperSizeVisibility(opt.dataset.val);
     }
     // don't return; seg-opt has no data-action
   }

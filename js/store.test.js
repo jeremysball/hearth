@@ -147,6 +147,27 @@ test('normalizeLog swaps reversed sleep timestamps', () => {
   assert.ok(new Date(out[0].end) >= new Date(out[0].start));
 });
 
+test('normalizeLog migrates a legacy Mixed diaper size into wetSize and dirtySize', () => {
+  const legacy = { id: 'd1', type: 'diaper', kind: 'Mixed', size: 'Large' };
+  const out = normalizeLog([legacy]);
+  assert.equal(out[0].wetSize, 'Large');
+  assert.equal(out[0].dirtySize, 'Large');
+});
+
+test('normalizeLog leaves an already-migrated Mixed diaper entry untouched', () => {
+  const migrated = { id: 'd2', type: 'diaper', kind: 'Mixed', size: null, wetSize: 'Small', dirtySize: 'Large' };
+  const out = normalizeLog([migrated]);
+  assert.equal(out[0].wetSize, 'Small');
+  assert.equal(out[0].dirtySize, 'Large');
+});
+
+test('normalizeLog does not touch non-Mixed diaper entries', () => {
+  const wet = { id: 'd3', type: 'diaper', kind: 'Wet', size: 'Medium' };
+  const out = normalizeLog([wet]);
+  assert.equal(out[0].wetSize, undefined);
+  assert.equal(out[0].dirtySize, undefined);
+});
+
 test('nextForType anchors on the last entry end + interval', () => {
   const end = '2026-06-27T10:30:00.000Z';
   addEntry({ type: 'play', start: '2026-06-27T10:00:00.000Z', end });
