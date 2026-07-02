@@ -456,7 +456,12 @@ const FORMS = {
     ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 90)}
     ${timeRow()} ${noteRow()}`,
   note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`,
-  play: () => `${timeRow()} ${noteRow()}`,
+  play: () => {
+    const types = state().settings.playTypes;
+    return `${types.length ? field('Type', seg('playType', types, types[0])) : ''}
+    <button type="button" class="btn-ghost" data-action="playtypes:open"><svg class="icon"><use href="#pencil"></use></svg> Manage play types</button>
+    ${timeRow()} ${noteRow()}`;
+  },
   bath: () => `${timeRow()} ${noteRow()}`,
 };
 
@@ -484,6 +489,9 @@ function gather(type) {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
+  } else if (type === 'play') {
+    const pt = segVal('playType');
+    if (pt) base.playType = pt;
   }
   return base;
 }
@@ -519,6 +527,7 @@ function prefill(type, e) {
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
+  else if (type === 'play') { setSeg('playType', e.playType); }
 }
 
 export function saveLog(type, id) {
@@ -690,6 +699,31 @@ export function medRow(m) {
       <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>
   </div>`;
+}
+
+function playTypesForm() {
+  const types = state().settings.playTypes;
+  return `<div id="playtype-list" class="playtype-list">` +
+    (types.length ? types.map(playTypeRow).join('') : `<p class="empty-note">No play types yet.</p>`) +
+    `</div>
+    <button class="btn-ghost" data-action="playtype:add"><svg class="icon"><use href="#plus"></use></svg> Add type</button>
+    <button class="btn-primary" data-action="playtypes:save"><svg class="icon"><use href="#check"></use></svg> Save</button>`;
+}
+export function playTypeRow(name) {
+  return `<div class="playtype-row">
+    <input class="playtype-name" placeholder="Type" value="${esc(name)}" />
+    <button class="playtype-del" data-action="playtype:remove" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
+  </div>`;
+}
+export function openPlayTypes() {
+  sheet.open(playTypesForm(), { title: 'Play types', size: 'sheet-form' });
+}
+export function savePlayTypes() {
+  const rows = $$('#playtype-list .playtype-row');
+  state().settings.playTypes = rows
+    .map((r) => $('.playtype-name', r).value.trim())
+    .filter(Boolean);
+  save(); enqueueSettingsSync(); sheet.close(); toast('Play types updated'); router.refresh();
 }
 
 export function saveBottle() {
