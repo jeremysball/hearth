@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -72,6 +73,40 @@ func TestHandleEventsStreamsBroadcast(t *testing.T) {
 	time.Sleep(20 * time.Millisecond) // let the handler subscribe
 	hub.Broadcast("fam1")
 	time.Sleep(20 * time.Millisecond) // let the write land in rec.Body
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("handleEvents did not return after context cancellation")
+	}
+
+	if !strings.Contains(rec.Body.String(), "data: changed") {
+		t.Fatalf("expected SSE body to contain 'data: changed', got %q", rec.Body.String())
+	}
+}
+
+// TestHandleEventsThroughStatusWriter exercises handleEvents behind the same
+// statusWriter that logMiddleware wraps every response in. A bare
+// httptest.ResponseRecorder implements http.Flusher directly and would miss
+// a wrapper that fails to forward it.
+func TestHandleEventsThroughStatusWriter(t *testing.T) {
+	hub := newHub()
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest("GET", "/api/events", nil)
+	req = req.WithContext(context.WithValue(ctx, ctxSessionKey, SessionInfo{FamilyID: "fam1"}))
+	rec := httptest.NewRecorder()
+	sw := &statusWriter{ResponseWriter: rec, status: http.StatusOK}
+
+	done := make(chan struct{})
+	go func() {
+		handleEvents(hub)(sw, req)
+		close(done)
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	hub.Broadcast("fam1")
+	time.Sleep(20 * time.Millisecond)
 
 	cancel()
 	select {
