@@ -5,7 +5,8 @@ export const CHANGELOG = [
     date: '2026-07-02',
     version: '2026-07-02',
     changes: [
-      'Fixed the Sleep tab failing to open overnight or for newborns.'
+      'Fixed the Sleep tab failing to open overnight or for newborns.',
+      'Fixed the app sometimes getting stuck on a stale cached version after an update.'
     ]
   },
   {
