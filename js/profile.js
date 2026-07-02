@@ -127,7 +127,7 @@ function caregiverRow(c) {
   const canManage = current?.isAdmin && !c.isAdmin;
   const roles = ['Parent', 'Partner', 'Caregiver'];
   const roleControl = canManage
-    ? `<select class="cg-role" data-action="cg:role" data-id="${esc(c.id)}">${roles.map((role) => `<option value="${role}" ${role === c.role ? 'selected' : ''}>${role}</option>`).join('')}</select>`
+    ? `<select class="cg-role" data-cg-role="${esc(c.id)}">${roles.map((role) => `<option value="${role}" ${role === c.role ? 'selected' : ''}>${role}</option>`).join('')}</select>`
     : `<span class="fld-l">${esc(c.role)}${c.isAdmin ? ' · Admin' : ''}</span>`;
   const remove = canManage ? `<button class="cg-remove" data-action="cg:remove" data-id="${esc(c.id)}" data-name="${esc(c.displayName)}" aria-label="Remove ${esc(c.displayName)}"><svg class="icon"><use href="#trash-2"></use></svg></button>` : '';
   return `<div class="cg-row">
