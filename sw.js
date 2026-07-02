@@ -1,5 +1,9 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-07-02T23:34Z'; // Must match <meta name="version"> in index.html
+<<<<<<< HEAD
+const VERSION = 'hearth-2026-07-02T23:39Z'; // Must match <meta name="version"> in index.html
+=======
+const VERSION = 'hearth-2026-07-02T23:39Z'; // Must match <meta name="version"> in index.html
+>>>>>>> 820013d (fix(home): wire info card revamp to the renderer)
 const SHELL = [
   './',
   './index.html',
