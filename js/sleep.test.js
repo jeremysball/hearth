@@ -98,3 +98,11 @@ test('predictionSourceInfo: missing/unknown source falls back to generic', () =>
   const info = predictionSourceInfo({});
   assert.equal(info.cls, 'src-generic');
 });
+
+test('sleep view renders a prediction source info button in the SweetSpot schedule header', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => sleep());
+
+  assert.match(html, /data-action="prediction:info"/);
+  assert.match(html, /class="src-info-btn src-generic"/);
+});
