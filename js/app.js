@@ -173,6 +173,10 @@ document.addEventListener('click', (ev) => {
       positionThumb(group);
       const bind = group.dataset.bindSeg;
       if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
+      if (group.dataset.seg === 'kind') {
+        const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
+        if (single && mixed) { const isMixed = opt.dataset.val === 'Mixed'; single.hidden = isMixed; mixed.hidden = !isMixed; }
+      }
     }
     // don't return; seg-opt has no data-action
   }
