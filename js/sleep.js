@@ -1,5 +1,5 @@
 // sleep.js: 24h ring, naps, SweetSpot schedule, night summary.
-import { state, derive, startOfDay, wakePosition } from './store.js';
+import { state, derive, startOfDay } from './store.js';
 import { fmt } from './ui.js';
 
 const MIN = 60000;
@@ -89,23 +89,7 @@ export function sleep() {
   }
 
   // SweetSpot schedule: project remaining naps today
-  const sched = [];
-  const st = derive.status();
-  let priorSleepMin = null;
-  if (st.state === 'awake') {
-    const lastSleep = state().log.filter(e => e.type === 'sleep' && e.end).sort((a, b) => new Date(b.end) - new Date(a.end))[0];
-    if (lastSleep) priorSleepMin = (new Date(lastSleep.end) - new Date(lastSleep.start)) / MIN;
-  }
-  let cursor = st.state === 'asleep' ? new Date(st.since.getTime() + 70 * MIN) : new Date(st.since);
-  for (let i = 0; i < 4; i++) {
-    const pos = wakePosition(cursor);
-    const pred = derive.wakeWindowPrediction(pos, i === 0 ? priorSleepMin : null);
-    const from = new Date(cursor.getTime() + pred.midpoint * MIN);
-    if (from.getHours() >= 20) break;
-    const to = new Date(from.getTime() + 30 * MIN);
-    sched.push({ from, to, past: to < now });
-    cursor = new Date(from.getTime() + 70 * MIN);
-  }
+  const sched = (derive.sweetSpotSchedule ? derive.sweetSpotSchedule() : []).map((s) => ({ ...s, past: s.to < now }));
   const schedHTML = sched.map((s) => `<div class="sched-item ${s.past ? 'past' : ''}">
     <span class="sched-dot"></span>
     <span class="sched-win">${fmt.clock(s.from)} – ${fmt.clock(s.to)}</span>
@@ -140,7 +124,7 @@ export function sleep() {
     </div>
 
     <div class="sched-card card">
-      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction.label}</span></div>
+      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction?.label || 'sleep clock active'}</span></div>
       ${schedHTML || `<div class="empty-log">Past today's nap windows.</div>`}
     </div>
 

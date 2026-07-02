@@ -194,6 +194,7 @@ test('wakePosition returns correct position for time of day', () => {
   assert.equal(wakePosition(new Date('2026-01-01T12:00:00')), 'middle');
   assert.equal(wakePosition(new Date('2026-01-01T16:00:00')), 'last'); // boundary: 4pm is last
   assert.equal(wakePosition(new Date('2026-01-01T16:30:00')), 'last');
+  assert.equal(wakePosition(new Date('2026-01-01T22:47:00')), 'night'); // late evening = night
 });
 
 test('wakeWindowRange returns wider last window than first', () => {
@@ -265,6 +266,29 @@ test('derive.sweetSpot() returns night mode for wakes before 6am', () => {
   } finally {
     global.Date = OrigDate;
   }
+});
+
+test('derive.sweetSpot() returns night mode for late evening wakes', () => {
+  const OrigDate = global.Date;
+  const nightMs = new OrigDate('2026-01-01T22:47:00').getTime();
+  class MockDate extends OrigDate {
+    constructor(...args) { if (args.length === 0) { super(nightMs); } else { super(...args); } }
+    static now() { return nightMs; }
+  }
+  global.Date = MockDate;
+  try {
+    const sp = derive.sweetSpot();
+    assert.equal(sp.night, true, 'should return night mode for 10:47pm wake');
+    assert.equal(sp.from, null, 'from should be null in night mode');
+    assert.equal(sp.to, null, 'to should be null in night mode');
+    assert.equal(sp.prediction, null, 'prediction should be null in night mode');
+  } finally {
+    global.Date = OrigDate;
+  }
+});
+
+test('wakeWindowPrediction returns null for night', () => {
+  assert.equal(derive.wakeWindowPrediction('night'), null);
 });
 
 test('weightedMedian returns median with equal weights', () => {
