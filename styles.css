@@ -648,6 +648,7 @@ body[data-mode="dark"] {
 .chart-hd h2 { font-family: var(--font-sans); font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .07em; text-transform: uppercase; }
 .chart-note { font-size: 11px; color: var(--muted); font-weight: 600; }
 .src-info-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 1.4em; height: 1.4em; margin-left: 4px; vertical-align: -0.3em; font-size: inherit; }
+.src-info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 50%; }
 .src-info-btn .icon { width: 0.9em; height: 0.9em; }
 .src-generic { color: var(--muted); opacity: 0.55; }
 .src-learning { color: oklch(0.70 0.15 70); opacity: 0.8; }
