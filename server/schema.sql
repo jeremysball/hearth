@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS settings (
   units_json TEXT NOT NULL DEFAULT '{}',
   reminders_json TEXT NOT NULL DEFAULT '{}',
   cards_json TEXT NOT NULL DEFAULT '{}',
+  playtypes_json TEXT NOT NULL DEFAULT '[]',
   updated_at TEXT NOT NULL
 );
 

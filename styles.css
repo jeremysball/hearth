@@ -901,6 +901,10 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .med-dose { width: 64px; flex: 0 0 auto; } .med-unit { width: 60px; flex: 0 0 auto; } .med-eh { width: 56px; flex: 0 0 auto; text-align: center; }
 .med-every { font-size: 12px; color: var(--muted); font-weight: 700; }
 .med-del { all: unset; cursor: pointer; margin-left: auto; color: oklch(0.6 0.12 25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+.playtype-list { display: flex; flex-direction: column; gap: 12px; }
+.playtype-row { display: flex; align-items: center; gap: 6px; padding: 12px; background: var(--surface); border-radius: 16px; }
+.playtype-name { flex: 1; }
+.playtype-del { all: unset; cursor: pointer; margin-left: auto; color: oklch(0.6 0.12 25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
 .cg-confirm { color: var(--good-deep); }
 
 /* entry view */

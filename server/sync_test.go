@@ -153,6 +153,34 @@ func TestHandleSyncIncludesBabyWhenChanged(t *testing.T) {
 	}
 }
 
+func TestHandleSyncReturnsPlayTypes(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+	reqPatch := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(`{"bottleIntervalH":3,"meds":[],"units":{},"reminders":{},"cards":{},"playTypes":["Tummy time","Reading"]}`))
+	reqPatch = withSession(reqPatch, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	handlePatchSettings(db, hub)(httptest.NewRecorder(), reqPatch)
+
+	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleSync(db)(rec, req)
+
+	var resp syncResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if resp.Settings == nil {
+		t.Fatal("expected settings to be included")
+	}
+	var settings struct {
+		PlayTypes []string `json:"playTypes"`
+	}
+	json.Unmarshal(resp.Settings, &settings)
+	if len(settings.PlayTypes) != 2 || settings.PlayTypes[0] != "Tummy time" || settings.PlayTypes[1] != "Reading" {
+		t.Errorf("settings.playTypes = %v, want [Tummy time Reading]", settings.PlayTypes)
+	}
+}
+
 func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
