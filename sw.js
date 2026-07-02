@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-07-02T04:11Z'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-07-02T04:28Z'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -33,7 +33,9 @@ const SHELL = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(VERSION)
+      .then((c) => c.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
