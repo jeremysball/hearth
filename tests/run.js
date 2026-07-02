@@ -4,7 +4,7 @@
 // and printed in original alphabetical order after all suites finish.
 
 const { execSync, spawn } = require('child_process');
-const { existsSync, readdirSync } = require('fs');
+const { readdirSync } = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -18,10 +18,8 @@ function buildServer() {
 }
 
 (async () => {
-  if (!existsSync(BIN)) {
-    console.log('Building hearth-server...');
-    buildServer();
-  }
+  console.log('Building hearth-server...');
+  buildServer();
 
   console.log('Running ' + SUITES.length + ' suites (' + CONCURRENCY + ' parallel)\n');
 
