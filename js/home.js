@@ -47,12 +47,19 @@ export function enterCardEditMode() {
   return true;
 }
 
+const NOTE_SHOWN_INLINE_TYPES = new Set(['note', 'bath', 'play']);
+export function hasUnshownNote(e) {
+  return Boolean(e.note) && !NOTE_SHOWN_INLINE_TYPES.has(e.type);
+}
+
 function logRow(e) {
   const s = summary(e);
+  const noteDot = hasUnshownNote(e) ? '<span class="row-note-dot" role="img" aria-label="Has note"></span>' : '';
   if (todayEditMode) {
     return `<div class="row row-edit" data-id="${e.id}">
       <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(s.detail)}</span></span>
+      ${noteDot}
       <button class="row-act edit" data-action="entry:edit" data-id="${e.id}" aria-label="Edit"><svg class="icon"><use href="#pencil"></use></svg></button>
       <button class="row-act del" data-action="entry:delete" data-id="${e.id}" aria-label="Delete"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>`;
@@ -60,6 +67,7 @@ function logRow(e) {
   return `<div class="row" data-action="entry:open" data-id="${e.id}">
     <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
     <span class="row-txt"><span class="what">${esc(s.label)}</span><span class="when">${esc(s.detail)}</span></span>
+    ${noteDot}
     ${s.meta ? `<span class="meta">${esc(s.meta)}</span>` : ''}
   </div>`;
 }
