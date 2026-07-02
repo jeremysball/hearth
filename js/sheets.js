@@ -464,7 +464,7 @@ function gather(type) {
   const time = $('#f-time') ? dtToISO($('#f-time').value) : new Date().toISOString();
   const note = $('#f-note') ? $('#f-note').value.trim() : '';
   const base = { type, start: time };
-  if (note) base.note = note;
+  base.note = note || null;
   if (type === 'sleep') {
     base.quality = segVal('quality');
     const end = $('#f-end').value;
