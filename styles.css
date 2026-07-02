@@ -710,11 +710,15 @@ body[data-mode="dark"] {
 .cg-row > i { color: var(--muted); font-size: 22px; }
 .cg-photo { all: unset; cursor: pointer; position: relative; display: inline-flex; }
 .cg-avatar { width: 38px; height: 38px; font-size: 15px; }
+.cg-admin-wrap { position: relative; display: inline-flex; border-radius: 50%; box-shadow: 0 0 0 2px oklch(0.80 0.12 70), 0 0 0 5px oklch(0.90 0.07 75 / .55); }
+.cg-crown { position: absolute; right: -6px; top: -8px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: oklch(0.52 0.12 68); background: oklch(0.95 0.05 75); box-shadow: 0 1px 4px oklch(0 0 0 / .16); }
+.cg-crown .icon { width: 13px; height: 13px; }
 .photo-edit.mini { width: 18px; height: 18px; right: -2px; bottom: -2px; }
 .photo-edit.mini .icon { width: 11px; height: 11px; }
 .cg-name { flex: 1; }
-.cg-role { width: 120px; }
-.cg-display { display: flex; flex-direction: column; gap: 1px; }
+.cg-role { width: 124px; padding: 7px 9px; font-size: 12px; border-radius: 999px; }
+.cg-display { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
+.cg-remove { all: unset; cursor: pointer; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: oklch(0.55 0.13 25); background: oklch(0.95 0.03 25); }
 .invite-link { background: var(--surface); border-radius: 14px; padding: 13px; font-size: 13px; font-weight: 600; color: var(--soft); word-break: break-all; }
 .add-row { all: unset; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 13px 0; color: var(--accent-ink); font-weight: 700; font-size: 13px; width: 100%; }
 .btn-ghost { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 16px; color: var(--soft); font-weight: 700; font-size: 14px; }

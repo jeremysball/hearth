@@ -22,7 +22,9 @@ func TestHandleCreateLaunchTokenRequiresAuth(t *testing.T) {
 
 func TestHandleCreateLaunchTokenReturnsToken(t *testing.T) {
 	db := newParallelTestDB(t)
-	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?, ?)`, now, now)
 	sessToken, _ := createSession(db, "cg1", "fam1")
 
 	req := httptest.NewRequest("POST", "/api/launch-tokens", nil)
