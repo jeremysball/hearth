@@ -712,7 +712,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   };
   const reloadWhenSafe = () => {
     pendingReload = true;
-    if ($('#scrim.show') || $('#toast.show')) return;
+    if ($('#scrim.show')) return;
     reloadNow();
   };
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -720,6 +720,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     if ($('#scrim.show')) {
       pendingReload = true;
       toast('Update ready', reloadWhenSafe, 'Refresh');
+    } else if ($('#toast.show')) {
+      pendingReload = true;
     } else {
       reloadNow();
     }

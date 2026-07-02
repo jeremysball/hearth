@@ -5,6 +5,8 @@ export const CHANGELOG = [
     date: '2026-07-02',
     version: '2026-07-02',
     changes: [
+      'Split log dates and times into easier inputs.',
+      'Made app updates wait until sheets and undo messages are closed.',
       'Fixed the Sleep tab failing to open overnight or for newborns.',
       'Fixed the app sometimes getting stuck on a stale cached version after an update.'
     ]
