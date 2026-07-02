@@ -98,8 +98,14 @@ function morningLightTip() {
   const todayBase = new Date(); todayBase.setHours(h, m, 0, 0);
   const timeStr = fmt.clock(todayBase);
   return `<div class="card tip-card">
-    <div class="tip-hd">${icon('sunrise')} Morning light</div>
+    <div class="tip-top">
+      <span class="tip-icon">${icon('sunrise')}</span>
+      <span class="tip-kicker">Rhythm cue</span>
+    </div>
+    <div class="tip-title">Morning light</div>
     <p>${name} wakes around ${timeStr} most mornings. Morning light in the first 30 minutes (open curtains, step outside) helps anchor the sleep clock and makes nap timing more predictable.</p>
+    <p>Light-dark contrast is a strong early circadian signal.</p>
+    <div class="tip-source">Source: Yates 2018; Kok 2024</div>
     <button class="tip-dismiss" data-action="tip:dismiss" data-tip="morning-light">Got it</button>
   </div>`;
 }
@@ -119,9 +125,15 @@ function regressionBanner() {
   const r = derive.regressionAlert();
   if (!r) return '';
   const name = esc(state().baby.name || 'Your baby');
-  return `<div class="regression-banner card">
-    <div class="reg-hd">${icon('info')} ${esc(r.name)}</div>
+  return `<div class="card tip-card regression-banner">
+    <div class="tip-top">
+      <span class="tip-icon">${icon('info')}</span>
+      <span class="tip-kicker">${esc(r.kicker)}</span>
+    </div>
+    <div class="tip-title">${esc(r.name)}</div>
     <p>${name} is approaching the ${esc(r.name.toLowerCase())}, one of the most common. ${esc(r.mechanism)} This is normal development, not a problem to fix.</p>
+    <p>${esc(r.tonight)}</p>
+    <div class="tip-source">Source: ${esc(r.sources)}</div>
     <button class="tip-dismiss" data-action="regression:dismiss" data-rid="${esc(r.id)}" aria-label="Dismiss">Got it</button>
   </div>`;
 }
@@ -131,8 +143,14 @@ function stageTipCard() {
   if (!tip) return '';
   const name = esc(state().baby.name || 'Your baby');
   return `<div class="card tip-card">
-    <div class="tip-hd">${icon(tip.icon)} ${esc(tip.title)}</div>
+    <div class="tip-top">
+      <span class="tip-icon">${icon(tip.icon)}</span>
+      <span class="tip-kicker">${esc(tip.kicker)}</span>
+    </div>
+    <div class="tip-title">${esc(tip.title)}</div>
     <p>${tip.body(name)}</p>
+    <p>${esc(tip.why)}</p>
+    <div class="tip-source">Source: ${esc(tip.sources)}</div>
     <button class="tip-dismiss" data-action="tip:dismiss" data-tip="${esc(tip.id)}">Got it</button>
   </div>`;
 }
