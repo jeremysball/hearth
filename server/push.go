@@ -33,7 +33,7 @@ func validateVAPIDEnv() error {
 	if len(missing) == 0 {
 		return nil
 	}
-	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with `cd server && go run github.com/SherClockHolmes/webpush-go`, then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
+	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with: cd server && go run ./cmd/vapidgen. Then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
 }
 
 func handlePushPublicKey() http.HandlerFunc {

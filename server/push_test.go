@@ -19,7 +19,7 @@ func TestValidateVAPIDEnvRequiresAllKeys(t *testing.T) {
 		t.Fatal("validateVAPIDEnv() error = nil, want setup instructions")
 	}
 	msg := err.Error()
-	for _, want := range []string{"VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT", "go run github.com/SherClockHolmes/webpush-go"} {
+	for _, want := range []string{"VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT", "cd server && go run ./cmd/vapidgen"} {
 		if !strings.Contains(msg, want) {
 			t.Fatalf("error %q missing %q", msg, want)
 		}
