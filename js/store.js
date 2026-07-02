@@ -225,15 +225,15 @@ const WAKE_WINDOW_TABLE = [
 ];
 
 // Infers the position of an awake period in the day from the clock.
-// 'night'  = midnight–6am (circadian drive still high; not a true wake window)
+// 'night'  = 8pm–6am (circadian drive takes over; not a true nap window)
 // 'first'  = 6am–10am (before day's first nap)
-// 'last'   = 4pm+ (pre-bedtime, longest wake window)
+// 'last'   = 4pm–8pm (pre-bedtime, longest wake window)
 // 'middle' = 10am–4pm
 // Thresholds are fixed population defaults; Phase 3 will anchor them to the
 // baby's actual morning wake time.
 export function wakePosition(date = new Date()) {
   const h = date.getHours() + date.getMinutes() / 60;
-  if (h < 6)  return 'night';
+  if (h < 6 || h >= 20) return 'night';
   if (h < 10) return 'first';
   if (h >= 16) return 'last';
   return 'middle';
@@ -366,6 +366,7 @@ export const derive = {
     const w = ageWeeks();
     if (w !== null && w < 6) return { newborn: true, napping: false, from: null, to: null, prediction: null };
     const prediction = derive.wakeWindowPrediction(pos);
+    if (!prediction) return { night: true, napping: false, from: null, to: null, prediction: null };
     if (st.state === 'asleep') {
       const wake = new Date(st.since.getTime() + 70 * MIN);
       const from = new Date(wake.getTime() + prediction.low * MIN);
@@ -375,6 +376,30 @@ export const derive = {
     const from = new Date(st.since.getTime() + prediction.low * MIN);
     const to   = new Date(st.since.getTime() + prediction.high * MIN);
     return { napping: false, from, to, prediction };
+  },
+  sweetSpotSchedule(limit = 4) {
+    const out = [];
+    const today = startOfDay(Date.now());
+    const dayEnd = today.getTime() + DAY;
+    const st = derive.status();
+    let priorSleepMin = null;
+    if (st.state === 'awake') {
+      const lastSleep = _state.log.filter((e) => e.type === 'sleep' && e.end).sort((a, b) => new Date(b.end) - new Date(a.end))[0];
+      if (lastSleep) priorSleepMin = (new Date(lastSleep.end) - new Date(lastSleep.start)) / MIN;
+    }
+    let cursor = st.state === 'asleep' ? new Date(st.since.getTime() + 70 * MIN) : new Date(st.since);
+    for (let i = 0; i < limit; i++) {
+      const pos = wakePosition(cursor);
+      if (pos === 'night') break;
+      const pred = derive.wakeWindowPrediction(pos, i === 0 ? priorSleepMin : null);
+      if (!pred) break;
+      const from = new Date(cursor.getTime() + pred.midpoint * MIN);
+      if (from.getTime() >= dayEnd || from.getHours() >= 20 || wakePosition(from) === 'night') break;
+      const to = new Date(from.getTime() + 30 * MIN);
+      out.push({ from, to, prediction: pred });
+      cursor = new Date(from.getTime() + 70 * MIN);
+    }
+    return out;
   },
   nextBottle() {
     const feeds = _state.log.filter((e) => e.type === 'feed' || e.type === 'bottle');
@@ -474,6 +499,7 @@ export const derive = {
   // At n=30 the personal signal reaches 90% weight; population acts as a
   // sanity check at all times.
   wakeWindowPrediction(position = 'middle', priorSleepMin = null) {
+    if (position === 'night') return null;
     const pop = wakeWindowRange(position);
     const personal = derive.personalWakeWindow(position);
     if (!personal) {
