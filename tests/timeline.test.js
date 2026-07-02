@@ -20,6 +20,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       const now = new Date().toISOString();
       st.log.unshift({ id: 'note-test', type: 'bottle', start: now, amount: 120, note: 'Fussy today' });
       st.log.unshift({ id: 'no-note-test', type: 'bottle', start: now, amount: 90 });
+      st.log.unshift({ id: 'bath-note-test', type: 'bath', start: now, note: 'Loved the water' });
       localStorage.setItem('hearth.state.v1', JSON.stringify(st));
     });
     await page.reload();
@@ -29,6 +30,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('home row shows a note dot when the entry has a note', Boolean(homeDotOnNoted));
     const homeDotOnUnnoted = await page.$('[data-id="no-note-test"] .row-note-dot');
     check('home row has no note dot when the entry has no note', !homeDotOnUnnoted);
+    const homeDotOnBath = await page.$('[data-id="bath-note-test"] .row-note-dot');
+    check('home row has no note dot for a bath entry (note already shown as meta)', !homeDotOnBath);
 
     // Open the timeline from Home.
     await page.click('[data-action="nav:timeline"]');
@@ -40,6 +43,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('timeline row shows a note dot when the entry has a note', Boolean(tlDotOnNoted));
     const tlDotOnUnnoted = await page.$('[data-id="no-note-test"] .row-note-dot');
     check('timeline row has no note dot when the entry has no note', !tlDotOnUnnoted);
+    const tlDotOnBath = await page.$('[data-id="bath-note-test"] .row-note-dot');
+    check('timeline row has no note dot for a bath entry (note already shown as meta)', !tlDotOnBath);
     const todayInfo = await page.$$eval('.tl-day-hd', els => {
       const hd = els.find(e => e.querySelector('span:first-child')?.textContent.trim() === 'Today');
       return hd ? { label: hd.querySelector('span:first-child').textContent.trim(), count: hd.querySelector('.tl-day-ct')?.textContent.trim() } : null;

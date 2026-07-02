@@ -47,13 +47,14 @@ export function enterCardEditMode() {
   return true;
 }
 
-export function hasUnshownNote(e, s) {
-  return Boolean(e.note) && s.detail !== e.note && s.meta !== e.note;
+const NOTE_SHOWN_INLINE_TYPES = new Set(['note', 'bath', 'play']);
+export function hasUnshownNote(e) {
+  return Boolean(e.note) && !NOTE_SHOWN_INLINE_TYPES.has(e.type);
 }
 
 function logRow(e) {
   const s = summary(e);
-  const noteDot = hasUnshownNote(e, s) ? '<span class="row-note-dot" aria-label="Has note"></span>' : '';
+  const noteDot = hasUnshownNote(e) ? '<span class="row-note-dot" role="img" aria-label="Has note"></span>' : '';
   if (todayEditMode) {
     return `<div class="row row-edit" data-id="${e.id}">
       <span class="row-ic tone-${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
