@@ -148,7 +148,7 @@ export function sleep() {
     </div>
 
     <div class="sched-card card">
-      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction?.label || 'sleep clock active'}</span></div>
+      <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${derive.sweetSpot().prediction?.label || 'sleep clock active'}${derive.sweetSpot().prediction ? `<button class="src-info-btn ${predictionSourceInfo(derive.sweetSpot().prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button>` : ''}</span></div>
       ${schedHTML || `<div class="empty-log">Past today's nap windows.</div>`}
     </div>
 
