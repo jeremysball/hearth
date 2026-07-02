@@ -139,7 +139,10 @@ function openEntry(id) {
       <span class="ic-ring ${s.tone}"><svg class="icon"><use href="#${s.icon}"></use></svg></span>
       <div><div class="entry-title">${esc(s.label)}</div><div class="entry-sub">${esc(s.detail)}${s.meta ? ' · ' + esc(s.meta) : ''}</div></div>
     </div>
-    ${author ? `<div class="entry-author">Logged by ${esc(author.displayName)}</div>` : ''}
+    ${author ? `<div class="entry-author">${author.photo
+      ? `<span class="avatar entry-author-avatar" style="background-image:url('${esc(author.photo)}')"></span>`
+      : `<span class="avatar entry-author-avatar">${esc((author.displayName || 'C')[0].toUpperCase())}</span>`
+    }<span class="entry-author-name">Logged by ${esc(author.displayName)}</span></div>` : ''}
     ${e.note ? `<div class="entry-note">${esc(e.note)}</div>` : ''}
     <button class="btn-primary" data-action="entry:edit" data-id="${e.id}"><svg class="icon"><use href="#pencil"></use></svg> Edit entry</button>
     <button class="btn-ghost danger" data-action="entry:delete" data-id="${e.id}"><svg class="icon"><use href="#trash-2"></use></svg> Delete entry</button>`,
