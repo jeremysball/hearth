@@ -38,6 +38,9 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return nil, err
 	}
+	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN removed_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
 	if _, err := db.Exec(`UPDATE caregivers SET updated_at = created_at WHERE updated_at = ''`); err != nil {
 		return nil, err
 	}
