@@ -78,6 +78,14 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	mux.HandleFunc("GET /join/{token}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticFS, "index.html")
 	})
+	// sw.js gates every frontend fix: browsers only learn a new one exists by
+	// re-fetching this file. Without an explicit header they may serve a
+	// stale HTTP-cached copy indefinitely (well, up to the 24h spec backstop),
+	// silently pinning the client to old cached JS. Force revalidation.
+	mux.HandleFunc("GET /sw.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		http.ServeFileFS(w, r, staticFS, "sw.js")
+	})
 	mux.HandleFunc("PUT /api/entries/{id}", requireAuth(db, handleUpsertEntry(db, hub, pushes)))
 	mux.HandleFunc("DELETE /api/entries/{id}", requireAuth(db, handleDeleteEntry(db, hub)))
 	mux.HandleFunc("PUT /api/growth/{id}", requireAuth(db, handleUpsertGrowth(db, hub)))
