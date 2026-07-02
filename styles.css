@@ -421,6 +421,7 @@ body {
 .what { font-size: 13px; font-weight: 700; }
 .when { font-size: 11px; color: var(--muted); font-weight: 600; }
 .meta { margin-left: auto; font-size: 12px; color: var(--soft); font-weight: 800; }
+.row-note-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
 .empty-log { padding: 22px 16px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; }
 .row-edit { cursor: default; }
 .row-act { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex: 0 0 auto; }

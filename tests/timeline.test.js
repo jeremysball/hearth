@@ -12,12 +12,34 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.click('[data-action="log:open"][data-type="diaper"]');
     await page.click('[data-action="log:save"][data-type="diaper"]');
     await page.waitForTimeout(500);
+
+    // Seed one entry with a note and one without, to check the note indicator dot.
+    await page.evaluate(() => {
+      const raw = localStorage.getItem('hearth.state.v1');
+      const st = JSON.parse(raw);
+      const now = new Date().toISOString();
+      st.log.unshift({ id: 'note-test', type: 'bottle', start: now, amount: 120, note: 'Fussy today' });
+      st.log.unshift({ id: 'no-note-test', type: 'bottle', start: now, amount: 90 });
+      localStorage.setItem('hearth.state.v1', JSON.stringify(st));
+    });
+    await page.reload();
+    await page.waitForSelector('.actions');
+
+    const homeDotOnNoted = await page.$('[data-id="note-test"] .row-note-dot');
+    check('home row shows a note dot when the entry has a note', Boolean(homeDotOnNoted));
+    const homeDotOnUnnoted = await page.$('[data-id="no-note-test"] .row-note-dot');
+    check('home row has no note dot when the entry has no note', !homeDotOnUnnoted);
+
     // Open the timeline from Home.
     await page.click('[data-action="nav:timeline"]');
     await page.waitForSelector('.tl-chipbar');
     check('timeline opens with a chip bar', true);
     const rows = await page.$$('.tl-row');
     check('timeline shows at least one row', rows.length >= 1, 'rows=' + rows.length);
+    const tlDotOnNoted = await page.$('[data-id="note-test"] .row-note-dot');
+    check('timeline row shows a note dot when the entry has a note', Boolean(tlDotOnNoted));
+    const tlDotOnUnnoted = await page.$('[data-id="no-note-test"] .row-note-dot');
+    check('timeline row has no note dot when the entry has no note', !tlDotOnUnnoted);
     const todayInfo = await page.$$eval('.tl-day-hd', els => {
       const hd = els.find(e => e.querySelector('span:first-child')?.textContent.trim() === 'Today');
       return hd ? { label: hd.querySelector('span:first-child').textContent.trim(), count: hd.querySelector('.tl-day-ct')?.textContent.trim() } : null;
