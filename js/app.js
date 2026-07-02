@@ -704,12 +704,22 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   let refreshing = false;
   let hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController) { hadController = true; return; }
+  let pendingReload = false;
+  const reloadNow = () => {
     if (refreshing) return;
     refreshing = true;
     window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) { hadController = true; return; }
+    if ($('#scrim.show')) {
+      pendingReload = true;
+      toast('Update ready', reloadNow, 'Refresh');
+    } else {
+      reloadNow();
+    }
   });
+  setInterval(() => { if (pendingReload && !$('#scrim.show')) reloadNow(); }, 3000);
 }
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
