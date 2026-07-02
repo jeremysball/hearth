@@ -1,6 +1,6 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep } from './store.js';
-import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg } from './ui.js';
+import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes } from './home.js';
@@ -441,7 +441,11 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
-    ${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}
+    <div id="diaper-size-single">${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}</div>
+    <div id="diaper-size-mixed" hidden>
+      ${field('Wet size', seg('wetSize', ['Small', 'Medium', 'Large'], 'Medium'))}
+      ${field('Dirty size', seg('dirtySize', ['Small', 'Medium', 'Large'], 'Medium'))}
+    </div>
     ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,
   medicine: () => {
@@ -483,7 +487,12 @@ function gather(type) {
     if (state().settings.units.volume === 'oz') amt = amt * 29.5735; // store ml
     base.amount = Math.round(amt); base.unit = 'ml';
   } else if (type === 'diaper') {
-    base.kind = segVal('kind'); base.size = segVal('size');
+    base.kind = segVal('kind');
+    if (base.kind === 'Mixed') {
+      base.size = null; base.wetSize = segVal('wetSize'); base.dirtySize = segVal('dirtySize');
+    } else {
+      base.size = segVal('size'); base.wetSize = null; base.dirtySize = null;
+    }
     base.rash = $('#f-rash') ? $('#f-rash').classList.contains('on') : false;
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
@@ -512,6 +521,13 @@ function setSeg(group, val) {
   const g = $(`[data-seg="${group}"]`); if (!g || val == null) return;
   $$('.seg-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
+export function syncDiaperSizeVisibility(kind) {
+  const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
+  if (!single || !mixed) return;
+  const isMixed = kind === 'Mixed';
+  single.hidden = isMixed; mixed.hidden = !isMixed;
+  $$('.segctl', isMixed ? mixed : single).forEach(positionThumb);
+}
 function prefill(type, e) {
   if ($('#f-time')) $('#f-time').value = isoToLocalDT(e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
@@ -523,6 +539,8 @@ function prefill(type, e) {
     const famt = $('#f-amt'); if (famt) { famt.dataset.value = a; famt.textContent = a; }
   } else if (type === 'diaper') {
     setSeg('kind', e.kind); setSeg('size', e.size);
+    setSeg('wetSize', e.wetSize); setSeg('dirtySize', e.dirtySize);
+    syncDiaperSizeVisibility(e.kind);
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }

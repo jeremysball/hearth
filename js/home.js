@@ -16,7 +16,8 @@ export function summary(e) {
     label = 'Bottle · ' + (e.contents || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'diaper') {
     label = 'Diaper · ' + (e.kind || '').toLowerCase(); detail = fmt.clock(e.start);
-    meta = [e.size, e.rash ? 'Rash' : ''].filter(Boolean).join(' · ');
+    const size = e.kind === 'Mixed' ? [e.wetSize, e.dirtySize].filter(Boolean).join('/') : e.size;
+    meta = [size, e.rash ? 'Rash' : ''].filter(Boolean).join(' · ');
   } else if (e.type === 'medicine') {
     label = e.name || 'Medicine'; detail = fmt.clock(e.start); meta = e.dose || '';
   } else if (e.type === 'pump') {
