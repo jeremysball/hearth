@@ -17,6 +17,7 @@ const DEFAULT = () => ({
     meds: [
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
     ],
+    playTypes: ['Tummy time', 'Reading', 'Outdoor'],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
@@ -61,6 +62,7 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
+  if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   return s;
 }
 
