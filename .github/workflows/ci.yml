@@ -1,0 +1,66 @@
+name: check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [lint, unit, go, e2e]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        if: matrix.leg != 'go'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - name: Set up Go
+        if: matrix.leg == 'go' || matrix.leg == 'e2e'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Playwright browsers
+        if: matrix.leg == 'e2e'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install npm dependencies
+        if: matrix.leg != 'go'
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: matrix.leg == 'e2e'
+        run: npx playwright install chromium --with-deps
+
+      - name: Run lint
+        if: matrix.leg == 'lint'
+        run: npm run check
+
+      - name: Run unit tests
+        if: matrix.leg == 'unit'
+        run: npm run test:unit
+
+      - name: Run Go tests
+        if: matrix.leg == 'go'
+        run: go test ./server
+
+      - name: Run E2E tests
+        if: matrix.leg == 'e2e'
+        run: npm run test:e2e
+        env:
+          TEST_CONCURRENCY: 4
