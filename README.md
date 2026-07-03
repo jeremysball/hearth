@@ -143,3 +143,7 @@ npm test
 ```
 
 The runner builds the Go binary if needed, starts the server on `127.0.0.1:18787`, drives Chromium via Playwright, and tears down on exit. Each suite reports `N pass, N fail`; any failure exits non-zero.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
