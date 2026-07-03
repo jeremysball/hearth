@@ -2,6 +2,17 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-03',
+    version: '2026-07-03',
+    features: [
+      'Repainted the home sky as a real lit scene — a glowing sun, drifting sun-lit clouds, and a richer starfield replace the old flat shapes.',
+      'Replaced the sleep countdown\'s coal tiles with a single glowing ember that grows warmer as nap time approaches.'
+    ],
+    fixes: [
+      'Fixed the birth constellation overlapping the moon at night.'
+    ]
+  },
+  {
     date: '2026-07-02',
     version: '2026-07-02',
     features: [

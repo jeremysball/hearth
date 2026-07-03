@@ -43,7 +43,9 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     await seed(page, { minutesAwake: 20 });
     check('early window renders morning sky', await skyMode(page) === 'morning', await skyMode(page));
     check('morning sky shows the sun', Boolean(await page.$('.sky-sun')));
-    check('hearth-light house renders', Boolean(await page.$('.house-window')));
+    check('sun has a rotating ray field', Boolean(await page.$('.sun-rays')));
+    check('no ridge landscape or house (Ember Horizon: light only)', !(await page.$('.sky-ridge-far')) && !(await page.$('.sky-house')));
+    check('awake hero shows the ember-glow field, not the coal bed', Boolean(await page.$('.ember-glow')) && !(await page.$('.sh-bed')));
 
     await seed(page, { minutesAwake: 100 });
     check('mid window renders day sky', await skyMode(page) === 'day', await skyMode(page));
@@ -62,6 +64,11 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     check('asleep renders night sky', await skyMode(page) === 'night', await skyMode(page));
     check('night sky shows a real-phase moon', Boolean(await page.$('.sky-moon')));
     check('capricorn constellation traced at night', Boolean(await page.$('.sky-constellation')));
+    const moonBox = await page.$eval('.sky-moon', (el) => el.getBoundingClientRect());
+    const constBox = await page.$eval('.sky-constellation', (el) => el.getBoundingClientRect());
+    const overlaps = moonBox.left < constBox.right && moonBox.right > constBox.left &&
+      moonBox.top < constBox.bottom && moonBox.bottom > constBox.top;
+    check('moon and constellation do not overlap', !overlaps, JSON.stringify({ moonBox, constBox }));
 
     const timerColor = await page.$eval('.hero-fg .timer', (el) => getComputedStyle(el).color);
     // Chromium may serialize computed color as rgb(...) or oklch(...) depending on version.
