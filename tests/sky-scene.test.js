@@ -54,7 +54,7 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
 
     await seed(page, { minutesAwake: 180 });
     check('past window renders twilight', await skyMode(page) === 'twilight', await skyMode(page));
-    check('twilight shows first stars', Boolean(await page.$('.sky-starfield')));
+    check('twilight shows first stars', Boolean(await page.$('.sky-stars-rich')));
     const cardAnim = await page.$eval('.card.hero', (el) => getComputedStyle(el).animationName);
     check('twilight card is not pulsing red', !cardAnim.includes('overtired-pulse'), cardAnim);
 

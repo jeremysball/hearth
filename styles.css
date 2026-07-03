@@ -1228,13 +1228,29 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sky-l { position: absolute; inset: 0; }
 .sky-grad { background: linear-gradient(180deg, var(--sky-zenith) 0%, var(--sky-horizon) 56%, var(--sky-glow) 72%, var(--sky-horizon) 100%); }
 
-/* stars: one box-shadow field + a few bright twinklers + birth constellation */
-.sky-starfield { position: absolute; top: 0; left: 0; width: 2px; height: 2px; border-radius: 50%; }
-.star-b { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: oklch(0.97 0.02 90); animation: star-twinkle 3.4s ease-in-out infinite; }
-@keyframes star-twinkle { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
-.sky-constellation { position: absolute; left: 56%; top: 8%; width: 28%; }
-.sky-constellation line { stroke: oklch(0.93 0.02 90 / 0.08); stroke-width: 0.12; }
-.sky-constellation circle { fill: oklch(0.96 0.02 90 / 0.6); }
+/* night: a richer star field (varied size + a little warm/cool color) instead
+   of uniform box-shadow noise, a soft atmospheric wash for depth, and the
+   birth constellation turned up from an 8%-opacity secret into something
+   quietly present. */
+.sky-stars-rich { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sky-stars-rich .star-big { filter: drop-shadow(0 0 1px currentColor); }
+.night-wash {
+  position: absolute; inset: -15% -10%; pointer-events: none; mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 65% 42% at 26% 12%, oklch(from var(--sky-glow) l c h / .22) 0%, transparent 62%),
+    radial-gradient(ellipse 50% 34% at 78% 58%, oklch(from var(--sky-horizon) l c h / .13) 0%, transparent 65%);
+}
+/* z-fix: the moon (72% night / 58% deep-night, always y22%) used to land
+   inside the constellation's box at left:56% top:8%, so lines/points crossed
+   and kissed the disc — accidental, not composed. The constellation only ever
+   renders alongside the moon (see skyScene()'s `spec.moon ?` guard), so one
+   direct placement — open sky below and right of the moon, moon centres at
+   y22% with a bottom edge around y29% — is enough; no mode-conditional
+   override needed. The moon still paints after the stars in the DOM, so it
+   stays unambiguously in front. */
+.sky-constellation { position: absolute; left: 56%; top: 35%; width: 38%; opacity: 1; }
+.sky-constellation line { stroke: oklch(0.95 0.03 90 / 0.28); stroke-width: 0.16; }
+.sky-constellation circle { r: 0.62; fill: oklch(0.98 0.02 90 / 0.95); filter: drop-shadow(0 0 1.1px oklch(0.92 0.05 85 / .75)); }
 [data-sky="twilight"] .sky-stars { opacity: .5; }
 
 /* sun: a lit sphere (off-center specular highlight, warm rim via SVG gradient
@@ -1330,7 +1346,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sky-cloud, .sky-cloud svg, .star-b, .sun-rays { animation: none !important; }
+  .sky-cloud, .sky-cloud svg, .sun-rays { animation: none !important; }
 }
 
 /* text contrast: dark scenes flip the hero ink light; the grade guarantees it */
