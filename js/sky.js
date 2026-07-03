@@ -33,8 +33,8 @@ export function sunPosition(elapsedMin, highMin) {
 // Painterly, desaturated, warm-graded. Night zenith sits at plum-violet
 // (hue 300) to harmonize with dark mode's maroon firelight.
 const SKY_STOPS = [
-  [-0.60, [0.24, 0.050, 300], [0.30, 0.050, 320], [0.36, 0.060, 330]], // deep night
-  [-0.12, [0.38, 0.070, 300], [0.48, 0.090, 350], [0.55, 0.110, 30]],  // dusk ember afterglow
+  [-0.60, [0.14, 0.040, 300], [0.19, 0.045, 320], [0.24, 0.055, 330]], // deep night
+  [-0.12, [0.26, 0.065, 300], [0.36, 0.085, 350], [0.44, 0.105, 30]],  // dusk ember afterglow
   [ 0.00, [0.62, 0.070, 285], [0.74, 0.110, 55],  [0.84, 0.130, 70]],  // golden hour horizon
   [ 0.35, [0.80, 0.060, 250], [0.88, 0.060, 75],  [0.94, 0.050, 85]],  // long morning light
   [ 1.00, [0.87, 0.050, 235], [0.92, 0.040, 85],  [0.97, 0.020, 90]],  // midday cerulean-cream
@@ -72,8 +72,12 @@ export function oklch([l, c, h], alpha = 1) {
 export function emberGlow(heat) {
   const h = Math.max(0, Math.min(1, heat));
   return {
-    core: oklch([0.62 + h * 0.26, 0.14 + h * 0.08, 48 - h * 8]),
-    mid: oklch([0.42 + h * 0.20, 0.10 + h * 0.09, 38]),
+    // Core lightness is capped at 0.78 (not 0.88): the hero labels sitting on
+    // top of the glow use a near-white cream ink (~0.90 L), and an ember that
+    // bright washed the text illegible at high heat. Chroma still climbs with
+    // heat so a hot overshoot reads as saturated orange, not just paler.
+    core: oklch([0.62 + h * 0.16, 0.14 + h * 0.10, 48 - h * 8]),
+    mid: oklch([0.42 + h * 0.16, 0.10 + h * 0.09, 38]),
     groundOp: +(0.30 + h * 0.45).toFixed(2),
     fieldOp: +(0.35 + h * 0.55).toFixed(2),
     size: +(120 + h * 80).toFixed(0),
@@ -136,13 +140,25 @@ export function starsSVG(seedStr) {
   for (let i = 0; i < 150; i++) {
     const x = (rnd() * 100).toFixed(1), y = (rnd() * 68).toFixed(1);
     const big = rnd() < 0.07;
-    const r = big ? (0.85 + rnd() * 0.55).toFixed(2) : (0.22 + rnd() * 0.3).toFixed(2);
+    // Big-star radius was 0.85-1.4, which combined with the drop-shadow below
+    // to read as soft glowing orbs (bokeh) rather than crisp bright pinpricks.
+    const r = big ? (0.5 + rnd() * 0.3).toFixed(2) : (0.22 + rnd() * 0.3).toFixed(2);
     const warm = rnd() < 0.1;
-    const a = (big ? 0.6 : 0.3) + rnd() * 0.4;
+    // Raised the opacity floor so stars read as sharp bright points against
+    // the sky rather than translucent flecks that blend into the gradient.
+    const a = (big ? 0.78 : 0.5) + rnd() * 0.22;
     const fill = warm
       ? `oklch(0.90 0.045 70 / ${a.toFixed(2)})`
       : `oklch(0.97 0.015 250 / ${a.toFixed(2)})`;
-    circles += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${big ? ' class="star-big"' : ''}/>`;
+    // Twinkle a minority of stars (every big one, plus a scatter of small
+    // ones) rather than the whole field — real skies read as mostly steady
+    // points with only some visibly flickering. Duration/delay are randomized
+    // per star so 150 points never beat in sync (same idea as the fire
+    // system's coprime periods, just continuous instead of three fixed ones).
+    const twinkle = big || rnd() < 0.18;
+    const cls = [big && 'star-big', twinkle && 'star-twinkle'].filter(Boolean).join(' ');
+    const style = twinkle ? ` style="--tw-d:${(1.6 + rnd() * 2.4).toFixed(2)}s;--tw-o:-${(rnd() * 3).toFixed(2)}s"` : '';
+    circles += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${cls ? ` class="${cls}"` : ''}${style}/>`;
   }
   return `<svg class="sky-stars-rich" viewBox="0 0 100 68" preserveAspectRatio="none" aria-hidden="true">${circles}</svg>`;
 }
@@ -257,25 +273,44 @@ export function moonSVG(phase) {
 // Blurred blob clusters drifting at coprime durations (the fire-a/b/c trick).
 // The negative delay is phase-locked to wall time so the once-a-minute
 // re-render resumes each cloud where it was instead of snapping it back. Each
-// puff carries a real lit/shadow gradient (userSpaceOnUse, not the default
-// objectBoundingBox — that would give each ellipse its own independent
-// diagonal and the cloud would read as separate glowing dots instead of one
-// lit form) so light reads as falling across a volume, not a flat silhouette.
-// One gradient id per layer (c1/c2/c3) is enough uniqueness: only one cloud
-// layer of each class ever renders in a given card at once.
-function cloudsHTML(mode) {
+// puff is a FLUX-painted raster (assets/sky/*.webp) used as an SVG luminance
+// mask, not a final-color image: the same file does triple duty as (1) the
+// silhouette cut over the existing palette gradient — this is exactly why
+// color stays 100% palette-driven — (2) a self-masked soft-light shading
+// overlay that reintroduces FLUX's own painted lobes/crevices as real tonal
+// shading, and (3) the clip region for a warm screen-blended hotspot. The
+// hotspot's cx is computed here (not via CSS var) because a live-browser
+// check this session showed CSS custom properties do not actually reposition
+// a <radialGradient>'s cx at paint time in this engine, despite
+// getComputedStyle reporting the resolved value — see the plan's Global
+// Constraints for the verification. One gradient/mask id set per layer
+// (c1/c2/c3) is enough uniqueness: only one cloud layer of each class ever
+// renders in a given card at once.
+const CLOUD_SHAPE = { c1: 'cloud-tower', c2: 'cloud-classic', c3: 'cloud-hazybank' };
+const CLOUD_VIEW_H = 33.49; // 60 * 1536/2752, the source PNGs' true aspect ratio
+
+function cloudsHTML(mode, sunFrac) {
   if (mode === 'deep-night') return '';
   const t = Date.now() / 1000;
+  const hotspotCx = sunFrac == null ? '50%' : `${(sunFrac * 100).toFixed(1)}%`;
   const cloud = (cls, dur) => {
     const gid = `cloud-${cls}`;
+    const href = `assets/sky/${CLOUD_SHAPE[cls]}.webp`;
+    const h = CLOUD_VIEW_H;
     return `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % dur).toFixed(1)}s">` +
-      `<svg viewBox="0 0 60 20" aria-hidden="true"><defs>` +
-      `<linearGradient id="${gid}" x1="6" y1="4" x2="44" y2="17" gradientUnits="userSpaceOnUse">` +
+      `<svg viewBox="0 0 60 ${h}" aria-hidden="true"><defs>` +
+      `<linearGradient id="${gid}" x1="6" y1="${(h * 0.2).toFixed(1)}" x2="44" y2="${(h * 0.85).toFixed(1)}" gradientUnits="userSpaceOnUse">` +
       `<stop offset="0%" stop-color="var(--cloud-hi)"/><stop offset="60%" stop-color="var(--cloud-mid)"/><stop offset="100%" stop-color="var(--cloud-sh)"/>` +
-      `</linearGradient></defs>` +
-      `<ellipse cx="18" cy="12" rx="16" ry="6" fill="url(#${gid})"/>` +
-      `<ellipse cx="34" cy="9" rx="14" ry="5" fill="url(#${gid})"/>` +
-      `<ellipse cx="47" cy="13" rx="11" ry="4.5" fill="url(#${gid})"/></svg></div>`;
+      `</linearGradient>` +
+      `<radialGradient id="${gid}-hotspot" cx="${hotspotCx}" cy="30%" r="70%">` +
+      `<stop offset="0%" stop-color="oklch(0.92 0.09 75 / 0.85)"/><stop offset="100%" stop-color="oklch(0.92 0.09 75 / 0)"/>` +
+      `</radialGradient>` +
+      `<mask id="${gid}-mask"><image href="${href}" x="0" y="0" width="60" height="${h}" preserveAspectRatio="xMidYMid meet"/></mask>` +
+      `</defs>` +
+      `<rect width="60" height="${h}" fill="url(#${gid})" mask="url(#${gid}-mask)"/>` +
+      `<image href="${href}" x="0" y="0" width="60" height="${h}" preserveAspectRatio="xMidYMid meet" mask="url(#${gid}-mask)" class="cloud-shade"/>` +
+      `<rect width="60" height="${h}" fill="url(#${gid}-hotspot)" mask="url(#${gid}-mask)" class="cloud-hotspot"/>` +
+      `</svg></div>`;
   };
   if (mode === 'night') return `<div class="sky-l sky-clouds">${cloud('c2', 251)}</div>`;
   return `<div class="sky-l sky-clouds">${cloud('c1', 173)}${cloud('c2', 251)}${cloud('c3', 293)}</div>`;
@@ -309,7 +344,7 @@ export function skyScene(spec, { birthdate = '', name = '' } = {}) {
     <div class="sky-l sky-grad"></div>
     ${stars}
     ${bodies}
-    ${cloudsHTML(spec.mode)}
+    ${cloudsHTML(spec.mode, spec.sun ? spec.sun.x : null)}
     <canvas class="sky-canvas"></canvas>
     <div class="sky-l sky-grain"></div>
     <div class="sky-l sky-grade"></div>

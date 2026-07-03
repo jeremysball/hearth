@@ -203,6 +203,48 @@ test('cloudsHTML (via skyScene): each puff gets its own userSpaceOnUse gradient'
   assert.match(html, /fill="url\(#cloud-c1\)"/);
 });
 
+test('cloudsHTML (via skyScene): each puff is a FLUX-masked shape (mask, shade, hotspot)', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 100 }); // day: 3 clouds
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  for (const shape of ['cloud-tower.webp', 'cloud-classic.webp', 'cloud-hazybank.webp']) {
+    assert.ok(html.includes(shape), `missing ${shape}`);
+  }
+  assert.match(html, /mask id="cloud-c1-mask"/);
+  assert.match(html, /mask id="cloud-c2-mask"/);
+  assert.match(html, /mask id="cloud-c3-mask"/);
+  assert.match(html, /class="cloud-shade"/);
+  assert.match(html, /class="cloud-hotspot"/);
+});
+
+test('cloudsHTML: night mode renders only the classic (c2) shape', () => {
+  const spec = sceneSpec({ ...specBase, asleep: true }); // night
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.ok(html.includes('cloud-classic.webp'));
+  assert.ok(!html.includes('cloud-tower.webp'));
+  assert.ok(!html.includes('cloud-hazybank.webp'));
+});
+
+test('cloudsHTML: hotspot gradient cx tracks the sun x fraction (day), defaults to 50% with no sun (night)', () => {
+  const day = sceneSpec({ ...specBase, elapsedMin: 100 });
+  const dayHtml = skyScene(day, { birthdate: '', name: '' });
+  const expectedCx = `${(day.sun.x * 100).toFixed(1)}%`;
+  assert.ok(dayHtml.includes(`cx="${expectedCx}"`), `expected cx="${expectedCx}" in ${dayHtml.match(/radialGradient[^>]*/g)}`);
+
+  const night = sceneSpec({ ...specBase, asleep: true });
+  const nightHtml = skyScene(night, { birthdate: '', name: '' });
+  assert.ok(nightHtml.includes('cx="50%"'), 'night hotspot should default to cx="50%"');
+});
+
+test('skyScene: sun (or moon) renders before clouds in DOM order — z-order stays source-order-driven', () => {
+  const day = sceneSpec({ ...specBase, elapsedMin: 100 });
+  const dayHtml = skyScene(day, { birthdate: '', name: '' });
+  assert.ok(dayHtml.indexOf('sky-sun') < dayHtml.indexOf('sky-clouds'), 'sun must precede clouds in markup');
+
+  const night = sceneSpec({ ...specBase, asleep: true });
+  const nightHtml = skyScene(night, { birthdate: '', name: '' });
+  assert.ok(nightHtml.indexOf('sky-moon') < nightHtml.indexOf('sky-clouds'), 'moon must precede clouds in markup');
+});
+
 test('skyScene: night scene has moon, star field, constellation — no sun', () => {
   const spec = sceneSpec({ ...specBase, asleep: true });
   const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
