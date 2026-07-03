@@ -197,9 +197,13 @@ function sunSVG() {
   </svg>`;
 }
 
-// Real-phase moon: full disc + mask. A half-rect hides the dark side; the
-// terminator ellipse bows into the lit half (black, crescent) or the dark
-// half (white, gibbous). rx = r|cos(2pi*frac)| gives the correct bow.
+// Real-phase moon: a painterly raster disc (assets/sky/moon.webp) lit like a
+// body, not a hand-drawn sticker. The terminator mask carves the lit fraction —
+// the half-rect hides the dark side, the soft bow ellipse restores it;
+// rx = r|cos(2pi*frac)| gives the correct crescent/gibbous curve. A circle clip
+// trims the raster's feathered margin to a crisp limb; the disc image fills 85%
+// of its frame, so width 23.56 centered maps the disc to r=10. Bloom (corona +
+// wide sky-lifting halo) lives in CSS so it stays cheap and compositor-only.
 export function moonSVG(phase) {
   const { frac, illum, waxing } = phase;
   const r = 10, c = 12;
@@ -207,15 +211,22 @@ export function moonSVG(phase) {
   const bow = illum >= 0.5 ? '#fff' : '#000';
   const darkX = waxing ? 0 : c; // waxing: lit on the right, dark half on the left
   return `<svg class="sky-moon" viewBox="0 0 24 24" aria-hidden="true">
-    <defs><mask id="sky-moon-mask">
-      <rect width="24" height="24" fill="#fff"/>
-      <rect x="${darkX}" width="12" height="24" fill="#000"/>
-      <ellipse cx="${c}" cy="${c}" rx="${rx}" ry="${r}" fill="${bow}"/>
-    </mask></defs>
-    <circle class="moon-halo h3" cx="${c}" cy="${c}" r="${r}"/>
-    <circle class="moon-halo h2" cx="${c}" cy="${c}" r="${r}"/>
-    <circle class="moon-halo h1" cx="${c}" cy="${c}" r="${r}"/>
-    <circle class="moon-disc" cx="${c}" cy="${c}" r="${r}" mask="url(#sky-moon-mask)"/>
+    <defs>
+      <filter id="sky-moon-soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="0.55"/>
+      </filter>
+      <mask id="sky-moon-mask">
+        <rect width="24" height="24" fill="#fff"/>
+        <rect x="${darkX}" width="12" height="24" fill="#000"/>
+        <ellipse cx="${c}" cy="${c}" rx="${rx}" ry="${r}" fill="${bow}" filter="url(#sky-moon-soft)"/>
+      </mask>
+      <clipPath id="sky-moon-clip"><circle cx="${c}" cy="${c}" r="${r}"/></clipPath>
+    </defs>
+    <g class="moon-body" mask="url(#sky-moon-mask)">
+      <g clip-path="url(#sky-moon-clip)">
+        <image href="assets/sky/moon.webp" x="0.22" y="0.22" width="23.56" height="23.56" preserveAspectRatio="xMidYMid meet"/>
+      </g>
+    </g>
   </svg>`;
 }
 
