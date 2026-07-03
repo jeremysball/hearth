@@ -17,6 +17,13 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
         { id: 'pump-vol', type: 'pump', start: now, amount: 90 },
       ];
       localStorage.setItem('hearth.state.v1', JSON.stringify(st));
+      // onboard()'s seed() demo data was already pushed to the server via the
+      // outbox by the time this overwrite runs. Without this, the next
+      // reload's sync pull can merge that stale seed data back into the log
+      // (mergeById is additive), inflating the totals below depending on
+      // whether the pull happens to land before the assertions run. Marking
+      // the log as already synced skips the pull entirely.
+      localStorage.setItem('hearth.lastsync.v1', now);
     });
     await page.reload();
     await page.click('.tab[data-tab="trends"]');
