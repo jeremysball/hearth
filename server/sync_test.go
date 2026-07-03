@@ -159,7 +159,7 @@ func TestHandleSyncReturnsPlayTypes(t *testing.T) {
 	hub := newHub()
 	reqPatch := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(`{"bottleIntervalH":3,"meds":[],"units":{},"reminders":{},"cards":{},"playTypes":["Tummy time","Reading"]}`))
 	reqPatch = withSession(reqPatch, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
-	handlePatchSettings(db, hub)(httptest.NewRecorder(), reqPatch)
+	handlePatchSettings(db, hub, nil)(httptest.NewRecorder(), reqPatch)
 
 	req := httptest.NewRequest("GET", "/api/sync?since=2020-01-01T00:00:00Z", nil)
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})

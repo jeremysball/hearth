@@ -61,7 +61,7 @@ func TestHandlePatchSettingsUpdatesFields(t *testing.T) {
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
 	rec := httptest.NewRecorder()
 
-	handlePatchSettings(db, hub)(rec, req)
+	handlePatchSettings(db, hub, nil)(rec, req)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
@@ -87,7 +87,7 @@ func TestHandlePatchSettingsUpdatesPlayTypes(t *testing.T) {
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
 	rec := httptest.NewRecorder()
 
-	handlePatchSettings(db, hub)(rec, req)
+	handlePatchSettings(db, hub, nil)(rec, req)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())

@@ -19,6 +19,12 @@ func openDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// In-memory SQLite is per-connection in modernc.org/sqlite; without
+	// pinning the pool to a single connection, parallel test goroutines
+	// each get their own empty database and the shared schema vanishes.
+	if path == ":memory:" {
+		db.SetMaxOpenConns(1)
+	}
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, err

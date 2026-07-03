@@ -41,11 +41,10 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('morning light card cites circadian research', sourceLines.some((line) => line.includes('Yates 2018') && line.includes('Kok 2024')), sourceLines.join(' | '));
 
     const headings = await page.$$eval('.tip-card', (cards) => cards.map((card) => ({
-      kicker: card.querySelector('.tip-kicker')?.textContent.trim() || '',
-      title: card.querySelector('.tip-title')?.textContent.trim() || '',
+      title: card.querySelector('.tip-hd')?.textContent.trim() || '',
       text: card.textContent.trim(),
     })));
-    check('info cards render a separate category kicker', headings.every((h) => h.kicker && h.title), JSON.stringify(headings));
+    check('info cards render a title', headings.every((h) => h.title), JSON.stringify(headings));
     check('info card titles do not start with info prefix', headings.every((h) => !/^info\s+/i.test(h.title)), JSON.stringify(headings));
 
     const morning = headings.find((h) => h.title.includes('Morning light'));

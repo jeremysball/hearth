@@ -141,7 +141,7 @@ func rawOrNull(r json.RawMessage) string {
 	return string(r)
 }
 
-func handlePatchSettings(db *sql.DB, hub *Hub) http.HandlerFunc {
+func handlePatchSettings(db *sql.DB, hub *Hub, pushes *pushScheduler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
 		var req patchSettingsRequest
@@ -161,6 +161,9 @@ func handlePatchSettings(db *sql.DB, hub *Hub) http.HandlerFunc {
 			return
 		}
 		hub.Broadcast(session.FamilyID)
+		if pushes != nil {
+			pushes.ScheduleFamily(session.FamilyID)
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
