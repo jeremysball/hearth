@@ -1,5 +1,5 @@
 // sky.js: hero sky scene — the wake-window prediction rendered as a living
-// landscape. Pure math + scene HTML builder + sparse canvas particle engine.
+// sky. Pure math + scene HTML builder + sparse canvas particle engine.
 import { state } from './store.js';
 
 const DAY = 86400000;
@@ -62,16 +62,6 @@ export function skyPalette(elevation) {
 export function oklch([l, c, h], alpha = 1) {
   const base = `${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)}`;
   return alpha >= 1 ? `oklch(${base})` : `oklch(${base} / ${alpha})`;
-}
-
-// Atmospheric perspective: ridges are the horizon color pulled darker and a
-// touch more saturated with depth (0 = far/hazy, 1 = near/dark).
-export function ridgeColor(horizon, depth) {
-  return [
-    Math.max(0.14, horizon[0] * (0.66 - 0.32 * depth)),
-    horizon[1] * (0.5 + 0.25 * depth),
-    horizon[2],
-  ];
 }
 
 // ---------- scene state ----------
@@ -230,15 +220,6 @@ export function moonSVG(phase) {
   </svg>`;
 }
 
-// The signature element: a tiny silhouette house with one warm lit window.
-function houseSVG() {
-  return `<svg class="sky-house" viewBox="0 0 20 14" aria-hidden="true">
-    <rect class="house-chimney" x="13.2" y="1.6" width="1.8" height="4"/>
-    <path class="house-body" d="M2.5 6.5 L10 1 L17.5 6.5 V13.5 H2.5 Z"/>
-    <rect class="house-window" x="8.5" y="7.6" width="3" height="3.6" rx="0.5"/>
-  </svg>`;
-}
-
 // Blurred blob clusters drifting at coprime durations (the fire-a/b/c trick).
 // The negative delay is phase-locked to wall time so the once-a-minute
 // re-render resumes each cloud where it was instead of snapping it back.
@@ -260,8 +241,6 @@ export function skyScene(spec, { birthdate = '', name = '' } = {}) {
     `--sky-zenith:${oklch(pal.zenith)}`,
     `--sky-horizon:${oklch(pal.horizon)}`,
     `--sky-glow:${oklch(pal.glow)}`,
-    `--ridge-far:${oklch(ridgeColor(pal.horizon, 0))}`,
-    `--ridge-near:${oklch(ridgeColor(pal.horizon, 1))}`,
   ];
   let bodies = '';
   if (spec.sun && spec.sun.elevation > -0.05) {
@@ -284,8 +263,6 @@ export function skyScene(spec, { birthdate = '', name = '' } = {}) {
     ${stars}
     ${bodies}
     ${cloudsHTML(spec.mode)}
-    <div class="sky-ridge-far"><svg viewBox="0 0 360 80" preserveAspectRatio="none"><path d="M0 38 Q45 20 95 32 T200 28 T300 36 T360 30 V80 H0 Z"/></svg></div>
-    <div class="sky-ridge-near"><svg viewBox="0 0 360 80" preserveAspectRatio="none"><path d="M0 52 Q60 34 130 46 T250 42 T360 50 V80 H0 Z"/></svg>${houseSVG()}</div>
     <canvas class="sky-canvas"></canvas>
     <div class="sky-l sky-grain"></div>
     <div class="sky-l sky-grade"></div>
@@ -363,7 +340,6 @@ function later(minS, maxS, fn) {
 }
 
 function scheduleEvents() {
-  later(6, 25, spawnSmoke); // chimney smoke: all modes, occasional
   if (sceneMode === 'golden') later(2, 6, spawnFireflies);
   if (sceneMode === 'night' || sceneMode === 'deep-night') later(20, 90, spawnShootingStar);
   if (sceneMode === 'morning' || sceneMode === 'day') later(30, 240, spawnBirds);
@@ -384,28 +360,7 @@ function ensureLoop() {
   rafId = requestAnimationFrame(step);
 }
 
-// Chimney smoke wisps rising from the hearth-light house (house sits at ~22.5% x).
-function spawnSmoke() {
-  for (let i = 0; i < 3; i++) {
-    particles.push({
-      t: -i * 0.9, life: 6,
-      draw(c, w, h) {
-        if (this.t < 0) return;
-        const k = this.t / this.life;
-        const x = w * 0.225 + Math.sin(this.t * 1.7 + i) * 4 * dpr;
-        const y = h * 0.70 - k * h * 0.22;
-        c.globalAlpha = 0.16 * (1 - k);
-        c.fillStyle = 'oklch(0.85 0.01 90)';
-        c.beginPath(); c.arc(x, y, (1.5 + k * 5) * dpr, 0, 7); c.fill();
-        c.globalAlpha = 1;
-      },
-    });
-  }
-  ensureLoop();
-  later(18, 55, spawnSmoke);
-}
-
-// Fireflies over the dark hills — sweetspot (golden) only.
+// Fireflies over the horizon — sweetspot (golden) only.
 function spawnFireflies() {
   for (let i = 0; i < 7; i++) {
     const bx = 0.1 + Math.random() * 0.8, by = 0.62 + Math.random() * 0.2;
@@ -428,7 +383,7 @@ function spawnFireflies() {
   later(14, 26, spawnFireflies);
 }
 
-// Shooting stars with fading trails — night, rare. Fade before the ridgeline.
+// Shooting stars with fading trails — night, rare. Fade before the horizon.
 function spawnShootingStar() {
   const x0 = 0.15 + Math.random() * 0.6, y0 = 0.05 + Math.random() * 0.15;
   const vx = 0.25 + Math.random() * 0.15, vy = 0.12;
@@ -437,7 +392,7 @@ function spawnShootingStar() {
     draw(c, w, h) {
       const k = this.t / this.life;
       const x = (x0 + vx * this.t) * w, y = (y0 + vy * this.t) * h;
-      if (y > h * 0.5) return; // gone well above the ridgeline
+      if (y > h * 0.5) return; // gone well above the horizon
       const g = c.createLinearGradient(x - 30 * dpr, y - 14 * dpr, x, y);
       g.addColorStop(0, 'oklch(0.95 0.02 90 / 0)');
       g.addColorStop(1, `oklch(0.95 0.02 90 / ${(0.8 * (1 - k)).toFixed(3)})`);

@@ -1274,23 +1274,6 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes cloud-drift { from { transform: translateX(-50%); } to { transform: translateX(260%); } }
 [data-sky="golden"] .sky-cloud svg, [data-sky="twilight"] .sky-cloud svg { fill: var(--sky-horizon); }
 
-/* ridgelines: layered hills with atmospheric perspective; static layers */
-.sky-ridge-far, .sky-ridge-near { position: absolute; left: -2%; right: -2%; }
-.sky-ridge-far { bottom: 15%; height: 32%; }
-.sky-ridge-near { bottom: -1%; height: 30%; }
-.sky-ridge-far svg, .sky-ridge-near svg { width: 100%; height: 100%; display: block; }
-.sky-ridge-far path { fill: var(--ridge-far); }
-.sky-ridge-near path { fill: var(--ridge-near); }
-
-/* the hearth-light: one warm lit window on the near ridge */
-.sky-house { position: absolute; left: 21%; bottom: 38%; width: 22px; height: 15px; }
-.house-body, .house-chimney { fill: var(--ridge-near); filter: brightness(0.72); }
-.house-window { fill: oklch(0.90 0.13 80); filter: drop-shadow(0 0 3px oklch(0.86 0.14 75 / 0.75)); }
-[data-sky="twilight"] .house-window, [data-sky="night"] .house-window, [data-sky="deep-night"] .house-window {
-  fill: oklch(0.93 0.15 80);
-  filter: drop-shadow(0 0 6px oklch(0.88 0.15 75 / 0.95));
-}
-
 /* particle canvas, grain, grade */
 .sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sky-grain { filter: url(#sky-grain-f); opacity: 0.05; mix-blend-mode: overlay; background: #808080; }
@@ -1326,15 +1309,5 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* low battery: static painterly scene remains; drift slows to near-still */
 .sky-low-power .sky-cloud { animation-duration: 700s !important; }
 
-/* parallax: depth-scaled transform from tilt (stars 0.15 · far 0.3 · near 0.6) */
+/* parallax: depth-scaled transform from tilt (stars 0.15 · clouds 0.3) */
 .sky-stars, .sky-clouds { transform: translate(calc(var(--par-x, 0) * -3px), calc(var(--par-y, 0) * -2px)); }
-.sky-ridge-far { transform: translate(calc(var(--par-x, 0) * -6px), calc(var(--par-y, 0) * -3px)); }
-.sky-ridge-near { transform: translate(calc(var(--par-x, 0) * -12px), calc(var(--par-y, 0) * -5px)); }
-/* autonomous drift: very slow ridge sway, compositor-only */
-.sky-ridge-far svg { animation: ridge-sway 240s ease-in-out infinite alternate; }
-.sky-ridge-near svg { animation: ridge-sway 180s ease-in-out infinite alternate-reverse; }
-@keyframes ridge-sway { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
-@media (prefers-reduced-motion: reduce) {
-  .sky-ridge-far svg, .sky-ridge-near svg { animation: none !important; }
-}
-.sky-low-power .sky-ridge-far svg, .sky-low-power .sky-ridge-near svg { animation: none !important; }
