@@ -75,8 +75,10 @@ A dense orientation doc for new sessions. Read before exploring files.
 **`sky.js`**
 - `moonPhase(date)`, `sunPosition(elapsedMin, highMin)`, `skyPalette(elevation)`: pure scene math
 - `sceneSpec(inputs)`: maps hero status to a scene mode (`morning`/`day`/`golden`/`twilight`/`night`/`deep-night`/`newborn`)
+- `emberGlow(heat)`: pure color/opacity/size for the hero card's ambient ember field (replaces the old 16-coal bed)
 - `heroSky(st, sp)`: scene HTML + `--light-x/--light-y` card style for `home.js`'s hero
 - `initSky()`: sizes the particle canvas and schedules events; called by the router after every render
+- No landscape: the scene is sky only (sun/moon/clouds/stars) — no ridges, no house
 
 ---
 
