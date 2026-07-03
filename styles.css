@@ -1318,3 +1318,16 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 
 /* low battery: static painterly scene remains; drift slows to near-still */
 .sky-low-power .sky-cloud { animation-duration: 700s !important; }
+
+/* parallax: depth-scaled transform from tilt (stars 0.15 · far 0.3 · near 0.6) */
+.sky-stars, .sky-clouds { transform: translate(calc(var(--par-x, 0) * -3px), calc(var(--par-y, 0) * -2px)); }
+.sky-ridge-far { transform: translate(calc(var(--par-x, 0) * -6px), calc(var(--par-y, 0) * -3px)); }
+.sky-ridge-near { transform: translate(calc(var(--par-x, 0) * -12px), calc(var(--par-y, 0) * -5px)); }
+/* autonomous drift: very slow ridge sway, compositor-only */
+.sky-ridge-far svg { animation: ridge-sway 240s ease-in-out infinite alternate; }
+.sky-ridge-near svg { animation: ridge-sway 180s ease-in-out infinite alternate-reverse; }
+@keyframes ridge-sway { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .sky-ridge-far svg, .sky-ridge-near svg { animation: none !important; }
+}
+.sky-low-power .sky-ridge-far svg, .sky-low-power .sky-ridge-near svg { animation: none !important; }
