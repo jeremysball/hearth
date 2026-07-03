@@ -182,6 +182,16 @@ test('skyScene: sun renders as a lit sphere with a ray field, not stacked halo r
   assert.ok(!html.includes('sun-halo'), 'old stacked halo rings should be gone');
 });
 
+test('cloudsHTML (via skyScene): each puff gets its own userSpaceOnUse gradient', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 100 }); // day: 3 clouds
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.match(html, /linearGradient id="cloud-c1"/);
+  assert.match(html, /linearGradient id="cloud-c2"/);
+  assert.match(html, /linearGradient id="cloud-c3"/);
+  assert.match(html, /gradientUnits="userSpaceOnUse"/);
+  assert.match(html, /fill="url\(#cloud-c1\)"/);
+});
+
 test('skyScene: night scene has moon, star field, constellation — no sun', () => {
   const spec = sceneSpec({ ...specBase, asleep: true });
   const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
