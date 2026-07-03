@@ -1214,10 +1214,10 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
    are stale from the last day render, so hide explicitly). */
 .sun-rays {
   position: absolute; left: var(--sun-x, 50%); top: var(--sun-y, 30%); width: 96px; height: 96px;
-  transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: screen; filter: blur(1.5px);
+  transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: screen; filter: blur(0.4px);
   animation: sun-rays-rot 240s linear infinite, sun-rays-breathe 19s ease-in-out infinite alternate;
 }
-.sun-rays-fill { fill: oklch(0.95 0.05 85 / .55); }
+.sun-rays-fill { fill: oklch(0.95 0.05 85 / .9); }
 @keyframes sun-rays-rot {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
