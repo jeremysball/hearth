@@ -58,14 +58,13 @@ func (sw *statusWriter) setSession(session SessionInfo) {
 	sw.session = session
 }
 
-func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler {
+func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushScheduler) http.Handler {
 	var staticFS fs.FS = hearth.StaticFS
 	if staticDir != "" {
 		staticFS = os.DirFS(staticDir)
 	}
 
 	mux := http.NewServeMux()
-	pushes := newPushScheduler(db)
 	mux.HandleFunc("POST /api/family", handleCreateFamily(db))
 	mux.HandleFunc("/api/events", requireAuth(db, handleEvents(hub)))
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
@@ -91,7 +90,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config) http.Handler 
 	mux.HandleFunc("PUT /api/growth/{id}", requireAuth(db, handleUpsertGrowth(db, hub)))
 	mux.HandleFunc("DELETE /api/growth/{id}", requireAuth(db, handleDeleteGrowth(db, hub)))
 	mux.HandleFunc("PATCH /api/baby", requireAuth(db, handlePatchBaby(db, hub)))
-	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub)))
+	mux.HandleFunc("PATCH /api/settings", requireAuth(db, handlePatchSettings(db, hub, pushes)))
 	mux.HandleFunc("GET /api/caregivers", requireAuth(db, handleListCaregivers(db)))
 	mux.HandleFunc("PATCH /api/caregivers/me", requireAuth(db, handlePatchCurrentCaregiver(db, hub)))
 	mux.HandleFunc("PATCH /api/caregivers/{id}/role", requireAuth(db, handlePatchCaregiverRole(db, hub)))
