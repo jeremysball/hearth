@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars, skyScene, moonSVG, initSky, teardownSky } = await import('./sky.js');
+const { moonPhase, sunPosition, skyPalette, oklch, sceneSpec, starsSVG, zodiacSign, constellationSVG, skyScene, moonSVG, emberGlow, initSky, teardownSky } = await import('./sky.js');
 
 const EPOCH = Date.UTC(2000, 0, 6, 18, 14); // known new moon
 const DAY = 86400000;
@@ -89,11 +89,6 @@ test('oklch: formats with and without alpha', () => {
   assert.equal(oklch([0.5, 0.1, 300], 0.5), 'oklch(0.500 0.100 300.0 / 0.5)');
 });
 
-test('ridgeColor: near ridge darker than far (atmospheric perspective)', () => {
-  const hz = [0.8, 0.1, 60];
-  assert.ok(ridgeColor(hz, 1)[0] < ridgeColor(hz, 0)[0]);
-});
-
 const specBase = {
   asleep: false, night: false, newborn: false,
   elapsedMin: 0, lowMin: 140, highMin: 170,
@@ -148,16 +143,6 @@ test('sceneSpec: newborn gets a fixed gentle mid-morning sky', () => {
   assert.equal(s.stars, false);
 });
 
-test('starField: deterministic for a given seed', () => {
-  assert.equal(starField('2026-01-01'), starField('2026-01-01'));
-  assert.notEqual(starField('2026-01-01'), starField('2025-06-15'));
-});
-
-test('starField: exactly 90 stars', () => {
-  // oklch colors are space-separated, so commas only delimit shadows.
-  assert.equal(starField('x').split(',').length, 90);
-});
-
 test('zodiacSign: known boundaries', () => {
   assert.equal(zodiacSign('2026-01-01'), 'capricorn');
   assert.equal(zodiacSign('2025-12-25'), 'capricorn');
@@ -175,22 +160,16 @@ test('constellationSVG: renders hairline lines and points', () => {
   assert.equal(constellationSVG(''), '');
 });
 
-test('brightStars: five staggered twinkle stars', () => {
-  const html = brightStars();
-  assert.equal((html.match(/star-b/g) || []).length, 5);
-  assert.match(html, /animation-delay/);
-});
-
-test('skyScene: day scene has sun, ridges, house, canvas, grain, grade — no moon/stars', () => {
+test('skyScene: day scene has sun, clouds, canvas, grain, grade — no ridges, house, or moon', () => {
   const spec = sceneSpec({ ...specBase, elapsedMin: 100 });
   const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
   assert.match(html, /data-sky="day"/);
-  for (const cls of ['sky-grad', 'sky-sun', 'sky-ridge-far', 'sky-ridge-near',
-    'house-window', 'sky-canvas', 'sky-grain', 'sky-grade', 'sky-cloud']) {
+  for (const cls of ['sky-grad', 'sky-sun', 'sky-canvas', 'sky-grain', 'sky-grade', 'sky-cloud']) {
     assert.ok(html.includes(cls), 'missing ' + cls);
   }
-  assert.ok(!html.includes('sky-moon'));
-  assert.ok(!html.includes('sky-starfield'));
+  for (const cls of ['sky-ridge-far', 'sky-ridge-near', 'sky-house', 'house-window', 'sky-moon', 'sky-starfield']) {
+    assert.ok(!html.includes(cls), 'unexpected ' + cls);
+  }
   assert.match(html, /--sun-x:/);
 });
 
