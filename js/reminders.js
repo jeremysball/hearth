@@ -36,6 +36,13 @@ async function subscribePush(reg) {
   return true;
 }
 
+export async function sendTestPush() {
+  const res = await fetch('/api/push/test', { method: 'POST', credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`test push endpoint returned ${res.status}`);
+  }
+}
+
 function loadNotified() {
   try { return new Map(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]')); }
   catch { return new Map(); }

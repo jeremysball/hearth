@@ -12,6 +12,24 @@ function buildStamp() {
   catch { return v; }
 }
 
+const DEV_MODE_KEY = 'hearth.devMode';
+let _versionTaps = 0;
+let _tapResetTimer = null;
+
+export function isDevMode() { return localStorage.getItem(DEV_MODE_KEY) === '1'; }
+
+// Android-style hidden unlock: tap the build stamp 10× within 2s of each tap.
+export function tapVersion() {
+  if (isDevMode()) return false;
+  clearTimeout(_tapResetTimer);
+  _versionTaps++;
+  _tapResetTimer = setTimeout(() => { _versionTaps = 0; }, 2000);
+  if (_versionTaps < 10) return false;
+  _versionTaps = 0;
+  localStorage.setItem(DEV_MODE_KEY, '1');
+  return true;
+}
+
 function sw(path, on) {
   return `<button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-action="toggle" data-path="${path}"><span class="knob"></span></button>`;
 }
@@ -69,6 +87,7 @@ export function profile() {
       <div class="set-row"><span>Bottle reminders</span>${sw('settings.reminders.bottle', s.reminders.bottle)}</div>
       <div class="set-row"><span>Medicine reminders</span>${sw('settings.reminders.meds', s.reminders.meds)}</div>
       <div class="set-row"><span>Quiet hours</span><span class="quiet"><input type="time" data-bind="settings.reminders.quietStart" value="${s.reminders.quietStart}" /> – <input type="time" data-bind="settings.reminders.quietEnd" value="${s.reminders.quietEnd}" /></span></div>
+      ${isDevMode() ? `<div class="set-row"><span>Developer mode</span><button class="btn-sm" data-action="dev:test-push">Test push in 15s</button></div>` : ''}
     </div>
 
     <div class="sec-label">Units & preferences</div>
@@ -96,7 +115,7 @@ export function profile() {
     ${renderChangelog()}
 
     <button class="btn-ghost danger" data-action="app:reset"><svg class="icon"><use href="#undo-2"></use></svg> Reset app & start over</button>
-    <div class="foot-note">Hearth · prototype · data stored on this device · ${buildStamp()}</div>`;
+    <div class="foot-note">Hearth · prototype · data stored on this device · <span data-action="dev:tap-version">${buildStamp()}</span></div>`;
 }
 
 let cachedCaregivers = [];
