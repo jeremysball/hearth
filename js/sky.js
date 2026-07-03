@@ -343,6 +343,7 @@ export function initSky() {
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.height * dpr));
   ctx = canvas.getContext('2d');
+  bindParallax();
   scheduleEvents();
 }
 
@@ -481,4 +482,42 @@ if (typeof navigator !== 'undefined' && navigator.getBattery) {
     b.addEventListener('chargingchange', update);
     update();
   }).catch(() => {});
+}
+
+// ---------- parallax ----------
+// Depth-scaled transform from device tilt. iOS requires a user-gesture
+// permission request; if it never arrives, the autonomous drift below is the
+// graceful fallback.
+let parallaxBound = false;
+
+function bindParallax() {
+  if (parallaxBound || reducedMotion() || lowPower) return;
+  if (typeof DeviceOrientationEvent === 'undefined') return;
+  parallaxBound = true;
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    const ask = () => {
+      DeviceOrientationEvent.requestPermission()
+        .then((r) => { if (r === 'granted') attachTilt(); })
+        .catch(() => {});
+    };
+    document.addEventListener('touchend', ask, { once: true });
+  } else {
+    attachTilt();
+  }
+}
+
+function attachTilt() {
+  let raf = 0;
+  window.addEventListener('deviceorientation', (e) => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const el = document.querySelector('.card.hero .sky');
+      if (!el) return;
+      const x = Math.max(-1, Math.min(1, (e.gamma || 0) / 30));
+      const y = Math.max(-1, Math.min(1, ((e.beta || 0) - 40) / 30));
+      el.style.setProperty('--par-x', x.toFixed(3));
+      el.style.setProperty('--par-y', y.toFixed(3));
+    });
+  });
 }
