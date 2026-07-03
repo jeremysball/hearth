@@ -173,6 +173,15 @@ test('skyScene: day scene has sun, clouds, canvas, grain, grade — no ridges, h
   assert.match(html, /--sun-x:/);
 });
 
+test('skyScene: sun renders as a lit sphere with a ray field, not stacked halo rings', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 100 });
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.ok(html.includes('sun-rays'), 'missing sun-rays');
+  assert.ok(html.includes('sunCore-'), 'missing sunCore gradient');
+  assert.ok(html.includes('sunHalo-'), 'missing sunHalo gradient');
+  assert.ok(!html.includes('sun-halo'), 'old stacked halo rings should be gone');
+});
+
 test('skyScene: night scene has moon, star field, constellation — no sun', () => {
   const spec = sceneSpec({ ...specBase, asleep: true });
   const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
