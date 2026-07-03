@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -36,8 +37,19 @@ func main() {
 	defer db.Close()
 	log.Printf("  db open OK")
 
+	pushes := newPushScheduler(db)
+	pushes.ScheduleAll()
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			pushes.ScheduleAll()
+		}
+	}()
+	log.Printf("  push scheduler armed")
+
 	hub := newHub()
-	mux := newRouter(db, hub, cfg.StaticDir, cfg)
+	mux := newRouter(db, hub, cfg.StaticDir, cfg, pushes)
 	addr := cfg.Host + ":" + cfg.Port
 
 	if cfg.CertFile != "" && cfg.KeyFile != "" {

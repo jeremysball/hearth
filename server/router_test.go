@@ -10,7 +10,7 @@ import (
 
 func TestRouterServesEmbeddedIndexByDefault(t *testing.T) {
 	db := newParallelTestDB(t)
-	mux := newRouter(db, newHub(), "", Config{})
+	mux := newRouter(db, newHub(), "", Config{}, newPushScheduler(db))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/", nil)
@@ -31,7 +31,7 @@ func TestRouterServesFromDiskWhenStaticDirSet(t *testing.T) {
 	}
 
 	db := newParallelTestDB(t)
-	mux := newRouter(db, newHub(), dir, Config{})
+	mux := newRouter(db, newHub(), dir, Config{}, newPushScheduler(db))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/", nil)

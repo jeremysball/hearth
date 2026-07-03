@@ -15,13 +15,25 @@ function urlBase64ToUint8Array(base64) {
 }
 
 async function subscribePush(reg) {
-  if (!reg?.pushManager) return false;
+  if (!reg?.pushManager) {
+    throw new Error('Push is not supported in this browser');
+  }
   const keyRes = await fetch('/api/push/public-key', { credentials: 'include' });
-  if (!keyRes.ok) return false;
+  if (!keyRes.ok) {
+    throw new Error(keyRes.status === 503
+      ? 'Server VAPID keys not configured'
+      : `public-key endpoint returned ${keyRes.status}`);
+  }
   const { publicKey } = await keyRes.json();
+  if (!publicKey) {
+    throw new Error('Server returned an empty VAPID public key');
+  }
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
   const res = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(sub) });
-  return res.ok;
+  if (!res.ok) {
+    throw new Error(`subscribe endpoint returned ${res.status}`);
+  }
+  return true;
 }
 
 function loadNotified() {
@@ -51,7 +63,14 @@ export async function enableNotifs() {
   _granted = perm === 'granted';
   if (_granted) {
     const reg = await navigator.serviceWorker.ready;
-    await subscribePush(reg).catch(() => false);
+    try {
+      await subscribePush(reg);
+    } catch (err) {
+      toast('Reminders enabled, but push failed: ' + (err?.message || err));
+      scheduleReminders();
+      router.refresh();
+      return;
+    }
     toast('Reminders enabled ✓');
     scheduleReminders();
     router.refresh();
