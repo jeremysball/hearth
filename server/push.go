@@ -125,6 +125,14 @@ func handlePushSubscribe(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func handlePushTest(pushes *pushScheduler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := sessionFrom(r)
+		pushes.SendTestPush(session.FamilyID, 15*time.Second)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func pushSubscriptionID(endpoint string) string {
 	sum := sha256.Sum256([]byte(endpoint))
 	return hex.EncodeToString(sum[:])
@@ -199,6 +207,16 @@ func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, d
 		}
 		s.mu.Unlock()
 	})}
+}
+
+// SendTestPush fires a one-off push at the family after delay, bypassing the
+// bottle/meds/quiet-hours pipeline. It's a manual QA hook (developer mode)
+// for confirming end-to-end delivery, e.g. after locking an iOS phone, and
+// isn't tracked in pending/byFamily since it has nothing to reschedule.
+func (s *pushScheduler) SendTestPush(familyID string, delay time.Duration) {
+	time.AfterFunc(delay, func() {
+		s.sendFamily(familyID, pushReminder{Key: "dev-test", Title: "Hearth", Body: "Test push — if you can read this, it worked.", At: time.Now()})
+	})
 }
 
 func (s *pushScheduler) ScheduleAll() {

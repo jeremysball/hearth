@@ -7,11 +7,11 @@ import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode
 import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
 import { growth } from './growth.js';
-import { profile, loadCaregivers, caregiversSnapshot } from './profile.js';
+import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility } from './sheets.js';
-import { enableNotifs, notify } from './reminders.js';
+import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion } from './changelog.js';
@@ -260,6 +260,8 @@ document.addEventListener('click', (ev) => {
     'measure:delete': () => { removeMeasure(d.id); sheet.close(); toast('Measurement deleted'); router.refresh(); },
     'notif:enable': () => enableNotifs(),
     'notif:test': () => { notify('Hearth', 'Reminders are working 🤍').then((ok) => { if (!ok) toast('Could not show a notification'); }); },
+    'dev:tap-version': () => { if (tapVersion()) { toast('Developer mode enabled'); router.refresh(); } },
+    'dev:test-push': () => { sendTestPush().then(() => toast('Test push scheduled — lock your phone now')).catch((err) => toast('Test push failed: ' + err.message)); },
     'entry:delete': () => {
       const e = state().log.find((x) => x.id === d.id);
       removeEntry(d.id); sheet.close(); router.refresh();
