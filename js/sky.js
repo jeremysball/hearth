@@ -307,3 +307,178 @@ export function heroSky(st, sp, now = new Date()) {
     cardStyle: `--light-x:${lx.toFixed(1)}%;--light-y:${ly.toFixed(1)}%`,
   };
 }
+
+// ---------- particle layer ----------
+// One small canvas, sparse particles only (tens). The rAF loop runs ONLY
+// while a particle event is live; otherwise the canvas is idle.
+let particles = [];
+let rafId = 0;
+let timers = [];
+let ctx = null;
+let dpr = 1;
+let sceneMode = '';
+let lowPower = false;
+
+function reducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+export function teardownSky() {
+  timers.forEach(clearTimeout);
+  timers = [];
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = 0;
+  particles = [];
+  ctx = null;
+}
+
+export function initSky() {
+  teardownSky();
+  const sky = document.querySelector('.card.hero .sky');
+  const canvas = sky && sky.querySelector('.sky-canvas');
+  if (!canvas || document.hidden || reducedMotion() || lowPower) return;
+  sceneMode = sky.dataset.sky;
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const r = canvas.getBoundingClientRect();
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  ctx = canvas.getContext('2d');
+  scheduleEvents();
+}
+
+function later(minS, maxS, fn) {
+  timers.push(setTimeout(fn, (minS + Math.random() * (maxS - minS)) * 1000));
+}
+
+function scheduleEvents() {
+  later(6, 25, spawnSmoke); // chimney smoke: all modes, occasional
+  if (sceneMode === 'golden') later(2, 6, spawnFireflies);
+  if (sceneMode === 'night' || sceneMode === 'deep-night') later(20, 90, spawnShootingStar);
+  if (sceneMode === 'morning' || sceneMode === 'day') later(30, 240, spawnBirds);
+}
+
+function ensureLoop() {
+  if (rafId || !ctx) return;
+  let last = performance.now();
+  const step = (now) => {
+    if (!ctx) { rafId = 0; return; }
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    const { width: w, height: h } = ctx.canvas;
+    ctx.clearRect(0, 0, w, h);
+    particles = particles.filter((p) => { p.t += dt; p.draw(ctx, w, h); return p.t < p.life; });
+    rafId = particles.length ? requestAnimationFrame(step) : 0; // idle until the next event
+  };
+  rafId = requestAnimationFrame(step);
+}
+
+// Chimney smoke wisps rising from the hearth-light house (house sits at ~22.5% x).
+function spawnSmoke() {
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      t: -i * 0.9, life: 6,
+      draw(c, w, h) {
+        if (this.t < 0) return;
+        const k = this.t / this.life;
+        const x = w * 0.225 + Math.sin(this.t * 1.7 + i) * 4 * dpr;
+        const y = h * 0.70 - k * h * 0.22;
+        c.globalAlpha = 0.16 * (1 - k);
+        c.fillStyle = 'oklch(0.85 0.01 90)';
+        c.beginPath(); c.arc(x, y, (1.5 + k * 5) * dpr, 0, 7); c.fill();
+        c.globalAlpha = 1;
+      },
+    });
+  }
+  ensureLoop();
+  later(18, 55, spawnSmoke);
+}
+
+// Fireflies over the dark hills — sweetspot (golden) only.
+function spawnFireflies() {
+  for (let i = 0; i < 7; i++) {
+    const bx = 0.1 + Math.random() * 0.8, by = 0.62 + Math.random() * 0.2;
+    const ph = Math.random() * 6;
+    particles.push({
+      t: 0, life: 10 + Math.random() * 6,
+      draw(c, w, h) {
+        const x = (bx + Math.sin(this.t * 0.5 + ph) * 0.03) * w;
+        const y = (by + Math.cos(this.t * 0.7 + ph) * 0.02) * h;
+        const tw = Math.max(0, Math.sin(this.t * 2.1 + ph));
+        const fade = Math.min(1, this.t, this.life - this.t);
+        c.globalAlpha = 0.75 * tw * fade;
+        c.fillStyle = 'oklch(0.88 0.16 105)';
+        c.beginPath(); c.arc(x, y, 1.1 * dpr, 0, 7); c.fill();
+        c.globalAlpha = 1;
+      },
+    });
+  }
+  ensureLoop();
+  later(14, 26, spawnFireflies);
+}
+
+// Shooting stars with fading trails — night, rare. Fade before the ridgeline.
+function spawnShootingStar() {
+  const x0 = 0.15 + Math.random() * 0.6, y0 = 0.05 + Math.random() * 0.15;
+  const vx = 0.25 + Math.random() * 0.15, vy = 0.12;
+  particles.push({
+    t: 0, life: 1.1,
+    draw(c, w, h) {
+      const k = this.t / this.life;
+      const x = (x0 + vx * this.t) * w, y = (y0 + vy * this.t) * h;
+      if (y > h * 0.5) return; // gone well above the ridgeline
+      const g = c.createLinearGradient(x - 30 * dpr, y - 14 * dpr, x, y);
+      g.addColorStop(0, 'oklch(0.95 0.02 90 / 0)');
+      g.addColorStop(1, `oklch(0.95 0.02 90 / ${(0.8 * (1 - k)).toFixed(3)})`);
+      c.strokeStyle = g; c.lineWidth = 1 * dpr;
+      c.beginPath(); c.moveTo(x - 30 * dpr, y - 14 * dpr); c.lineTo(x, y); c.stroke();
+    },
+  });
+  ensureLoop();
+  later(40, 160, spawnShootingStar);
+}
+
+// Birds crossing on a curved path — daytime, a few times an hour.
+function spawnBirds() {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const y0 = 0.18 + Math.random() * 0.2;
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      t: -i * 0.5, life: 12,
+      draw(c, w, h) {
+        if (this.t < 0) return;
+        const k = this.t / this.life;
+        const x = (dir > 0 ? k : 1 - k) * 1.1 * w - 0.05 * w;
+        const y = (y0 - Math.sin(k * Math.PI) * 0.06 + i * 0.015) * h;
+        const flap = Math.sin(this.t * 9 + i) * 2.2 * dpr;
+        c.strokeStyle = 'oklch(0.35 0.03 40 / 0.65)';
+        c.lineWidth = 1 * dpr;
+        c.beginPath();
+        c.moveTo(x - 3.4 * dpr, y + flap);
+        c.quadraticCurveTo(x, y - 1.6 * dpr, x + 3.4 * dpr, y + flap);
+        c.stroke();
+      },
+    });
+  }
+  ensureLoop();
+  later(420, 1500, spawnBirds);
+}
+
+// Page Visibility: the canvas ticks only while the app is visible.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) teardownSky();
+  else initSky();
+});
+
+// Low battery: particles off, cloud drift slowed (CSS reads .sky-low-power).
+if (typeof navigator !== 'undefined' && navigator.getBattery) {
+  navigator.getBattery().then((b) => {
+    const update = () => {
+      lowPower = b.level < 0.2 && !b.charging;
+      document.documentElement.classList.toggle('sky-low-power', lowPower);
+      initSky();
+    };
+    b.addEventListener('levelchange', update);
+    b.addEventListener('chargingchange', update);
+    update();
+  }).catch(() => {});
+}
