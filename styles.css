@@ -1189,11 +1189,12 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   flex-direction: column;
   gap: 0.48rem;
 }
-.tip-top {
+.tip-hd {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  color: var(--ink-2);
+  gap: 0.5rem;
+  font-weight: 700;
+  color: var(--ink);
 }
 .tip-icon {
   width: 1.55rem;
@@ -1206,17 +1207,6 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   flex: 0 0 auto;
 }
 .tip-icon .icon { width: 0.95rem; height: 0.95rem; }
-.tip-kicker {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.tip-title {
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.2;
-}
 .tip-card p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2); }
 .tip-source {
   margin-top: 0.08rem;
