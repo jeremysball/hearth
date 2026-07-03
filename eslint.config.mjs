@@ -43,9 +43,9 @@ export default [
     },
   },
 
-  // Node-run CommonJS test scripts
+  // Node-run CommonJS test scripts and dev tooling scripts
   {
-    files: ['tests/**/*.js'],
+    files: ['tests/**/*.js', 'scripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'commonjs',
