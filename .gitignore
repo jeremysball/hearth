@@ -1,5 +1,6 @@
 certs/
-screenshots/
+screenshots/*
+!screenshots/readme-*.png
 .worktrees/
 .prettierrc
 .env
