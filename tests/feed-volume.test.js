@@ -26,6 +26,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       localStorage.setItem('hearth.lastsync.v1', now);
     });
     await page.reload();
+    const dbgLog = await page.evaluate(() => JSON.parse(localStorage.getItem('hearth.state.v1')).log);
+    console.log('  [debug] log after final reload:', JSON.stringify(dbgLog));
     await page.click('.tab[data-tab="trends"]');
     await page.waitForSelector('.chart-card');
     const body = await page.textContent('#view');

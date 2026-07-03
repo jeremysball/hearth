@@ -14,11 +14,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
         if (new URL(req.url()).pathname === '/api/sync') syncHits++;
       } catch {}
     });
-    page.on('console', (msg) => console.log('  [browser]', msg.text()));
-    page.on('pageerror', (err) => console.log('  [pageerror]', err.message));
-
     await page.goto(srv.base + '/', { waitUntil: 'networkidle' });
-    await page.evaluate(() => localStorage.setItem('hearth.debug', '1'));
     await page.waitForTimeout(500);
     await onboard(page);
     // Let the initial sync + SSE connection settle. 2s is well under the
@@ -33,12 +29,10 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     // in the test ever backgrounded it. A dispatched Event can't change that
     // read-only property, so stub it before dispatching to make the guard
     // deterministic instead of dependent on the runner's window-focus state.
-    const stubResult = await page.evaluate(() => {
+    await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
       document.dispatchEvent(new Event('visibilitychange'));
-      return { visibilityState: document.visibilityState, hidden: document.hidden };
     });
-    console.log('  [debug] after stub+dispatch:', JSON.stringify(stubResult));
 
     // Poll instead of a fixed wait: syncOnce() drains the outbox before its
     // pull fetch, and under CI load that round trip can take longer than a

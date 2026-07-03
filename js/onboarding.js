@@ -93,7 +93,6 @@ export async function onboardFinish() {
   st.setup = true;
   seed();
   save();
-  enqueueSettingsSync();
   applyTheme();
   router.boot();
   router.go('home');
@@ -109,9 +108,15 @@ export async function onboardFinish() {
         caregiverName: st.baby.caregiver || 'Parent'
       })
     });
+    // Enqueue the settings sync only once the family/session is established —
+    // queuing it earlier races the session cookie: a sync drain triggered in
+    // that gap (background interval, visibilitychange, SSE push) 401s and
+    // gets stuck at the head of the outbox, blocking every future sync until
+    // it's retried and finally succeeds.
     if (res.ok) markSynced();
     else log.warn('onboard', 'family create failed', res.status);
   } catch (e) {
     log.warn('onboard', 'family create offline', e);
   }
+  enqueueSettingsSync();
 }
