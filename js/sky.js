@@ -214,12 +214,16 @@ export function constellationSVG(birthdate) {
 // ---------- scene svg pieces ----------
 // A lit sphere, not a flat disc + ring stack: an off-center specular highlight
 // (cx/cy offset in sunCore) and a warm rim read as a body catching light, not
-// a sticker. .sun-rays (a screen-blended conic gradient, positioned by CSS from
-// --sun-x/--sun-y) rides alongside for a hint of dancing light — see the
-// keyframes in styles.css. There is exactly one sun on screen at a time, so a
-// fixed gradient id (no per-render uniqueness) is safe.
+// a sticker. .sun-rays (a FLUX starburst used as an SVG luminance mask over a
+// warm screen-blended fill, positioned by CSS from --sun-x/--sun-y) rides
+// alongside for a hint of dancing light — see the keyframes in styles.css.
+// There is exactly one sun on screen at a time, so fixed mask/gradient ids
+// (no per-render uniqueness) are safe.
 function sunSVG() {
-  return `<div class="sun-rays"></div><svg class="sky-sun" viewBox="0 0 24 24" aria-hidden="true">
+  return `<svg class="sun-rays" viewBox="0 0 100 100" aria-hidden="true">
+    <defs><mask id="sun-rays-mask"><image href="assets/sky/sun-starburst.webp" x="0" y="0" width="100" height="100"/></mask></defs>
+    <rect class="sun-rays-fill" width="100" height="100" mask="url(#sun-rays-mask)"/>
+  </svg><svg class="sky-sun" viewBox="0 0 24 24" aria-hidden="true">
     <defs>
       <radialGradient id="sunHalo-hero" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="var(--sky-glow)" stop-opacity="0.4"/>
