@@ -731,8 +731,10 @@ body[data-mode="dark"] {
 .btn-ghost.danger { color: oklch(0.55 0.13 25); background: oklch(0.95 0.03 25); margin-top: 6px; }
 .changelog-card { gap: 12px; }
 .changelog-card h2 { margin: 0; font-size: 18px; }
-.change-entry { display: grid; gap: 6px; }
+.change-entry { display: grid; gap: 8px; }
 .change-date { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .03em; }
+.change-group { display: grid; gap: 2px; }
+.change-group-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
 .change-entry ul { margin: 0; padding-left: 18px; color: var(--soft); }
 .change-entry li { margin: 4px 0; }
 .foot-note { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0 8px; }
