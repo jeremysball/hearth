@@ -193,6 +193,14 @@ test('skyScene: sun renders as a lit sphere with a ray field, not stacked halo r
   assert.ok(!html.includes('sun-halo'), 'old stacked halo rings should be gone');
 });
 
+test('sunSVG (via skyScene): ray field is a FLUX starburst luminance mask, not a conic-gradient div', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 100 });
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.ok(html.includes('sun-starburst.webp'), 'missing starburst asset reference');
+  assert.match(html, /mask id="sun-rays-mask"/);
+  assert.match(html, /class="sun-rays"/);
+});
+
 test('cloudsHTML (via skyScene): each puff gets its own userSpaceOnUse gradient', () => {
   const spec = sceneSpec({ ...specBase, elapsedMin: 100 }); // day: 3 clouds
   const html = skyScene(spec, { birthdate: '', name: '' });
