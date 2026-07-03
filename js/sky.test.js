@@ -244,3 +244,21 @@ test('moonSVG: geometrically correct terminator', () => {
 test('initSky: no-ops safely without a DOM', () => {
   assert.doesNotThrow(() => { initSky(); teardownSky(); });
 });
+
+test('emberGlow: clamps heat to 0..1 and never goes fully dark', () => {
+  const cold = emberGlow(-5);
+  const hot = emberGlow(5);
+  assert.deepEqual(cold, emberGlow(0));
+  assert.deepEqual(hot, emberGlow(1));
+  assert.ok(cold.groundOp > 0, 'banked ember should still glow at heat 0');
+});
+
+test('emberGlow: hotter heat brightens the core and grows the field', () => {
+  const cool = emberGlow(0.1);
+  const warm = emberGlow(0.9);
+  const coolL = Number(cool.core.match(/oklch\(([\d.]+)/)[1]);
+  const warmL = Number(warm.core.match(/oklch\(([\d.]+)/)[1]);
+  assert.ok(warmL > coolL, 'core should lighten with heat');
+  assert.ok(warm.size > cool.size, 'field should grow with heat');
+  assert.ok(warm.fieldOp > cool.fieldOp, 'field opacity should rise with heat');
+});

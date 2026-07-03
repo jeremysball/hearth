@@ -64,6 +64,22 @@ export function oklch([l, c, h], alpha = 1) {
   return alpha >= 1 ? `oklch(${base})` : `oklch(${base} / ${alpha})`;
 }
 
+// ---------- ember glow (hero card ambient field, replaces the 16-coal bed) ----------
+// heat 0-1 drives color/opacity/size on one continuous curve, tuned so a
+// banked ember (heat ~0.1-0.2) still reads as a quiet warm coal — never fully
+// cold — and an overtired overshoot (heat ~0.95) reads as an anxious hot
+// flare. Values match the ones validated in the Ember Horizon mockup.
+export function emberGlow(heat) {
+  const h = Math.max(0, Math.min(1, heat));
+  return {
+    core: oklch([0.62 + h * 0.26, 0.14 + h * 0.08, 48 - h * 8]),
+    mid: oklch([0.42 + h * 0.20, 0.10 + h * 0.09, 38]),
+    groundOp: +(0.30 + h * 0.45).toFixed(2),
+    fieldOp: +(0.35 + h * 0.55).toFixed(2),
+    size: +(120 + h * 80).toFixed(0),
+  };
+}
+
 // ---------- scene state ----------
 // Maps hero status to a scene descriptor. All inputs are plain values so the
 // mapping is unit-testable without the store.

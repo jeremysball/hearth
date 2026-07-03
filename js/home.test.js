@@ -60,3 +60,13 @@ test('home hero renders the sky scene wrapping the timer content', () => {
   assert.match(html, /hero-fg/);
   assert.doesNotMatch(html, /hero-moon/);
 });
+
+test('home hero replaces the coal bed with an ember-glow field', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => home()); // awake state
+  assert.match(html, /class="ember-glow"/);
+  assert.match(html, /class="ember-ground"/);
+  assert.match(html, /class="ember-field"/);
+  assert.doesNotMatch(html, /class="sh-bed/);
+  assert.doesNotMatch(html, /class="coal/);
+});
