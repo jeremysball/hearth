@@ -1246,14 +1246,21 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sun-halo.s2 { opacity: .22; transform: scale(1.9); }
 .sun-halo.s3 { opacity: .10; transform: scale(2.8); }
 
-/* moon: silver through the glass, 3 stacked halo layers */
-.sky-moon { position: absolute; left: var(--moon-x, 72%); top: var(--moon-y, 22%); width: 30px; height: 30px; overflow: visible; transform: translate(-50%, -50%); color: oklch(0.93 0.02 250); }
-.moon-disc { fill: currentColor; }
-.moon-halo { fill: oklch(0.90 0.04 260); transform-origin: 12px 12px; }
-.moon-halo.h1 { opacity: .28; transform: scale(1.35); }
-.moon-halo.h2 { opacity: .14; transform: scale(1.9); }
-.moon-halo.h3 { opacity: .07; transform: scale(2.7); }
-[data-sky="deep-night"] .sky-moon { width: 34px; height: 34px; }
+/* moon: a lit body, not a sticker — gradient surface + faint maria, a tight
+   silver corona at the limb, and a wide halo that lifts the sky around it */
+.sky-moon { position: absolute; left: var(--moon-x, 72%); top: var(--moon-y, 22%); width: 33px; height: 33px; overflow: visible; transform: translate(-50%, -50%); }
+.sky-moon::before { /* soft glow hugging the disc, fading into the sky — no ring */
+  content: ''; position: absolute; left: 50%; top: 50%; width: 380%; height: 380%;
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(closest-side,
+    oklch(0.94 0.02 250 / 0.20) 24%, oklch(0.89 0.035 262 / 0.10) 44%, transparent 72%);
+}
+.moon-body { filter: drop-shadow(0 0 0.4px oklch(0.95 0.02 250 / 0.5)); } /* faint limb glow */
+[data-sky="deep-night"] .sky-moon { width: 37px; height: 37px; }
+[data-sky="deep-night"] .sky-moon::before {
+  background: radial-gradient(closest-side,
+    oklch(0.95 0.025 250 / 0.24) 24%, oklch(0.90 0.04 262 / 0.12) 44%, transparent 72%);
+}
 
 /* clouds: blurred blobs, coprime drift durations, undersides from the palette */
 .sky-clouds { overflow: hidden; }
