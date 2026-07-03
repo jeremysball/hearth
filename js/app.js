@@ -16,6 +16,7 @@ import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
+import { initSky } from './sky.js';
 
 let current = 'home';
 const VIEWS = { home, trends, sleep, growth, profile, timeline };
@@ -94,6 +95,7 @@ export const router = {
     if (!$('#view')) { router.boot(); }
     $('#view').innerHTML = VIEWS[view]();
     initThumbs($('#view'));
+    initSky();
     if (view === 'timeline') initTimelineFilters();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
@@ -107,7 +109,7 @@ export const router = {
     else if (view === 'growth') enterGrowth();
   },
   refresh() {
-    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); if (current === 'timeline') initTimelineFilters(); }
+    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); initSky(); if (current === 'timeline') initTimelineFilters(); }
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
     $$('.tab[data-tab="profile"]').forEach((t) => {
       const badge = t.querySelector('.tab-badge');

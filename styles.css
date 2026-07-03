@@ -1315,3 +1315,6 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 }
 .hero-sky .hero-fg .state-lbl, .hero-sky .hero-fg .hero-sub { color: var(--hero-ink-soft, var(--soft)); }
 .hero-sky .hero-fg .sh-sweet-lbl, .hero-sky .hero-fg .sh-rail-cap, .hero-sky .hero-fg .timer .u { color: var(--hero-ink-soft, var(--muted)); }
+
+/* low battery: static painterly scene remains; drift slows to near-still */
+.sky-low-power .sky-cloud { animation-duration: 700s !important; }

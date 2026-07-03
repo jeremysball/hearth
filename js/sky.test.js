@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars, skyScene, moonSVG } = await import('./sky.js');
+const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars, skyScene, moonSVG, initSky, teardownSky } = await import('./sky.js');
 
 const EPOCH = Date.UTC(2000, 0, 6, 18, 14); // known new moon
 const DAY = 86400000;
@@ -230,4 +230,8 @@ test('moonSVG: geometrically correct terminator', () => {
   const wax = moonSVG({ frac: 0.1, illum: 0.1, waxing: true });
   assert.match(wax, /<rect x="0" width="12"/);
   assert.match(wax, /fill="#000"/);
+});
+
+test('initSky: no-ops safely without a DOM', () => {
+  assert.doesNotThrow(() => { initSky(); teardownSky(); });
 });
