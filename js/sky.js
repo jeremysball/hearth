@@ -238,14 +238,27 @@ export function moonSVG(phase) {
 
 // Blurred blob clusters drifting at coprime durations (the fire-a/b/c trick).
 // The negative delay is phase-locked to wall time so the once-a-minute
-// re-render resumes each cloud where it was instead of snapping it back.
+// re-render resumes each cloud where it was instead of snapping it back. Each
+// puff carries a real lit/shadow gradient (userSpaceOnUse, not the default
+// objectBoundingBox — that would give each ellipse its own independent
+// diagonal and the cloud would read as separate glowing dots instead of one
+// lit form) so light reads as falling across a volume, not a flat silhouette.
+// One gradient id per layer (c1/c2/c3) is enough uniqueness: only one cloud
+// layer of each class ever renders in a given card at once.
 function cloudsHTML(mode) {
   if (mode === 'deep-night') return '';
   const t = Date.now() / 1000;
-  const cloud = (cls, dur) =>
-    `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % dur).toFixed(1)}s">` +
-    `<svg viewBox="0 0 60 20" aria-hidden="true"><ellipse cx="18" cy="12" rx="16" ry="6"/>` +
-    `<ellipse cx="34" cy="9" rx="14" ry="5"/><ellipse cx="47" cy="13" rx="11" ry="4.5"/></svg></div>`;
+  const cloud = (cls, dur) => {
+    const gid = `cloud-${cls}`;
+    return `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % dur).toFixed(1)}s">` +
+      `<svg viewBox="0 0 60 20" aria-hidden="true"><defs>` +
+      `<linearGradient id="${gid}" x1="6" y1="4" x2="44" y2="17" gradientUnits="userSpaceOnUse">` +
+      `<stop offset="0%" stop-color="var(--cloud-hi)"/><stop offset="60%" stop-color="var(--cloud-mid)"/><stop offset="100%" stop-color="var(--cloud-sh)"/>` +
+      `</linearGradient></defs>` +
+      `<ellipse cx="18" cy="12" rx="16" ry="6" fill="url(#${gid})"/>` +
+      `<ellipse cx="34" cy="9" rx="14" ry="5" fill="url(#${gid})"/>` +
+      `<ellipse cx="47" cy="13" rx="11" ry="4.5" fill="url(#${gid})"/></svg></div>`;
+  };
   if (mode === 'night') return `<div class="sky-l sky-clouds">${cloud('c2', 251)}</div>`;
   return `<div class="sky-l sky-clouds">${cloud('c1', 173)}${cloud('c2', 251)}${cloud('c3', 293)}</div>`;
 }

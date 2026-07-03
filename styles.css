@@ -1281,17 +1281,39 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
     oklch(0.95 0.025 250 / 0.24) 24%, oklch(0.90 0.04 262 / 0.12) 44%, transparent 72%);
 }
 
-/* clouds: blurred blobs, coprime drift durations, undersides from the palette */
+/* clouds: a real lit/shadow gradient per puff (painted in JS), tied to the
+   sky's own palette via CSS relative-color so it tracks every state; coprime
+   drift durations as before. Opacity now lives on the layer (.c1/.c2/.c3),
+   not the svg, since the svg's fill is the gradient url, not a flat color. */
 .sky-clouds { overflow: hidden; }
-.sky-cloud { position: absolute; left: 0; width: 46%; animation: cloud-drift linear infinite; }
-.sky-cloud svg { width: 100%; filter: blur(5px); fill: var(--sky-glow); opacity: .55; }
-.sky-cloud.c1 { top: 12%; animation-duration: 173s; }
-.sky-cloud.c2 { top: 27%; width: 36%; animation-duration: 251s; }
-.sky-cloud.c2 svg { opacity: .4; }
-.sky-cloud.c3 { top: 5%; width: 30%; animation-duration: 293s; }
-.sky-cloud.c3 svg { opacity: .3; filter: blur(7px); }
+.sky-cloud {
+  position: absolute; left: 0; width: 46%; animation: cloud-drift linear infinite;
+  --cloud-hi: oklch(from var(--sky-horizon) min(l + 0.10, 0.92) c h);
+  --cloud-mid: var(--sky-horizon);
+  --cloud-sh: oklch(from var(--sky-zenith) calc(l - 0.04) c h);
+}
+.sky-cloud svg { width: 100%; filter: blur(3.5px); }
+.sky-cloud.c1 { top: 12%; animation-duration: 173s; opacity: .62; }
+.sky-cloud.c2 { top: 27%; width: 36%; animation-duration: 251s; opacity: .46; }
+.sky-cloud.c2 svg { filter: blur(4px); }
+.sky-cloud.c3 { top: 5%; width: 30%; animation-duration: 293s; opacity: .32; }
+.sky-cloud.c3 svg { filter: blur(5.5px); }
 @keyframes cloud-drift { from { transform: translateX(-50%); } to { transform: translateX(260%); } }
-[data-sky="golden"] .sky-cloud svg, [data-sky="twilight"] .sky-cloud svg { fill: var(--sky-horizon); }
+
+/* depth in the drift: the flat translateX scroll above still carries each
+   layer sideways, but the inner puff also breathes on a gentle vertical bob +
+   faint opacity swell. Nearer layers (c1) bob more and faster, far layers
+   (c3) barely stir. Compositor-only (transform + opacity), coprime-ish
+   periods so nothing beats in sync. Bob rides the svg child, drift the
+   parent, so the two transforms compose cleanly. */
+.sky-cloud svg { animation: cloud-bob 41s ease-in-out infinite alternate; }
+.sky-cloud.c1 svg { --bob: 4px; animation-duration: 37s; animation-delay: -6s; }
+.sky-cloud.c2 svg { --bob: 2.6px; animation-duration: 43s; animation-delay: -20s; }
+.sky-cloud.c3 svg { --bob: 1.6px; animation-duration: 53s; animation-delay: -33s; }
+@keyframes cloud-bob {
+  from { transform: translateY(calc(var(--bob, 3px) * -1)); opacity: .84; }
+  to { transform: translateY(var(--bob, 3px)); opacity: 1; }
+}
 
 /* particle canvas, grain, grade */
 .sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -1308,7 +1330,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sky-cloud, .star-b, .sun-rays { animation: none !important; }
+  .sky-cloud, .sky-cloud svg, .star-b, .sun-rays { animation: none !important; }
 }
 
 /* text contrast: dark scenes flip the hero ink light; the grade guarantees it */
@@ -1327,6 +1349,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 
 /* low battery: static painterly scene remains; drift slows to near-still */
 .sky-low-power .sky-cloud { animation-duration: 700s !important; }
+.sky-low-power .sky-cloud svg { animation-duration: 900s !important; }
 .sky-low-power .sun-rays { animation: none !important; }
 
 /* parallax: depth-scaled transform from tilt (stars 0.15 · clouds 0.3) */
