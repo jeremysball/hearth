@@ -3,7 +3,7 @@ import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './sleep.js';
-import { heroSky } from './sky.js';
+import { heroSky, emberGlow } from './sky.js';
 
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
@@ -149,14 +149,20 @@ function heroCard() {
   const elapsed = (now - since) / MIN;
   const t = fmt.durBig(elapsed);
   const asleep = st.state === 'asleep';
-  const N = 16; // coals in the ember bed
   const sky = heroSky(st, sp);
-  const open = (attrs) => `<div class="card hero hero-sky" data-sky-mode="${sky.mode}" ${attrs} style="${sky.cardStyle}">${sky.html}<div class="hero-fg">`;
+  const open = (attrs, glowHTML = '') => `<div class="card hero hero-sky" data-sky-mode="${sky.mode}" ${attrs} style="${sky.cardStyle}">${sky.html}${glowHTML}<div class="hero-fg">`;
   const close = `</div></div>`;
   const timer = `<div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>`;
+  // The ember-glow ground+field replaces the 16-coal bed: same warm ember
+  // material, now a continuous card-level glow instead of discrete tiles.
+  const emberGlowHTML = (x, glow) => `<div class="ember-glow">
+    <div class="ember-ground" style="background:linear-gradient(180deg, transparent 0%, ${glow.mid} 70%, ${glow.core} 100%); opacity:${glow.groundOp}"></div>
+    <div class="ember-field" style="left:calc(${x.toFixed(1)}% - ${glow.size / 2}%); width:${glow.size}%; height:${(glow.size * 0.55).toFixed(0)}%; background:radial-gradient(ellipse at center, ${glow.core} 0%, ${glow.mid} 40%, transparent 72%); opacity:${glow.fieldOp}"></div>
+  </div>`;
 
   // Night hours (midnight–6am): suppress the sweet spot rail entirely.
   // Overnight sleep is not a nap; arousals are circadian, not homeostatic.
+  // No coal bed today, so no ember-glow here either — untouched.
   if (sp.night) {
     if (asleep) {
       return open('data-state="asleep" data-night') + `
@@ -171,19 +177,15 @@ function heroCard() {
   }
 
   if (asleep) {
-    // Banked overnight embers: coals warm left→right by nap progress, low and slow.
+    // Banked ember: a low, steady glow that eases in as the nap settles —
+    // restful, not building tension like the awake state below.
     const pct = Math.min(100, (elapsed / 70) * 100);
-    let coals = '';
-    for (let i = 0; i < N; i++) {
-      const c = (i + 0.5) / N * 100;
-      coals += `<i class="coal ${c <= pct ? 'banked' : ''}"></i>`;
-    }
-    return open('data-state="asleep"') + `
+    const glow = emberGlow(0.22);
+    return open('data-state="asleep"', emberGlowHTML(pct, glow)) + `
       <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
       ${timer}
       <div class="hero-sub">Resting peacefully.</div>
       <div class="sh-rail-wrap">
-        <div class="sh-bed banked">${coals}</div>
         <div class="sh-rail-cap"><span>asleep</span><span>~70m typical nap</span></div>
       </div>` + close;
   }
@@ -198,16 +200,11 @@ function heroCard() {
       <div class="hero-sub">Watch for tired cues: yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>` + close;
   }
 
-  // Awake: the bed spans the awake window plus an hour of "overdue" runway,
-  // so the gold sweetspot band (at the window's end) and any overshoot past it
-  // both have room to show. Without the headroom the sweetspot sits exactly at
-  // 100% and never renders.
+  // Awake: the rail spans the awake window plus an hour of "overdue" runway,
+  // so the ember can still track progress after the sweetspot has passed.
   const sf = sp.from.getTime(), sto = sp.to.getTime();
   const railSpan = (sp.prediction.high + 60) * MIN;
   const nowPct = Math.min(100, (now - since) / railSpan * 100);
-  const sweetFromPct = Math.max(0, Math.min(100, (sf - since) / railSpan * 100));
-  const sweetToPct   = Math.max(0, Math.min(100, (sto - since) / railSpan * 100));
-  const bandWidth = Math.max(0, sweetToPct - sweetFromPct);
 
   let sweetState = 'before';
   if (now < sf - 15 * MIN) sweetState = 'before';
@@ -231,7 +228,7 @@ function heroCard() {
   }
 
   // Overdue begins only after the 30-min sweetspot grace window passes, so the
-  // gold "good nap window" and the twilight overtired state don't fire at once.
+  // gold "good nap window" and the overtired state don't fire at once.
   const pastWindow = now > sto;
   const healthy = elapsed < sp.prediction.low * 0.85
     ? 'Sleep pressure building: adenosine is rising.'
@@ -239,29 +236,20 @@ function heroCard() {
     : now <= sto ? 'Sleep pressure is high, good time for a nap.'
     : 'Past the usual window. Settling may take a little longer.';
 
-  // Ember bed: coals ignite left→right as the awake window elapses.
-  let coals = '';
-  for (let i = 0; i < N; i++) {
-    const c = (i + 0.5) / N * 100;
-    const isLit = c <= nowPct;
-    const isSweet = bandWidth > 0 && c >= sweetFromPct && c <= sweetToPct;
-    let cls;
-    if (pastWindow && isLit && c > sweetToPct) cls = 'toohot'; // overshoot past sweetspot burns too hot
-    else if (isSweet && isLit) cls = 'caught';                 // sweetspot coal that has caught, gold
-    else if (isSweet) cls = 'ready';                           // sweetspot ahead, dim gold target
-    else if (isLit) cls = 'lit';                               // ordinary lit ember
-    else cls = '';                                             // cool, unlit coal
-    const isFront = cls === 'lit' && (i + 1.5) / N * 100 > nowPct; // hottest leading ember
-    coals += `<i class="coal ${cls}${isFront ? ' front' : ''}"></i>`;
-  }
+  // Ember heat mirrors the same four pressure tiers as `healthy` above:
+  // building, approaching, in the sweetspot, then a hot overtired overshoot.
+  const heat = elapsed < sp.prediction.low * 0.85 ? 0.15
+    : now < sf ? 0.35
+    : now <= sto ? 0.55
+    : 0.95;
+  const glow = emberGlow(heat);
 
-  return open(`data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}`) + `
+  return open(`data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}`, emberGlowHTML(nowPct, glow)) + `
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
     <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">past window</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
     <div class="sh-sweet-lbl">${sweetLabel}${clockTimeNote}</div>
     <div class="sh-rail-wrap">
-      <div class="sh-bed">${coals}</div>
       <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}<button class="src-info-btn ${predictionSourceInfo(sp.prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button></span></div>
     </div>` + close;
 }
