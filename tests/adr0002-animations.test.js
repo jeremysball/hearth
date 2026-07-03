@@ -33,7 +33,10 @@ async function runSuite(base) {
     ];
     localStorage.setItem(KEY, JSON.stringify(st));
   });
-  await page.reload({ waitUntil: 'networkidle' });
+  // 'networkidle' can hang past Playwright's 30s timeout under CI load — the
+  // service worker's background activity around a reload keeps resetting its
+  // required 500ms-idle window. 'load' is deterministic regardless.
+  await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(500);
   await onboard(page);
   await page.waitForTimeout(300);

@@ -34,7 +34,15 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
       document.dispatchEvent(new Event('visibilitychange'));
     });
-    await page.waitForTimeout(2000);
+
+    // Poll instead of a fixed wait: syncOnce() drains the outbox before its
+    // pull fetch, and under CI load that round trip can take longer than a
+    // fixed 2s window even though it always completes well within a few
+    // seconds.
+    const deadline = Date.now() + 5000;
+    while (syncHits <= baseline && Date.now() < deadline) {
+      await page.waitForTimeout(50);
+    }
 
     check('visibilitychange triggers syncOnce', syncHits > baseline, `${syncHits - baseline} sync requests after foreground (baseline ${baseline})`);
   } catch (e) {
