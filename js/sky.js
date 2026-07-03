@@ -178,12 +178,28 @@ export function constellationSVG(birthdate) {
 }
 
 // ---------- scene svg pieces ----------
+// A lit sphere, not a flat disc + ring stack: an off-center specular highlight
+// (cx/cy offset in sunCore) and a warm rim read as a body catching light, not
+// a sticker. .sun-rays (a screen-blended conic gradient, positioned by CSS from
+// --sun-x/--sun-y) rides alongside for a hint of dancing light — see the
+// keyframes in styles.css. There is exactly one sun on screen at a time, so a
+// fixed gradient id (no per-render uniqueness) is safe.
 function sunSVG() {
-  return `<svg class="sky-sun" viewBox="0 0 24 24" aria-hidden="true">
-    <circle class="sun-halo s3" cx="12" cy="12" r="10"/>
-    <circle class="sun-halo s2" cx="12" cy="12" r="10"/>
-    <circle class="sun-halo s1" cx="12" cy="12" r="10"/>
-    <circle class="sun-disc" cx="12" cy="12" r="7"/>
+  return `<div class="sun-rays"></div><svg class="sky-sun" viewBox="0 0 24 24" aria-hidden="true">
+    <defs>
+      <radialGradient id="sunHalo-hero" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="var(--sky-glow)" stop-opacity="0.4"/>
+        <stop offset="45%" stop-color="var(--sky-glow)" stop-opacity="0.14"/>
+        <stop offset="100%" stop-color="var(--sky-glow)" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="sunCore-hero" cx="40%" cy="35%" r="72%">
+        <stop offset="0%" stop-color="oklch(0.99 0.02 95)"/>
+        <stop offset="42%" stop-color="oklch(0.95 0.09 80)"/>
+        <stop offset="100%" stop-color="oklch(0.78 0.16 55)"/>
+      </radialGradient>
+    </defs>
+    <circle cx="12" cy="12" r="16" fill="url(#sunHalo-hero)"/>
+    <circle class="sun-disc" cx="12" cy="12" r="7" fill="url(#sunCore-hero)" stroke="oklch(0.7 0.12 55 / .35)" stroke-width="0.4"/>
   </svg>`;
 }
 
