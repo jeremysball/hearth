@@ -15,8 +15,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       } catch {}
     });
     page.on('console', (msg) => console.log('  [browser]', msg.text()));
+    await page.addInitScript(() => localStorage.setItem('hearth.debug', '1'));
     await page.goto(srv.base + '/', { waitUntil: 'networkidle' });
-    await page.evaluate(() => localStorage.setItem('hearth.debug', '1'));
     await page.waitForTimeout(500);
     await onboard(page);
     // Let the initial sync + SSE connection settle. 2s is well under the
