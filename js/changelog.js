@@ -6,10 +6,12 @@ export const CHANGELOG = [
     version: '2026-07-03',
     features: [
       'Repainted the home sky as a real lit scene — a glowing sun, drifting sun-lit clouds, and a richer starfield replace the old flat shapes.',
-      'Replaced the sleep countdown\'s coal tiles with a single glowing ember that grows warmer as nap time approaches.'
+      'Replaced the sleep countdown\'s coal tiles with a single glowing ember that grows warmer as nap time approaches.',
+      'Clouds and sunlight in the hero sky now have real painted texture and shading.'
     ],
     fixes: [
-      'Fixed the birth constellation overlapping the moon at night.'
+      'Fixed the birth constellation overlapping the moon at night.',
+      'Fixed sleep timer text becoming hard to read against a hot ember glow, and cleaned up starfield glare.'
     ]
   },
   {
