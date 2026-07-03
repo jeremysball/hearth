@@ -1,5 +1,6 @@
 // sky.js: hero sky scene — the wake-window prediction rendered as a living
 // landscape. Pure math + scene HTML builder + sparse canvas particle engine.
+import { state } from './store.js';
 
 const DAY = 86400000;
 
@@ -279,4 +280,30 @@ export function skyScene(spec, { birthdate = '', name = '' } = {}) {
     <div class="sky-l sky-grade"></div>
     <svg width="0" height="0" style="position:absolute"><filter id="sky-grain-f"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7"/><feColorMatrix type="saturate" values="0"/></filter></svg>
   </div>`;
+}
+
+// ---------- hero integration ----------
+// Builds the scene from the hero's already-derived status. The light position
+// feeds --light-x/--light-y so card material highlights follow the sun/moon.
+export function heroSky(st, sp, now = new Date()) {
+  const elapsedMin = (now.getTime() - new Date(st.since).getTime()) / 60000;
+  const spec = sceneSpec({
+    asleep: st.state === 'asleep',
+    night: Boolean(sp.night),
+    newborn: Boolean(sp.newborn),
+    elapsedMin,
+    lowMin: sp.prediction ? sp.prediction.low : 0,
+    highMin: sp.prediction ? sp.prediction.high : 0,
+    hour: now.getHours(),
+    date: now,
+  });
+  const b = state().baby;
+  const sunUp = spec.sun && spec.sun.elevation > 0.02;
+  const lx = sunUp ? spec.sun.x * 100 : 72;
+  const ly = sunUp ? 62 - spec.sun.elevation * 46 : 22;
+  return {
+    mode: spec.mode,
+    html: skyScene(spec, { birthdate: b.birthdate, name: b.name }),
+    cardStyle: `--light-x:${lx.toFixed(1)}%;--light-y:${ly.toFixed(1)}%`,
+  };
 }

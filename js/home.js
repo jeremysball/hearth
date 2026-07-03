@@ -3,6 +3,7 @@ import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './sleep.js';
+import { heroSky } from './sky.js';
 
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
@@ -149,24 +150,24 @@ function heroCard() {
   const t = fmt.durBig(elapsed);
   const asleep = st.state === 'asleep';
   const N = 16; // coals in the ember bed
+  const sky = heroSky(st, sp);
+  const open = (attrs) => `<div class="card hero hero-sky" data-sky-mode="${sky.mode}" ${attrs} style="${sky.cardStyle}">${sky.html}<div class="hero-fg">`;
+  const close = `</div></div>`;
+  const timer = `<div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>`;
 
   // Night hours (midnight–6am): suppress the sweet spot rail entirely.
   // Overnight sleep is not a nap; arousals are circadian, not homeostatic.
   if (sp.night) {
     if (asleep) {
-      return `<div class="card hero" data-state="asleep" data-night>
-        <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+      return open('data-state="asleep" data-night') + `
         <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
-        <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-        <div class="hero-sub">Resting peacefully.</div>
-      </div>`;
+        ${timer}
+        <div class="hero-sub">Resting peacefully.</div>` + close;
     }
-    return `<div class="card hero" data-state="awake" data-night>
-      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+    return open('data-state="awake" data-night') + `
       <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Nighttime wake: circadian drive is still high. Settle back to sleep now.</div>
-    </div>`;
+      ${timer}
+      <div class="hero-sub">Nighttime wake: circadian drive is still high. Settle back to sleep now.</div>` + close;
   }
 
   if (asleep) {
@@ -177,28 +178,24 @@ function heroCard() {
       const c = (i + 0.5) / N * 100;
       coals += `<i class="coal ${c <= pct ? 'banked' : ''}"></i>`;
     }
-    return `<div class="card hero" data-state="asleep">
-      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+    return open('data-state="asleep"') + `
       <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
-      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
+      ${timer}
       <div class="hero-sub">Resting peacefully.</div>
       <div class="sh-rail-wrap">
         <div class="sh-bed banked">${coals}</div>
         <div class="sh-rail-cap"><span>asleep</span><span>~70m typical nap</span></div>
-      </div>
-    </div>`;
+      </div>` + close;
   }
 
   // Under 6 weeks: no reliable wake windows or circadian rhythm.
   // Show cue-following guidance instead of the sleep pressure rail.
   if (sp.newborn) {
     const name = esc(state().baby.name || 'Baby');
-    return `<div class="card hero" data-state="awake" data-newborn>
-      <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+    return open('data-state="awake" data-newborn') + `
       <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
-      <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>
-      <div class="hero-sub">Watch for tired cues: yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>
-    </div>`;
+      ${timer}
+      <div class="hero-sub">Watch for tired cues: yawning, eye-rubs, looking away. ${name} sets the rhythm now.</div>` + close;
   }
 
   // Awake: the bed spans the awake window plus an hour of "overdue" runway,
@@ -234,7 +231,7 @@ function heroCard() {
   }
 
   // Overdue begins only after the 30-min sweetspot grace window passes, so the
-  // gold "good nap window" and the red overtired state don't fire at once.
+  // gold "good nap window" and the twilight overtired state don't fire at once.
   const pastWindow = now > sto;
   const healthy = elapsed < sp.prediction.low * 0.85
     ? 'Sleep pressure building: adenosine is rising.'
@@ -258,8 +255,7 @@ function heroCard() {
     coals += `<i class="coal ${cls}${isFront ? ' front' : ''}"></i>`;
   }
 
-  return `<div class="card hero" data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}>
-    <svg class="hero-moon" aria-hidden="true"><use href="#moon-filled"></use></svg>
+  return open(`data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}`) + `
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
     <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">past window</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
@@ -267,8 +263,7 @@ function heroCard() {
     <div class="sh-rail-wrap">
       <div class="sh-bed">${coals}</div>
       <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}<button class="src-info-btn ${predictionSourceInfo(sp.prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button></span></div>
-    </div>
-  </div>`;
+    </div>` + close;
 }
 
 function icEdit(key) {
