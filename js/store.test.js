@@ -476,7 +476,7 @@ test('derive.regressionAlert returns null when baby age is far from any regressi
   if (alert !== null) {
     assert.ok(typeof alert.id === 'string');
     assert.ok(typeof alert.name === 'string');
-    assert.ok(typeof alert.mechanism === 'string');
+    assert.ok(typeof alert.text === 'string');
     assert.ok(Array.isArray(alert.onsetRange));
   }
 });

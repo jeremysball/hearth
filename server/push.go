@@ -36,6 +36,62 @@ func validateVAPIDEnv() error {
 	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with: cd server && go run ./cmd/vapidgen. Then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
 }
 
+type reminderSettings struct {
+	Bottle     bool   `json:"bottle"`
+	Meds       bool   `json:"meds"`
+	QuietStart string `json:"quietStart"`
+	QuietEnd   string `json:"quietEnd"`
+}
+
+func defaultReminderSettings() reminderSettings {
+	return reminderSettings{Bottle: true, Meds: true, QuietStart: "20:00", QuietEnd: "07:00"}
+}
+
+func parseReminderSettings(raw string) reminderSettings {
+	r := defaultReminderSettings()
+	if raw == "" || raw == "null" {
+		return r
+	}
+	json.Unmarshal([]byte(raw), &r)
+	if r.QuietStart == "" {
+		r.QuietStart = "20:00"
+	}
+	if r.QuietEnd == "" {
+		r.QuietEnd = "07:00"
+	}
+	return r
+}
+
+func parseHHMM(hhmm string) (h, m int) {
+	n, err := fmt.Sscanf(hhmm, "%d:%d", &h, &m)
+	if err != nil || n < 2 {
+		return
+	}
+	if h < 0 || h > 23 {
+		h = 0
+	}
+	if m < 0 || m > 59 {
+		m = 0
+	}
+	return
+}
+
+func isQuietAt(at time.Time, qStart, qEnd string) bool {
+	sh, sm := parseHHMM(qStart)
+	eh, em := parseHHMM(qEnd)
+	s := sh*60 + sm
+	e := eh*60 + em
+	hour, min, _ := at.Clock()
+	atMin := hour*60 + min
+	if s > e {
+		return atMin >= s || atMin < e
+	}
+	if s == e {
+		return false
+	}
+	return atMin >= s && atMin < e
+}
+
 func handlePushPublicKey() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		publicKey := os.Getenv("VAPID_PUBLIC_KEY")
@@ -91,13 +147,14 @@ type scheduledPush struct {
 }
 
 type pushScheduler struct {
-	db      *sql.DB
-	mu      sync.Mutex
-	pending map[string]scheduledPush
+	db       *sql.DB
+	mu       sync.Mutex
+	pending  map[string]scheduledPush
+	byFamily map[string]map[string]bool
 }
 
 func newPushScheduler(db *sql.DB) *pushScheduler {
-	return &pushScheduler{db: db, pending: map[string]scheduledPush{}}
+	return &pushScheduler{db: db, pending: map[string]scheduledPush{}, byFamily: map[string]map[string]bool{}}
 }
 
 func (s *pushScheduler) ScheduleFamily(familyID string) {
@@ -105,56 +162,101 @@ func (s *pushScheduler) ScheduleFamily(familyID string) {
 	if err != nil {
 		return
 	}
+	s.mu.Lock()
+	for k := range s.byFamily[familyID] {
+		if sp, ok := s.pending[k]; ok {
+			sp.timer.Stop()
+		}
+		delete(s.pending, k)
+	}
+	if s.byFamily[familyID] == nil {
+		s.byFamily[familyID] = map[string]bool{}
+	}
 	for _, rem := range reminders {
 		key := familyID + ":" + rem.Key + ":" + rem.At.UTC().Format(time.RFC3339Nano)
 		delay := time.Until(rem.At)
 		if delay < 0 {
 			delay = 0
 		}
+		s.byFamily[familyID][key] = true
+		s.scheduleLocked(familyID, key, rem, delay)
+	}
+	if len(s.byFamily[familyID]) == 0 {
+		delete(s.byFamily, familyID)
+	}
+	s.mu.Unlock()
+}
+
+func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, delay time.Duration) {
+	reminder := rem
+	s.pending[key] = scheduledPush{timer: time.AfterFunc(delay, func() {
+		s.sendFamily(familyID, reminder)
 		s.mu.Lock()
-		if old, ok := s.pending[key]; ok {
-			old.timer.Stop()
+		delete(s.pending, key)
+		delete(s.byFamily[familyID], key)
+		if len(s.byFamily[familyID]) == 0 {
+			delete(s.byFamily, familyID)
 		}
-		reminder := rem
-		s.pending[key] = scheduledPush{timer: time.AfterFunc(delay, func() {
-			s.sendFamily(familyID, reminder)
-			s.mu.Lock()
-			delete(s.pending, key)
-			s.mu.Unlock()
-		})}
 		s.mu.Unlock()
+	})}
+}
+
+func (s *pushScheduler) ScheduleAll() {
+	rows, err := s.db.Query(`SELECT id FROM families`)
+	if err != nil {
+		return
+	}
+	var familyIDs []string
+	for rows.Next() {
+		var familyID string
+		if err := rows.Scan(&familyID); err != nil {
+			continue
+		}
+		familyIDs = append(familyIDs, familyID)
+	}
+	rows.Close()
+	for _, familyID := range familyIDs {
+		s.ScheduleFamily(familyID)
 	}
 }
 
 func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error) {
 	var bottleInterval float64
-	var medsJSON string
-	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON); err != nil {
+	var medsJSON, remindersJSON string
+	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json, reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON, &remindersJSON); err != nil {
 		return nil, err
 	}
+	settings := parseReminderSettings(remindersJSON)
 	reminders := []pushReminder{}
-	var lastBottle string
-	if err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle); err == nil {
-		if t, err := time.Parse(time.RFC3339Nano, lastBottle); err == nil {
-			reminders = append(reminders, pushReminder{Key: "bottle", Title: "Bottle due", Body: "Time for the next feed.", At: t.Add(time.Duration(bottleInterval * float64(time.Hour)))})
+	if settings.Bottle {
+		var lastBottle string
+		if err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle); err == nil {
+			if t, err := time.Parse(time.RFC3339Nano, lastBottle); err == nil {
+				at := t.Add(time.Duration(bottleInterval * float64(time.Hour)))
+				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
+					reminders = append(reminders, pushReminder{Key: "bottle", Title: "Bottle due", Body: "Time for the next feed.", At: at})
+				}
+			}
 		}
 	}
-	var meds []struct {
-		ID     string  `json:"id"`
-		Name   string  `json:"name"`
-		Dose   string  `json:"dose"`
-		Unit   string  `json:"unit"`
-		EveryH float64 `json:"everyH"`
-	}
-	json.Unmarshal([]byte(medsJSON), &meds)
-	for _, med := range meds {
-		var lastMed string
-		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'medicine' AND json_extract(payload_json, '$.medId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, med.ID).Scan(&lastMed)
-		if err != nil {
-			continue
+	if settings.Meds {
+		var meds []struct {
+			ID     string  `json:"id"`
+			Name   string  `json:"name"`
+			Dose   string  `json:"dose"`
+			Unit   string  `json:"unit"`
+			EveryH float64 `json:"everyH"`
 		}
-		if t, err := time.Parse(time.RFC3339Nano, lastMed); err == nil {
-			reminders = append(reminders, pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: t.Add(time.Duration(med.EveryH * float64(time.Hour)))})
+		json.Unmarshal([]byte(medsJSON), &meds)
+		for _, med := range meds {
+			var lastMed string
+			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'medicine' AND json_extract(payload_json, '$.medId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, med.ID).Scan(&lastMed)
+			if err != nil {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339Nano, lastMed); err == nil {
+				reminders = append(reminders, pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: t.Add(time.Duration(med.EveryH * float64(time.Hour)))})
+			}
 		}
 	}
 	return reminders, nil
@@ -171,17 +273,22 @@ func (s *pushScheduler) sendFamily(familyID string, rem pushReminder) {
 	if err != nil {
 		return
 	}
-	defer rows.Close()
-	payload, _ := json.Marshal(map[string]string{"title": rem.Title, "body": rem.Body, "key": rem.Key})
+	type sub struct{ endpoint, p256dh, auth string }
+	var subs []sub
 	for rows.Next() {
 		var endpoint, p256dh, auth string
 		if err := rows.Scan(&endpoint, &p256dh, &auth); err != nil {
 			continue
 		}
-		resp, err := webpush.SendNotification(payload, &webpush.Subscription{Endpoint: endpoint, Keys: webpush.Keys{P256dh: p256dh, Auth: auth}}, &webpush.Options{Subscriber: subject, VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 60})
+		subs = append(subs, sub{endpoint, p256dh, auth})
+	}
+	rows.Close()
+	payload, _ := json.Marshal(map[string]string{"title": rem.Title, "body": rem.Body, "key": rem.Key})
+	for _, su := range subs {
+		resp, err := webpush.SendNotification(payload, &webpush.Subscription{Endpoint: su.endpoint, Keys: webpush.Keys{P256dh: su.p256dh, Auth: su.auth}}, &webpush.Options{Subscriber: subject, VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 86400})
 		if resp != nil {
 			if resp.StatusCode == http.StatusGone {
-				deletePushSubscription(s.db, endpoint)
+				deletePushSubscription(s.db, su.endpoint)
 			}
 			resp.Body.Close()
 		}

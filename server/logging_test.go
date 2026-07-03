@@ -26,7 +26,7 @@ func TestRequestLogIncludesOriginAuthContextAndGeo(t *testing.T) {
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)
 	token, _ := createSession(db, "cg", "fam")
-	mux := newRouter(db, newHub(), "", Config{})
+	mux := newRouter(db, newHub(), "", Config{}, newPushScheduler(db))
 
 	req := httptest.NewRequest("GET", "/api/me", nil)
 	req.Host = "hearth.example"
@@ -139,7 +139,7 @@ func TestRequestLogOmitsGeoFieldsWhenUnavailable(t *testing.T) {
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg','fam','A','Parent',?)`, now)
 	token, _ := createSession(db, "cg", "fam")
-	mux := newRouter(db, newHub(), "", Config{})
+	mux := newRouter(db, newHub(), "", Config{}, newPushScheduler(db))
 
 	req := httptest.NewRequest("GET", "/api/me", nil)
 	req.RemoteAddr = "198.51.100.10:12345"
