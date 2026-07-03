@@ -92,9 +92,19 @@ async function runSuite(base) {
   await closeOverlay();
 
   // ---------- vibrate is bounded: fling across many rows produces discrete ticks ----------
+  // Two things this assertion must not assume:
+  // 1. A hardcoded starting value — the amount field carries over whatever
+  //    the previous test left it at, so expectedRows is measured from the
+  //    value at open, not a literal 120.
+  // 2. Near-equality between buzz count and row count — maybeBuzz() (see
+  //    js/sheets.js) deliberately suppresses buzzing above velocity 0.9, so a
+  //    genuinely fast fling crosses most rows during the suppressed phase and
+  //    buzzes only as it settles. The real invariant is "discrete, not
+  //    per-frame" (an upper bound), not "one buzz per row".
   console.log('\n--- Haptics: fling fires per-row, not per-frame ---');
   await page.evaluate(() => { window.__vibrations = []; });
   const overlay3 = await openSpinner();
+  const startVal = await page.$eval('.stepper-val', el => parseFloat(el.dataset.value));
   const win3 = await (await overlay3.$('.spinner-window')).boundingBox();
   const cx3 = win3.x + win3.width / 2, cy3 = win3.y + win3.height / 2;
   await page.mouse.move(cx3, cy3 + 20);
@@ -105,9 +115,9 @@ async function runSuite(base) {
   await page.waitForTimeout(700);
   const flingVal = await page.$eval('.stepper-val', el => parseFloat(el.dataset.value));
   const vibsFling = await page.evaluate(() => window.__vibrations);
-  const expectedRows = Math.round(Math.abs(flingVal - 120) / 5); // step=5, default=120
-  console.log('  fling val:', flingVal, 'expected rows:', expectedRows, 'vibrations:', vibsFling.length);
-  check('fling haptic count matches row count (within 1)', Math.abs(vibsFling.length - expectedRows) <= 1, `${vibsFling.length} vs ${expectedRows}`);
+  const expectedRows = Math.round(Math.abs(flingVal - startVal) / 5); // step=5
+  console.log('  start val:', startVal, 'fling val:', flingVal, 'expected rows:', expectedRows, 'vibrations:', vibsFling.length);
+  check('fling haptic count is discrete, not per-frame (<= row count, > 0)', vibsFling.length > 0 && vibsFling.length <= expectedRows, `${vibsFling.length} vs <= ${expectedRows}`);
   await closeOverlay();
 
   const exitCode = tally() === 0 ? 0 : 1;
