@@ -1061,49 +1061,11 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* Past-window "nap overdue" flag next to timer */
 .overtired-flag { font-family: var(--font-sans); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: oklch(0.55 0.18 25); background: oklch(0.96 0.06 25 / 0.30); border: 1px solid oklch(0.70 0.14 25 / 0.35); border-radius: 8px; padding: 3px 8px; vertical-align: middle; margin-left: 10px; }
 [data-mode="dark"] .overtired-flag { color: oklch(0.82 0.14 25); background: oklch(0.38 0.10 25 / 0.30); border-color: oklch(0.60 0.12 25 / 0.40); }
-/* Hero card pulses red border when overtired */
-.card.hero[data-overtired] { animation: overtired-pulse 3s ease-in-out infinite; }
-@keyframes overtired-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.18 25 / 0); }
-  50% { box-shadow: 0 0 0 2px oklch(0.65 0.18 25 / 0.45), 0 4px 20px oklch(0.60 0.15 25 / 0.18); }
-}
-@media (prefers-reduced-motion: reduce) { .card.hero[data-overtired] { animation: none; } }
 /* Cue 2: hero card border + glow blooms during sweetspot */
 .card.hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16); }
 .card.hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28); }
 .card.hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12); }
-/* ---- hero card: moon glow ---- */
 .card.hero { position: relative; }
-.card.hero::before {
-  content: '';
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none; border-radius: inherit;
-  background:
-    radial-gradient(ellipse 55% 60% at 92% 20%, oklch(0.90 0.07 292 / 0.38), transparent 62%),
-    radial-gradient(ellipse 30% 75% at 99% 65%, oklch(0.76 0.10 270 / 0.20), transparent 66%);
-  mix-blend-mode: soft-light;
-  opacity: 0.6; transition: opacity 1s ease;
-}
-/* real crescent moon, top-right, sitting in the glow */
-.card.hero .hero-moon {
-  position: absolute; top: 15px; right: 17px;
-  width: 30px; height: 30px; z-index: 1;
-  color: oklch(0.85 0.11 90);
-  opacity: 0.95; pointer-events: none;
-  filter: drop-shadow(0 1px 1px oklch(0.55 0.09 60 / 0.25)) drop-shadow(0 0 10px oklch(0.9 0.1 92 / 0.45));
-}
-[data-mode="dark"] .card.hero .hero-moon {
-  color: oklch(0.93 0.08 95);
-  filter: drop-shadow(0 0 14px oklch(0.9 0.12 90 / 0.8));
-}
-[data-mode="dark"] .card.hero::before { mix-blend-mode: screen; opacity: 0.78; }
-[data-sweet="entering"] .card.hero::before,
-.card.hero[data-sweet="entering"]::before { opacity: 0.78; }
-.card.hero[data-sweet="now"]::before { opacity: 1; }
-.card.hero[data-sweet="passing"]::before { opacity: 0.85; }
-[data-mode="dark"] .card.hero[data-sweet="now"]::before { opacity: 1; }
-.card.hero > * { position: relative; z-index: 1; }
-.card.hero::before { z-index: 0; }
 
 /* ---- glassmorphism ---- */
 @supports (backdrop-filter: blur(1px)) {
@@ -1339,3 +1301,17 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @media (prefers-reduced-motion: reduce) {
   .sky-cloud, .star-b { animation: none !important; }
 }
+
+/* text contrast: dark scenes flip the hero ink light; the grade guarantees it */
+.hero-sky[data-sky-mode="golden"] .hero-fg, .hero-sky[data-sky-mode="twilight"] .hero-fg,
+.hero-sky[data-sky-mode="night"] .hero-fg, .hero-sky[data-sky-mode="deep-night"] .hero-fg {
+  --hero-ink: oklch(0.97 0.015 90);
+  --hero-ink-soft: oklch(0.90 0.03 85 / 0.94);
+}
+.hero-sky .hero-fg .timer { color: var(--hero-ink, inherit); }
+.hero-sky[data-sky-mode="golden"] .hero-fg .timer, .hero-sky[data-sky-mode="twilight"] .hero-fg .timer,
+.hero-sky[data-sky-mode="night"] .hero-fg .timer, .hero-sky[data-sky-mode="deep-night"] .hero-fg .timer {
+  text-shadow: 0 1px 10px oklch(0.22 0.04 300 / 0.55);
+}
+.hero-sky .hero-fg .state-lbl, .hero-sky .hero-fg .hero-sub { color: var(--hero-ink-soft, var(--soft)); }
+.hero-sky .hero-fg .sh-sweet-lbl, .hero-sky .hero-fg .sh-rail-cap, .hero-sky .hero-fg .timer .u { color: var(--hero-ink-soft, var(--muted)); }
