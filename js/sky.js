@@ -185,3 +185,98 @@ export function constellationSVG(birthdate) {
   const pts = c.pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="0.4"/>`).join('');
   return `<svg class="sky-constellation" viewBox="0 0 24 14" aria-hidden="true">${lines}${pts}</svg>`;
 }
+
+// ---------- scene svg pieces ----------
+function sunSVG() {
+  return `<svg class="sky-sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle class="sun-halo s3" cx="12" cy="12" r="10"/>
+    <circle class="sun-halo s2" cx="12" cy="12" r="10"/>
+    <circle class="sun-halo s1" cx="12" cy="12" r="10"/>
+    <circle class="sun-disc" cx="12" cy="12" r="7"/>
+  </svg>`;
+}
+
+// Real-phase moon: full disc + mask. A half-rect hides the dark side; the
+// terminator ellipse bows into the lit half (black, crescent) or the dark
+// half (white, gibbous). rx = r|cos(2pi*frac)| gives the correct bow.
+export function moonSVG(phase) {
+  const { frac, illum, waxing } = phase;
+  const r = 10, c = 12;
+  const rx = (Math.abs(Math.cos(frac * 2 * Math.PI)) * r).toFixed(2);
+  const bow = illum >= 0.5 ? '#fff' : '#000';
+  const darkX = waxing ? 0 : c; // waxing: lit on the right, dark half on the left
+  return `<svg class="sky-moon" viewBox="0 0 24 24" aria-hidden="true">
+    <defs><mask id="sky-moon-mask">
+      <rect width="24" height="24" fill="#fff"/>
+      <rect x="${darkX}" width="12" height="24" fill="#000"/>
+      <ellipse cx="${c}" cy="${c}" rx="${rx}" ry="${r}" fill="${bow}"/>
+    </mask></defs>
+    <circle class="moon-halo h3" cx="${c}" cy="${c}" r="${r}"/>
+    <circle class="moon-halo h2" cx="${c}" cy="${c}" r="${r}"/>
+    <circle class="moon-halo h1" cx="${c}" cy="${c}" r="${r}"/>
+    <circle class="moon-disc" cx="${c}" cy="${c}" r="${r}" mask="url(#sky-moon-mask)"/>
+  </svg>`;
+}
+
+// The signature element: a tiny silhouette house with one warm lit window.
+function houseSVG() {
+  return `<svg class="sky-house" viewBox="0 0 20 14" aria-hidden="true">
+    <rect class="house-chimney" x="13.2" y="1.6" width="1.8" height="4"/>
+    <path class="house-body" d="M2.5 6.5 L10 1 L17.5 6.5 V13.5 H2.5 Z"/>
+    <rect class="house-window" x="8.5" y="7.6" width="3" height="3.6" rx="0.5"/>
+  </svg>`;
+}
+
+// Blurred blob clusters drifting at coprime durations (the fire-a/b/c trick).
+// The negative delay is phase-locked to wall time so the once-a-minute
+// re-render resumes each cloud where it was instead of snapping it back.
+function cloudsHTML(mode) {
+  if (mode === 'deep-night') return '';
+  const t = Date.now() / 1000;
+  const cloud = (cls, dur) =>
+    `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % dur).toFixed(1)}s">` +
+    `<svg viewBox="0 0 60 20" aria-hidden="true"><ellipse cx="18" cy="12" rx="16" ry="6"/>` +
+    `<ellipse cx="34" cy="9" rx="14" ry="5"/><ellipse cx="47" cy="13" rx="11" ry="4.5"/></svg></div>`;
+  if (mode === 'night') return `<div class="sky-l sky-clouds">${cloud('c2', 251)}</div>`;
+  return `<div class="sky-l sky-clouds">${cloud('c1', 173)}${cloud('c2', 251)}${cloud('c3', 293)}</div>`;
+}
+
+// ---------- scene builder ----------
+export function skyScene(spec, { birthdate = '', name = '' } = {}) {
+  const pal = skyPalette(spec.elevation);
+  const vars = [
+    `--sky-zenith:${oklch(pal.zenith)}`,
+    `--sky-horizon:${oklch(pal.horizon)}`,
+    `--sky-glow:${oklch(pal.glow)}`,
+    `--ridge-far:${oklch(ridgeColor(pal.horizon, 0))}`,
+    `--ridge-near:${oklch(ridgeColor(pal.horizon, 1))}`,
+  ];
+  let bodies = '';
+  if (spec.sun && spec.sun.elevation > -0.05) {
+    vars.push(
+      `--sun-x:${(spec.sun.x * 100).toFixed(1)}%`,
+      `--sun-y:${(62 - spec.sun.elevation * 46).toFixed(1)}%`,
+      `--sun-warm:${Math.min(1, Math.max(0, 1 - spec.sun.elevation)).toFixed(2)}`
+    );
+    bodies += sunSVG();
+  }
+  if (spec.moon) {
+    vars.push(`--moon-x:${spec.mode === 'deep-night' ? '58%' : '72%'}`, '--moon-y:22%');
+    bodies += moonSVG(spec.moon);
+  }
+  const stars = spec.stars
+    ? `<div class="sky-l sky-stars"><i class="sky-starfield" style="box-shadow:${starField(birthdate || name || 'hearth')}"></i>${brightStars()}${spec.moon ? constellationSVG(birthdate) : ''}</div>`
+    : '';
+  return `<div class="sky" data-sky="${spec.mode}" aria-hidden="true" style="${vars.join(';')}">
+    <div class="sky-l sky-grad"></div>
+    ${stars}
+    ${bodies}
+    ${cloudsHTML(spec.mode)}
+    <div class="sky-ridge-far"><svg viewBox="0 0 360 80" preserveAspectRatio="none"><path d="M0 38 Q45 20 95 32 T200 28 T300 36 T360 30 V80 H0 Z"/></svg></div>
+    <div class="sky-ridge-near"><svg viewBox="0 0 360 80" preserveAspectRatio="none"><path d="M0 52 Q60 34 130 46 T250 42 T360 50 V80 H0 Z"/></svg>${houseSVG()}</div>
+    <canvas class="sky-canvas"></canvas>
+    <div class="sky-l sky-grain"></div>
+    <div class="sky-l sky-grade"></div>
+    <svg width="0" height="0" style="position:absolute"><filter id="sky-grain-f"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7"/><feColorMatrix type="saturate" values="0"/></filter></svg>
+  </div>`;
+}

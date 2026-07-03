@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars } = await import('./sky.js');
+const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars, skyScene, moonSVG } = await import('./sky.js');
 
 const EPOCH = Date.UTC(2000, 0, 6, 18, 14); // known new moon
 const DAY = 86400000;
@@ -179,4 +179,55 @@ test('brightStars: five staggered twinkle stars', () => {
   const html = brightStars();
   assert.equal((html.match(/star-b/g) || []).length, 5);
   assert.match(html, /animation-delay/);
+});
+
+test('skyScene: day scene has sun, ridges, house, canvas, grain, grade — no moon/stars', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 100 });
+  const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
+  assert.match(html, /data-sky="day"/);
+  for (const cls of ['sky-grad', 'sky-sun', 'sky-ridge-far', 'sky-ridge-near',
+    'house-window', 'sky-canvas', 'sky-grain', 'sky-grade', 'sky-cloud']) {
+    assert.ok(html.includes(cls), 'missing ' + cls);
+  }
+  assert.ok(!html.includes('sky-moon'));
+  assert.ok(!html.includes('sky-starfield'));
+  assert.match(html, /--sun-x:/);
+});
+
+test('skyScene: night scene has moon, star field, constellation — no sun', () => {
+  const spec = sceneSpec({ ...specBase, asleep: true });
+  const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
+  assert.match(html, /data-sky="night"/);
+  assert.ok(html.includes('sky-moon'));
+  assert.ok(html.includes('sky-starfield'));
+  assert.ok(html.includes('sky-constellation'));
+  assert.ok(!html.includes('sky-sun'));
+});
+
+test('skyScene: twilight keeps first stars but no moon, sun below horizon hidden', () => {
+  const spec = sceneSpec({ ...specBase, elapsedMin: 200 });
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.match(html, /data-sky="twilight"/);
+  assert.ok(html.includes('sky-starfield'));
+  assert.ok(!html.includes('sky-moon'));
+  assert.ok(!html.includes('sky-sun')); // elevation < -0.05: sun fully set
+});
+
+test('skyScene: deep-night drops clouds (sparser motion)', () => {
+  const spec = sceneSpec({ ...specBase, asleep: true, hour: 3 });
+  const html = skyScene(spec, { birthdate: '', name: '' });
+  assert.ok(!html.includes('sky-cloud'));
+});
+
+test('moonSVG: geometrically correct terminator', () => {
+  // First quarter: terminator ellipse collapses to rx 0.
+  const fq = moonSVG({ frac: 0.25, illum: 0.5, waxing: true });
+  assert.match(fq, /rx="0\.00"/);
+  // Full moon: gibbous bow (white ellipse restores the dark half).
+  const full = moonSVG({ frac: 0.5, illum: 1, waxing: false });
+  assert.match(full, /fill="#fff"/);
+  // Waxing crescent: dark side on the left, crescent bow is black.
+  const wax = moonSVG({ frac: 0.1, illum: 0.1, waxing: true });
+  assert.match(wax, /<rect x="0" width="12"/);
+  assert.match(wax, /fill="#000"/);
 });

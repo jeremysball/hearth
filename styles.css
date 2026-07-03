@@ -1256,3 +1256,86 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .regression-banner {
   border-left: 3px solid var(--accent);
 }
+
+/* ---- hero sky scene ---- */
+/* The card is a window: the scene fills it edge to edge behind .hero-fg. */
+.card.hero.hero-sky { display: flex; flex-direction: column; min-height: 240px; overflow: hidden; }
+.card.hero.hero-sky .hero-fg { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
+.card.hero.hero-sky .hero-fg .sh-rail-wrap { margin-top: auto; }
+.sky { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; container-type: size; pointer-events: none; }
+.sky-l { position: absolute; inset: 0; }
+.sky-grad { background: linear-gradient(180deg, var(--sky-zenith) 0%, var(--sky-horizon) 56%, var(--sky-glow) 72%, var(--sky-horizon) 100%); }
+
+/* stars: one box-shadow field + a few bright twinklers + birth constellation */
+.sky-starfield { position: absolute; top: 0; left: 0; width: 2px; height: 2px; border-radius: 50%; }
+.star-b { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: oklch(0.97 0.02 90); animation: star-twinkle 3.4s ease-in-out infinite; }
+@keyframes star-twinkle { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+.sky-constellation { position: absolute; left: 56%; top: 8%; width: 28%; }
+.sky-constellation line { stroke: oklch(0.93 0.02 90 / 0.08); stroke-width: 0.12; }
+.sky-constellation circle { fill: oklch(0.96 0.02 90 / 0.6); }
+[data-sky="twilight"] .sky-stars { opacity: .5; }
+
+/* sun: disc + stacked bloom halos; grows and warms at low elevation */
+.sky-sun { position: absolute; left: var(--sun-x, 50%); top: var(--sun-y, 30%); width: 36px; height: 36px; overflow: visible; transform: translate(-50%, -50%) scale(calc(1 + var(--sun-warm, 0) * 0.45)); }
+.sun-disc { fill: oklch(0.98 0.05 90); }
+[data-sky="morning"] .sun-disc, [data-sky="golden"] .sun-disc { fill: oklch(0.95 0.09 75); }
+.sun-halo { fill: var(--sky-glow); transform-origin: 12px 12px; }
+.sun-halo.s1 { opacity: .45; transform: scale(1.3); }
+.sun-halo.s2 { opacity: .22; transform: scale(1.9); }
+.sun-halo.s3 { opacity: .10; transform: scale(2.8); }
+
+/* moon: silver through the glass, 3 stacked halo layers */
+.sky-moon { position: absolute; left: var(--moon-x, 72%); top: var(--moon-y, 22%); width: 30px; height: 30px; overflow: visible; transform: translate(-50%, -50%); color: oklch(0.93 0.02 250); }
+.moon-disc { fill: currentColor; }
+.moon-halo { fill: oklch(0.90 0.04 260); transform-origin: 12px 12px; }
+.moon-halo.h1 { opacity: .28; transform: scale(1.35); }
+.moon-halo.h2 { opacity: .14; transform: scale(1.9); }
+.moon-halo.h3 { opacity: .07; transform: scale(2.7); }
+[data-sky="deep-night"] .sky-moon { width: 34px; height: 34px; }
+
+/* clouds: blurred blobs, coprime drift durations, undersides from the palette */
+.sky-clouds { overflow: hidden; }
+.sky-cloud { position: absolute; left: 0; width: 46%; animation: cloud-drift linear infinite; }
+.sky-cloud svg { width: 100%; filter: blur(5px); fill: var(--sky-glow); opacity: .55; }
+.sky-cloud.c1 { top: 12%; animation-duration: 173s; }
+.sky-cloud.c2 { top: 27%; width: 36%; animation-duration: 251s; }
+.sky-cloud.c2 svg { opacity: .4; }
+.sky-cloud.c3 { top: 5%; width: 30%; animation-duration: 293s; }
+.sky-cloud.c3 svg { opacity: .3; filter: blur(7px); }
+@keyframes cloud-drift { from { transform: translateX(-50%); } to { transform: translateX(260%); } }
+[data-sky="golden"] .sky-cloud svg, [data-sky="twilight"] .sky-cloud svg { fill: var(--sky-horizon); }
+
+/* ridgelines: layered hills with atmospheric perspective; static layers */
+.sky-ridge-far, .sky-ridge-near { position: absolute; left: -2%; right: -2%; }
+.sky-ridge-far { bottom: 15%; height: 32%; }
+.sky-ridge-near { bottom: -1%; height: 30%; }
+.sky-ridge-far svg, .sky-ridge-near svg { width: 100%; height: 100%; display: block; }
+.sky-ridge-far path { fill: var(--ridge-far); }
+.sky-ridge-near path { fill: var(--ridge-near); }
+
+/* the hearth-light: one warm lit window on the near ridge */
+.sky-house { position: absolute; left: 21%; bottom: 38%; width: 22px; height: 15px; }
+.house-body, .house-chimney { fill: var(--ridge-near); filter: brightness(0.72); }
+.house-window { fill: oklch(0.90 0.13 80); filter: drop-shadow(0 0 3px oklch(0.86 0.14 75 / 0.75)); }
+[data-sky="twilight"] .house-window, [data-sky="night"] .house-window, [data-sky="deep-night"] .house-window {
+  fill: oklch(0.93 0.15 80);
+  filter: drop-shadow(0 0 6px oklch(0.88 0.15 75 / 0.95));
+}
+
+/* particle canvas, grain, grade */
+.sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sky-grain { filter: url(#sky-grain-f); opacity: 0.05; mix-blend-mode: overlay; background: #808080; }
+.sky-grade {
+  background:
+    radial-gradient(120% 100% at 50% 118%, oklch(0.35 0.06 45 / 0.22), transparent 55%),
+    radial-gradient(140% 120% at 50% -20%, transparent 60%, oklch(0.30 0.04 300 / 0.16) 100%);
+}
+[data-sky="golden"] .sky-grade, [data-sky="twilight"] .sky-grade, [data-sky="night"] .sky-grade, [data-sky="deep-night"] .sky-grade {
+  background:
+    linear-gradient(180deg, oklch(0.18 0.03 300 / 0.30), transparent 52%),
+    radial-gradient(120% 100% at 50% 118%, oklch(0.30 0.05 40 / 0.25), transparent 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-cloud, .star-b { animation: none !important; }
+}
