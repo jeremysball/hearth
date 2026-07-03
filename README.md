@@ -2,11 +2,26 @@
   <img src="icons/icon-512.png" width="128" height="128" alt="Hearth" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/go-1.26-00ADD8.svg" alt="Go 1.26" />
+  <img src="https://img.shields.io/badge/PWA-ready-5A0FC8.svg" alt="PWA" />
+  <img src="https://img.shields.io/badge/self--hosted-yes-success.svg" alt="Self-hosted" />
+  <img src="https://img.shields.io/badge/no%20cloud-private-critical.svg" alt="No cloud" />
+</p>
+
 # Hearth
 
 A free, private baby tracker. No accounts, no ads, no cloud.
 
 Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your device: install it as a PWA and it works offline.
+
+## Screenshots
+
+| | Light | Dark |
+| --- | --- | --- |
+| Hero card | ![Hero card, light mode](screenshots/readme-hero-light.png) | ![Hero card, dark mode](screenshots/readme-hero-dark.png) |
+| Logging a bottle | ![Bottle logging modal, light mode](screenshots/readme-logging-light.png) | ![Bottle logging modal, dark mode](screenshots/readme-logging-dark.png) |
 
 ## What it tracks
 
