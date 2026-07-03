@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec } = await import('./sky.js');
+const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec, starField, zodiacSign, constellationSVG, brightStars } = await import('./sky.js');
 
 const EPOCH = Date.UTC(2000, 0, 6, 18, 14); // known new moon
 const DAY = 86400000;
@@ -146,4 +146,37 @@ test('sceneSpec: newborn gets a fixed gentle mid-morning sky', () => {
   assert.equal(s.mode, 'newborn');
   assert.equal(s.sun.elevation, 0.55);
   assert.equal(s.stars, false);
+});
+
+test('starField: deterministic for a given seed', () => {
+  assert.equal(starField('2026-01-01'), starField('2026-01-01'));
+  assert.notEqual(starField('2026-01-01'), starField('2025-06-15'));
+});
+
+test('starField: exactly 90 stars', () => {
+  // oklch colors are space-separated, so commas only delimit shadows.
+  assert.equal(starField('x').split(',').length, 90);
+});
+
+test('zodiacSign: known boundaries', () => {
+  assert.equal(zodiacSign('2026-01-01'), 'capricorn');
+  assert.equal(zodiacSign('2025-12-25'), 'capricorn');
+  assert.equal(zodiacSign('2025-08-01'), 'leo');
+  assert.equal(zodiacSign('2025-03-21'), 'aries');
+  assert.equal(zodiacSign('2025-03-20'), 'pisces');
+  assert.equal(zodiacSign(''), null);
+});
+
+test('constellationSVG: renders hairline lines and points', () => {
+  const svg = constellationSVG('2026-01-01');
+  assert.match(svg, /class="sky-constellation"/);
+  assert.ok(svg.includes('<line'));
+  assert.ok(svg.includes('<circle'));
+  assert.equal(constellationSVG(''), '');
+});
+
+test('brightStars: five staggered twinkle stars', () => {
+  const html = brightStars();
+  assert.equal((html.match(/star-b/g) || []).length, 5);
+  assert.match(html, /animation-delay/);
 });
