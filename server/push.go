@@ -178,11 +178,6 @@ func (s *pushScheduler) ScheduleFamily(familyID string) {
 		if delay < 0 {
 			delay = 0
 		}
-		if sp, ok := s.pending[key]; ok {
-			// already scheduled
-			_ = sp
-			continue
-		}
 		s.byFamily[familyID][key] = true
 		s.scheduleLocked(familyID, key, rem, delay)
 	}

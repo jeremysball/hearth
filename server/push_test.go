@@ -198,6 +198,9 @@ func TestScheduleAllEnumeratesAllFamilies(t *testing.T) {
 	s.mu.Lock()
 	gotA := len(s.byFamily["famA"]) > 0
 	gotB := len(s.byFamily["famB"]) > 0
+	for _, sp := range s.pending {
+		sp.timer.Stop()
+	}
 	s.mu.Unlock()
 	if !gotA || !gotB {
 		t.Fatalf("ScheduleAll should arm both families, got famA=%v famB=%v", gotA, gotB)
