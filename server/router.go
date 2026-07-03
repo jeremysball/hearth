@@ -70,6 +70,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
 	mux.HandleFunc("GET /api/push/public-key", requireAuth(db, handlePushPublicKey()))
 	mux.HandleFunc("POST /api/push/subscribe", requireAuth(db, handlePushSubscribe(db)))
+	mux.HandleFunc("POST /api/push/test", requireAuth(db, handlePushTest(pushes)))
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
 	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
