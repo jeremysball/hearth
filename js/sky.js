@@ -72,3 +72,35 @@ export function ridgeColor(horizon, depth) {
     horizon[2],
   ];
 }
+
+// ---------- scene state ----------
+// Maps hero status to a scene descriptor. All inputs are plain values so the
+// mapping is unit-testable without the store.
+export function sceneSpec({ asleep, night, newborn, elapsedMin, lowMin, highMin, hour, date }) {
+  const deep = hour < 6; // circadian deep night: midnight-6am
+  if (asleep || night) {
+    return {
+      mode: deep ? 'deep-night' : 'night',
+      sun: null, moon: moonPhase(date),
+      elevation: deep ? -0.6 : -0.45,
+      stars: true, fireflies: false,
+    };
+  }
+  if (newborn) {
+    return {
+      mode: 'newborn',
+      sun: { frac: 0.35, x: 0.63, elevation: 0.55 }, moon: null,
+      elevation: 0.55, stars: false, fireflies: false,
+    };
+  }
+  const sun = sunPosition(elapsedMin, highMin);
+  let mode;
+  if (elapsedMin > highMin) mode = 'twilight';
+  else if (elapsedMin >= lowMin - 15) mode = 'golden';
+  else if (elapsedMin < lowMin * 0.5) mode = 'morning';
+  else mode = 'day';
+  return {
+    mode, sun, moon: null, elevation: sun.elevation,
+    stars: mode === 'twilight', fireflies: mode === 'golden',
+  };
+}
