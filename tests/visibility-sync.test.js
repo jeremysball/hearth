@@ -23,9 +23,17 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.waitForTimeout(2000);
     const baseline = syncHits;
 
-    // Dispatch a synthetic visibilitychange. The page is already visible,
-    // so the listener's guard passes and syncOnce fires.
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    // Dispatch a synthetic visibilitychange. The app's listener guards on
+    // `document.visibilityState === 'visible'` (js/app.js), but headless
+    // Chromium's real visibilityState tracks browser/OS-level occlusion —
+    // a page with no focused window can report 'hidden' even though nothing
+    // in the test ever backgrounded it. A dispatched Event can't change that
+    // read-only property, so stub it before dispatching to make the guard
+    // deterministic instead of dependent on the runner's window-focus state.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
     await page.waitForTimeout(2000);
 
     check('visibilitychange triggers syncOnce', syncHits > baseline, `${syncHits - baseline} sync requests after foreground (baseline ${baseline})`);
