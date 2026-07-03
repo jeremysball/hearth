@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor } = await import('./sky.js');
+const { moonPhase, sunPosition, skyPalette, oklch, ridgeColor, sceneSpec } = await import('./sky.js');
 
 const EPOCH = Date.UTC(2000, 0, 6, 18, 14); // known new moon
 const DAY = 86400000;
@@ -92,4 +92,58 @@ test('oklch: formats with and without alpha', () => {
 test('ridgeColor: near ridge darker than far (atmospheric perspective)', () => {
   const hz = [0.8, 0.1, 60];
   assert.ok(ridgeColor(hz, 1)[0] < ridgeColor(hz, 0)[0]);
+});
+
+const specBase = {
+  asleep: false, night: false, newborn: false,
+  elapsedMin: 0, lowMin: 140, highMin: 170,
+  hour: 13, date: new Date('2026-07-03T13:00:00'),
+};
+
+test('sceneSpec: early window is morning', () => {
+  const s = sceneSpec({ ...specBase, elapsedMin: 20 }); // < low * 0.5
+  assert.equal(s.mode, 'morning');
+  assert.ok(s.sun && s.sun.elevation > 0);
+  assert.equal(s.moon, null);
+});
+
+test('sceneSpec: mid window is day', () => {
+  assert.equal(sceneSpec({ ...specBase, elapsedMin: 100 }).mode, 'day');
+});
+
+test('sceneSpec: within 15m of the low edge is golden (sweetspot)', () => {
+  const s = sceneSpec({ ...specBase, elapsedMin: 130 });
+  assert.equal(s.mode, 'golden');
+  assert.equal(s.fireflies, true);
+});
+
+test('sceneSpec: past the window high is twilight with first stars', () => {
+  const s = sceneSpec({ ...specBase, elapsedMin: 180 });
+  assert.equal(s.mode, 'twilight');
+  assert.ok(s.sun.elevation < 0);
+  assert.equal(s.stars, true);
+});
+
+test('sceneSpec: asleep at any daytime hour is night with a real moon', () => {
+  const s = sceneSpec({ ...specBase, asleep: true, elapsedMin: 30 });
+  assert.equal(s.mode, 'night');
+  assert.equal(s.sun, null);
+  assert.ok(s.moon && typeof s.moon.frac === 'number');
+  assert.equal(s.stars, true);
+});
+
+test('sceneSpec: circadian night (12-6am) is deep-night', () => {
+  assert.equal(sceneSpec({ ...specBase, asleep: true, hour: 3 }).mode, 'deep-night');
+  assert.equal(sceneSpec({ ...specBase, night: true, hour: 3 }).mode, 'deep-night');
+});
+
+test('sceneSpec: awake at night (pre-midnight) is night', () => {
+  assert.equal(sceneSpec({ ...specBase, night: true, hour: 22 }).mode, 'night');
+});
+
+test('sceneSpec: newborn gets a fixed gentle mid-morning sky', () => {
+  const s = sceneSpec({ ...specBase, newborn: true });
+  assert.equal(s.mode, 'newborn');
+  assert.equal(s.sun.elevation, 0.55);
+  assert.equal(s.stars, false);
 });
