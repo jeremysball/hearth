@@ -143,6 +143,17 @@ test('sceneSpec: newborn gets a fixed gentle mid-morning sky', () => {
   assert.equal(s.stars, false);
 });
 
+test('starsSVG: deterministic for a given seed', () => {
+  assert.equal(starsSVG('2026-01-01'), starsSVG('2026-01-01'));
+  assert.notEqual(starsSVG('2026-01-01'), starsSVG('2025-06-15'));
+});
+
+test('starsSVG: exactly 150 stars, a mix of sizes', () => {
+  const svg = starsSVG('x');
+  assert.equal((svg.match(/<circle/g) || []).length, 150);
+  assert.ok(svg.includes('star-big'), 'no near/bright stars in a 150-star seed');
+});
+
 test('zodiacSign: known boundaries', () => {
   assert.equal(zodiacSign('2026-01-01'), 'capricorn');
   assert.equal(zodiacSign('2025-12-25'), 'capricorn');
@@ -197,7 +208,7 @@ test('skyScene: night scene has moon, star field, constellation — no sun', () 
   const html = skyScene(spec, { birthdate: '2026-01-01', name: 'Mina' });
   assert.match(html, /data-sky="night"/);
   assert.ok(html.includes('sky-moon'));
-  assert.ok(html.includes('sky-starfield'));
+  assert.ok(html.includes('sky-stars-rich'));
   assert.ok(html.includes('sky-constellation'));
   assert.ok(!html.includes('sky-sun'));
 });
@@ -206,7 +217,7 @@ test('skyScene: twilight keeps first stars but no moon, sun below horizon hidden
   const spec = sceneSpec({ ...specBase, elapsedMin: 200 });
   const html = skyScene(spec, { birthdate: '', name: '' });
   assert.match(html, /data-sky="twilight"/);
-  assert.ok(html.includes('sky-starfield'));
+  assert.ok(html.includes('sky-stars-rich'));
   assert.ok(!html.includes('sky-moon'));
   assert.ok(!html.includes('sky-sun')); // elevation < -0.05: sun fully set
 });

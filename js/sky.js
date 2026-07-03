@@ -108,27 +108,27 @@ function mulberry32(seed) {
   };
 }
 
-// One box-shadow star field on a single element. cq units size it to the
-// .sky container (container-type: size).
-export function starField(seedStr) {
+// A richer star field: varied radius (a few "near" bright stars among many
+// distant pinpricks) and a touch of warm/cool color variance, instead of one
+// flat box-shadow field of uniform 2px dots. Same deterministic mulberry32
+// seed as before, so the field is stable across the once-a-minute re-render.
+export function starsSVG(seedStr) {
   let seed = 0;
   for (const ch of String(seedStr)) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
   const rnd = mulberry32(seed || 42);
-  const shadows = [];
-  for (let i = 0; i < 90; i++) {
-    const x = (rnd() * 100).toFixed(1);
-    const y = (rnd() * 70).toFixed(1);
-    const a = (0.25 + rnd() * 0.55).toFixed(2);
-    shadows.push(`${x}cqw ${y}cqh 0 0 oklch(0.95 0.02 90 / ${a})`);
+  let circles = '';
+  for (let i = 0; i < 150; i++) {
+    const x = (rnd() * 100).toFixed(1), y = (rnd() * 68).toFixed(1);
+    const big = rnd() < 0.07;
+    const r = big ? (0.85 + rnd() * 0.55).toFixed(2) : (0.22 + rnd() * 0.3).toFixed(2);
+    const warm = rnd() < 0.1;
+    const a = (big ? 0.6 : 0.3) + rnd() * 0.4;
+    const fill = warm
+      ? `oklch(0.90 0.045 70 / ${a.toFixed(2)})`
+      : `oklch(0.97 0.015 250 / ${a.toFixed(2)})`;
+    circles += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${big ? ' class="star-big"' : ''}/>`;
   }
-  return shadows.join(',');
-}
-
-export function brightStars() {
-  const POS = [[12, 12], [30, 26], [55, 9], [72, 31], [88, 15]];
-  return POS.map(([x, y], i) =>
-    `<i class="star-b" style="left:${x}%;top:${y}%;animation-delay:-${(i * 1.1).toFixed(1)}s"></i>`
-  ).join('');
+  return `<svg class="sky-stars-rich" viewBox="0 0 100 68" preserveAspectRatio="none" aria-hidden="true">${circles}</svg>`;
 }
 
 // ---------- birth constellation ----------
@@ -166,7 +166,9 @@ const CONSTELLATIONS = {
   sagittarius: { pts: [[3,11],[8,8],[13,5],[18,3],[15,9],[10,12]], lines: [[0,1],[1,2],[2,3],[1,4],[4,5]] },
 };
 
-// Never announced; discovered. Hairline lines at ~8% opacity via CSS.
+// Never announced; discovered — but visible enough to actually notice at a
+// glance, unlike the original near-invisible 8%-opacity version. Opacity and
+// position are CSS-only (see styles.css); this just emits the geometry.
 export function constellationSVG(birthdate) {
   const sign = zodiacSign(birthdate);
   if (!sign) return '';
@@ -285,7 +287,7 @@ export function skyScene(spec, { birthdate = '', name = '' } = {}) {
     bodies += moonSVG(spec.moon);
   }
   const stars = spec.stars
-    ? `<div class="sky-l sky-stars"><i class="sky-starfield" style="box-shadow:${starField(birthdate || name || 'hearth')}"></i>${brightStars()}${spec.moon ? constellationSVG(birthdate) : ''}</div>`
+    ? `<div class="sky-l sky-stars">${starsSVG(birthdate || name || 'hearth')}<div class="night-wash"></div>${spec.moon ? constellationSVG(birthdate) : ''}</div>`
     : '';
   return `<div class="sky" data-sky="${spec.mode}" aria-hidden="true" style="${vars.join(';')}">
     <div class="sky-l sky-grad"></div>
