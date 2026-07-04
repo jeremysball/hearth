@@ -721,7 +721,6 @@ body[data-mode="dark"] {
 .cg-crown .icon { width: 13px; height: 13px; }
 .photo-edit.mini { width: 18px; height: 18px; right: -2px; bottom: -2px; }
 .photo-edit.mini .icon { width: 11px; height: 11px; }
-.cg-name { flex: 1; }
 .cg-role { width: 124px; padding: 7px 9px; font-size: 12px; border-radius: 999px; }
 .cg-display { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
 .cg-remove { all: unset; cursor: pointer; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: oklch(0.55 0.13 25); background: oklch(0.95 0.03 25); }
@@ -945,7 +944,6 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .playtype-row { display: flex; align-items: center; gap: 6px; padding: 12px; background: var(--surface); border-radius: 16px; }
 .playtype-name { flex: 1; }
 .playtype-del { all: unset; cursor: pointer; margin-left: auto; color: oklch(0.6 0.12 25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-.cg-confirm { color: var(--good-deep); }
 
 /* entry view */
 .entry-view { display: flex; align-items: center; gap: 13px; }
