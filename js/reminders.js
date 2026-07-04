@@ -30,30 +30,49 @@ async function subscribePush(reg) {
     throw new Error('Server returned an empty VAPID public key');
   }
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-  const res = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(sub) });
+  const res = await postSubscription(sub);
   if (!res.ok) {
     throw new Error(`subscribe endpoint returned ${res.status}`);
   }
   return true;
 }
 
-// POST an existing local PushSubscription back to the server. The server
-// upserts by endpoint (push.go: ON CONFLICT(endpoint) DO UPDATE), so calling
-// this when the row already exists just refreshes caregiver_id/p256dh/auth.
-// This is what re-attaches a sub to the current caregiver after their server
-// row was deleted but their browser still holds the local subscription.
+function postSubscription(sub) {
+  return fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(sub),
+  });
+}
+
+// POST an existing local PushSubscription back to the server and report
+// whether the server actually confirmed it. The server upserts by endpoint
+// (push.go: ON CONFLICT(endpoint) DO UPDATE), so calling this when the row
+// already exists just refreshes caregiver_id/p256dh/auth. This is what
+// re-attaches a sub to the current caregiver after their server row was
+// deleted but their browser still holds the local subscription -- and the
+// boolean it returns is the only trustworthy signal that push actually
+// works, since a local PushSubscription can outlive its server-side row.
 async function reRegisterLocalSub(sub) {
   if (!sub) return false;
   try {
-    const res = await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(sub),
-    });
+    const res = await postSubscription(sub);
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// Reads the browser's current PushSubscription, or null if there is none
+// (unsupported, never subscribed, or the browser dropped it).
+async function getLocalSub() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return (reg?.pushManager && await reg.pushManager.getSubscription()) || null;
+  } catch {
+    return null;
   }
 }
 
@@ -93,9 +112,11 @@ export async function enableNotifs() {
     const reg = await navigator.serviceWorker.ready;
     try {
       await subscribePush(reg);
-      await refreshSubState();
+      _hasLocalSub = true; // subscribePush's own POST already confirmed the server row
     } catch (err) {
       toast('Reminders enabled, but push failed: ' + (err?.message || err));
+      // subscribe() may have already created a local subscription even
+      // though the follow-up POST failed -- give it one more chance to sync.
       await refreshSubState();
       scheduleReminders();
       router.refresh();
@@ -108,35 +129,28 @@ export async function enableNotifs() {
   else toast('Permission denied, enable in browser settings');
 }
 
+// Re-confirms with the server that the browser's current local
+// PushSubscription (if any) has a matching row, and updates the flag
+// notifsGranted() reads. A local subscription alone is not proof push
+// works: the server-side row backing it can be deleted independently (DB
+// cleanup, migration, expiry), so this always re-POSTs to verify rather
+// than trusting mere local presence -- otherwise a failed re-attach would
+// silently leave the profile showing "Notifications on" with no working
+// push, the exact bug this flag exists to catch.
 export async function refreshSubState() {
-  if (!('serviceWorker' in navigator)) { _hasLocalSub = false; return false; }
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    _hasLocalSub = !!(reg?.pushManager && await reg.pushManager.getSubscription());
-  } catch {
-    _hasLocalSub = false;
-  }
+  const sub = await getLocalSub();
+  _hasLocalSub = sub ? await reRegisterLocalSub(sub) : false;
   return _hasLocalSub;
 }
 
 export async function initNotifState() {
   // _granted reflects browser-side permission only — it's what the local
-  // setTimeout reminder path needs. _hasLocalSub is the separate UI signal
-  // for the profile's Enable/Test button (see notifsGranted()).
+  // setTimeout reminder path needs. _hasLocalSub (via refreshSubState) is
+  // the separate, server-confirmed signal for the profile's Enable/Test
+  // button (see notifsGranted()).
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   _granted = true;
   await refreshSubState();
-  if (_hasLocalSub) {
-    // Re-POST the existing local sub so the server has a row for this
-    // caregiver. Handles the case where the server-side push_subscriptions
-    // row was deleted but the browser still holds the local subscription —
-    // the user would otherwise see "Notifications on" with broken reminders.
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = reg?.pushManager && await reg.pushManager.getSubscription();
-      if (sub) await reRegisterLocalSub(sub);
-    } catch {}
-  }
   scheduleReminders();
   router.refresh();
 }
