@@ -62,14 +62,15 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		}
 
 		var bottleIntervalH float64
-		var medsJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON string
+		var medsJSON, hygieneJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON string
 		var settingsRev int64
-		err = tx.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, playtypes_json, rev FROM settings WHERE family_id = ?`, session.FamilyID).
-			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsRev)
+		err = tx.QueryRow(`SELECT bottle_interval_h, meds_json, hygiene_json, units_json, reminders_json, cards_json, playtypes_json, rev FROM settings WHERE family_id = ?`, session.FamilyID).
+			Scan(&bottleIntervalH, &medsJSON, &hygieneJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsRev)
 		if err == nil && settingsRev > since {
 			s, _ := json.Marshal(map[string]any{
 				"bottleIntervalH": bottleIntervalH,
 				"meds":            json.RawMessage(medsJSON),
+				"hygiene":         json.RawMessage(hygieneJSON),
 				"units":           json.RawMessage(unitsJSON),
 				"reminders":       json.RawMessage(remindersJSON),
 				"cards":           json.RawMessage(cardsJSON),

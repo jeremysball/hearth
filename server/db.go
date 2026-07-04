@@ -62,6 +62,9 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN playtypes_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return nil, err
 	}
+	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN hygiene_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
 	for _, stmt := range []string{
 		`ALTER TABLE families ADD COLUMN rev_counter INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE babies ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
