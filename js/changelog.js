@@ -8,7 +8,9 @@ export const CHANGELOG = [
       'Added optional sleep details: bedtime mood, time to fall asleep, how it happened, and how sleep ended. Tap "Details - Optional" on the sleep log sheet.',
       'Added a Hygiene card, for tracking custom items like nail trims or brushing teeth, each with its own reminder interval. Add it from "Add card" on Home.',
       'Added a close button to every toast message, so you can dismiss it right away instead of waiting for it to fade.',
-      'Collapsed older changelog entries behind a "Show older updates" button so the Changelog card stays short.'
+      'Collapsed older changelog entries behind a "Show older updates" button so the Changelog card stays short.',
+      'Added a default bottle amount setting, set it once from the Bottle card, and every new bottle log starts prefilled with it.',
+      'Added an "Add or edit medicines" shortcut right in the medicine log form, so you no longer have to leave it to manage your medicine list.'
     ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',

@@ -56,7 +56,7 @@ func TestMigrationsAreReplayable(t *testing.T) {
 		}
 		versions = append(versions, v)
 	}
-	want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+	want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 	if fmt.Sprint(versions) != fmt.Sprint(want) {
 		t.Fatalf("versions = %v, want %v", versions, want)
 	}
@@ -125,8 +125,8 @@ func TestLegacyDBAppliesForward(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 11 {
-		t.Fatalf("schema_migrations has %d rows, want 11", count)
+	if count != 12 {
+		t.Fatalf("schema_migrations has %d rows, want 12", count)
 	}
 }
 
