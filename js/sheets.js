@@ -479,7 +479,7 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   bottle: () => `
     ${field('Contents', seg('contents', ['Formula', 'Breast milk', 'Water'], 'Formula'))}
-    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, 120)}
+    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, state().settings.bottleAmountDefault)}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
@@ -742,6 +742,7 @@ export function editCard(which) {
   if (which === 'bottle') {
     sheet.open(`
       ${stepperField('Remind every (hours)', 'c-int', 1, 8, 0.5, s.bottleIntervalH)}
+      ${stepperField('Default amount (' + s.units.volume + ')', 'c-amt', 0, 9999, 5, s.bottleAmountDefault)}
       <p class="empty-note">Next bottle is predicted from your last feed plus this interval.</p>
       <button class="btn-primary" data-action="card:save-bottle"><svg class="icon"><use href="#check"></use></svg> Save</button>
       <button class="btn-ghost" data-action="card:hide" data-card="bottle">Hide this card</button>`,
@@ -897,6 +898,7 @@ export function savePlayTypes() {
 
 export function saveBottle() {
   state().settings.bottleIntervalH = Number($('#c-int').dataset.value) || 3;
+  state().settings.bottleAmountDefault = Number($('#c-amt').dataset.value) || 120;
   save(); enqueueSettingsSync(); sheet.close(); toast('Bottle reminder updated'); router.refresh();
 }
 export function saveMeds() {
