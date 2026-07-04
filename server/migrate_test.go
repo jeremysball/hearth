@@ -62,7 +62,10 @@ func TestMigrationsAreReplayable(t *testing.T) {
 	}
 }
 
-func TestRefusesHashMismatch(t *testing.T) {
+func TestRefusesNewerBinaryMigration(t *testing.T) {
+	// A db carrying a migration version this binary has never heard of
+	// means a *newer* binary wrote it — never safe to guess at, unlike an
+	// older binary's db just needing forward migrations applied.
 	db, err := openDB(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -72,12 +75,44 @@ func TestRefusesHashMismatch(t *testing.T) {
 	if _, err := db.Exec("PRAGMA user_version = 305419896"); err != nil { // 0x12345678 — fits in int32, won't match the real hash
 		t.Fatal(err)
 	}
+	if _, err := db.Exec("INSERT INTO schema_migrations(version, applied_at) VALUES (99999, datetime('now'))"); err != nil {
+		t.Fatal(err)
+	}
 	err = verifySchemaHash(db)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 	if !strings.Contains(err.Error(), "schema hash mismatch") {
 		t.Fatalf("expected hash mismatch error, got: %v", err)
+	}
+}
+
+func TestRestampsAfterForwardMigration(t *testing.T) {
+	// A db stamped by an older binary (stale hash, but every migration
+	// this binary knows about is applied) should be re-stamped and start
+	// cleanly rather than refusing forever.
+	db, err := openDB(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec("PRAGMA user_version = 305419896"); err != nil { // stale/garbage stamp
+		t.Fatal(err)
+	}
+	if err := verifySchemaHash(db); err != nil {
+		t.Fatalf("expected re-stamp to succeed, got: %v", err)
+	}
+	var stamped int64
+	if err := db.QueryRow("PRAGMA user_version").Scan(&stamped); err != nil {
+		t.Fatal(err)
+	}
+	expected, err := schemaHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if int32(stamped) != expected {
+		t.Fatalf("stamped 0x%08x, want 0x%08x", uint32(stamped), uint32(expected))
 	}
 }
 
