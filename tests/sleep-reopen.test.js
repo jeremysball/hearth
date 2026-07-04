@@ -44,10 +44,11 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     await page.goto(srv.base + '/');
 
     try {
-      await page.click('[data-id="sleep-test"]', { timeout: 10000 });
+      await page.click('[data-id="sleep-test"]');
     } catch (e) {
-      const html = await page.evaluate(() => document.getElementById('app')?.innerHTML.slice(0, 2000));
-      console.log('  [debug] #app innerHTML:', html);
+      const present = await page.evaluate(() => !!document.querySelector('[data-id="sleep-test"]'));
+      const rowIds = await page.evaluate(() => Array.from(document.querySelectorAll('.row[data-id]')).map((el) => el.dataset.id));
+      console.log('  [debug] sleep-test present:', present, 'row ids:', JSON.stringify(rowIds));
       throw e;
     }
     await page.waitForSelector('[data-action="entry:edit"][data-id="sleep-test"]');
