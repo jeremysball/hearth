@@ -82,6 +82,23 @@ test('drainOutbox stops at the first failure and leaves remaining ops queued', a
   assert.equal(loadOutbox()[0].url, '/api/entries/y');
 });
 
+test('drainOutbox does not lose an op enqueued while a slow send is in flight', async () => {
+  saveOutbox([{ url: '/api/entries/A', method: 'PUT', body: { id: 'A' } }]);
+  const sent = [];
+  const fakeFetch = async (url) => {
+    sent.push(url);
+    await new Promise((r) => setTimeout(r, 20));
+    return { ok: true, status: 204 };
+  };
+
+  const drainPromise = drainOutbox(fakeFetch);
+  setTimeout(() => enqueue({ url: '/api/entries/B', method: 'PUT', body: { id: 'B' } }), 5);
+  await drainPromise;
+
+  assert.deepEqual(sent, ['/api/entries/A', '/api/entries/B']);
+  assert.equal(loadOutbox().length, 0);
+});
+
 test('getLastSync defaults to empty string, setLastSync round-trips', () => {
   localStorage.removeItem('hearth.lastsync.v1');
   assert.equal(getLastSync(), '');

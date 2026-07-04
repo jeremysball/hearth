@@ -99,16 +99,19 @@ export function addEntry(e) {
   if (!e.caregiverId) e.caregiverId = currentCaregiverId();
   _state.log.push(e);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
-  save();
+  // Enqueue before save: they're two separate localStorage writes, and a
+  // process kill between them (backgrounded PWA reaped, tab crash) must not
+  // leave an entry in local state with no queued op to sync it.
   enqueue({ url: '/api/entries/' + e.id, method: 'PUT', body: e });
+  save();
   if (_syncTrigger) _syncTrigger();
   log.event('store', 'addEntry', e.type, e.id);
   return e;
 }
 export function removeEntry(id) {
   _state.log = _state.log.filter((e) => e.id !== id);
-  save();
   enqueue({ url: '/api/entries/' + id, method: 'DELETE' });
+  save();
   if (_syncTrigger) _syncTrigger();
   log.event('store', 'removeEntry', id);
 }
@@ -118,8 +121,8 @@ export function updateEntry(id, patch) {
     if (!patch.caregiverId && !e.caregiverId) patch.caregiverId = currentCaregiverId();
     Object.assign(e, patch);
     _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
-    save();
     enqueue({ url: '/api/entries/' + id, method: 'PUT', body: e });
+    save();
   }
   if (_syncTrigger) _syncTrigger();
   log.event('store', 'updateEntry', id, patch);
@@ -181,14 +184,14 @@ export function addMeasure(m) {
   const existing = _state.growth.find((x) => x.id === m.id);
   if (existing) Object.assign(existing, m); else _state.growth.push(m);
   _state.growth.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
-  save();
   enqueue({ url: '/api/growth/' + m.id, method: 'PUT', body: m });
+  save();
   return m;
 }
 export function removeMeasure(id) {
   _state.growth = _state.growth.filter((m) => m.id !== id);
-  save();
   enqueue({ url: '/api/growth/' + id, method: 'DELETE' });
+  save();
 }
 
 // ---------- time utils ----------

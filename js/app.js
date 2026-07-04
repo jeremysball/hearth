@@ -831,6 +831,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 setInterval(syncOnce, 15000);
-setSyncTrigger(() => { drainOutbox(); syncOnce(); });
+setSyncTrigger(() => { drainOutbox(fetch); syncOnce(); });
 
 document.addEventListener('DOMContentLoaded', init);
