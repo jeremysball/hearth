@@ -5,6 +5,12 @@ import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './sleep.js';
 import { heroSky, emberGlow } from './sky.js';
 
+// Diaper size label map. Stored values stay "Small"/"Medium"/"Large" but the
+// "Small" option is rendered as "Little" in the UI. Keep this in sync with
+// `SIZE_OPTS` in sheets.js.
+const SIZE_LABELS = { Small: 'Little', Medium: 'Medium', Large: 'Large' };
+function sizeLabel(s) { return SIZE_LABELS[s] || s; }
+
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
   let label = c.label, detail = '', meta = '';
@@ -18,7 +24,8 @@ export function summary(e) {
     label = 'Bottle · ' + (e.contents || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'diaper') {
     label = 'Diaper · ' + (e.kind || '').toLowerCase(); detail = fmt.clock(e.start);
-    const size = e.kind === 'Mixed' ? [e.wetSize, e.dirtySize].filter(Boolean).join('/') : e.size;
+    const rawSize = e.kind === 'Mixed' ? [e.wetSize, e.dirtySize].filter(Boolean) : (e.size ? [e.size] : []);
+    const size = rawSize.map(sizeLabel).join('/');
     meta = [size, e.rash ? 'Rash' : ''].filter(Boolean).join(' · ');
   } else if (e.type === 'medicine') {
     label = e.name || 'Medicine'; detail = fmt.clock(e.start); meta = e.dose || '';
