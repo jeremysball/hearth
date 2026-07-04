@@ -11,7 +11,7 @@ const BIN = path.join(ROOT, 'hearth-server');
 
 function buildServer() {
   const { execSync } = require('child_process');
-  execSync('go build -o ' + BIN + ' .', { cwd: ROOT + '/server', stdio: 'pipe' });
+  execSync('go build -o ' + BIN + ' ./cmd/hearth', { cwd: ROOT, stdio: 'pipe' });
 }
 
 async function startServer(port = 18787) {

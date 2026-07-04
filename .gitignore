@@ -17,6 +17,6 @@ docs/superpowers/plans/*
 !docs/superpowers/plans/*.md
 docs/research-books-extracted*.md
 docs/research-plan-books.md
-hearth
+/hearth
 server/server
 todo-*.txt

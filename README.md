@@ -54,12 +54,10 @@ tags.
 
 ### Without Docker
 
-Requires Go (version in `server/go.mod`). The frontend embeds into the binary at build time, so the resulting binary is self-contained.
+Requires Go (version in `go.mod`). The frontend embeds into the binary at build time, so the resulting binary is self-contained.
 
 ```bash
-cd server
-go build -o ../hearth-server .
-cd ..
+go build -o hearth-server ./cmd/hearth
 ./hearth-server
 ```
 
@@ -95,7 +93,10 @@ Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HT
 
 ```
 hearth/
-├── server/            # Go backend: API, auth, SQLite, SSE sync
+├── cmd/
+│   ├── hearth/        # Server entrypoint (thin main, imports server/)
+│   └── vapidgen/      # One-off VAPID keypair generator
+├── server/            # Go backend package: API, auth, SQLite, SSE sync
 ├── js/                # Vanilla JS frontend, no framework
 ├── index.html         # PWA shell
 ├── sw.js              # Service worker
@@ -114,8 +115,7 @@ Tailscale is the auth layer. It has no login page, no passwords, and no token ha
 Run the server with `STATIC_DIR` set so frontend edits show up on refresh without rebuilding:
 
 ```bash
-cd server
-STATIC_DIR=. go run .
+STATIC_DIR=. go run ./cmd/hearth
 ```
 
 Without `STATIC_DIR`, the server serves the frontend baked in at the last Go build.

@@ -9,7 +9,8 @@ COPY index.html manifest.webmanifest styles.css sw.js assets.go ./
 COPY js/ ./js/
 COPY icons/ ./icons/
 COPY server/ ./server/
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/hearth-server ./server
+COPY cmd/hearth/ ./cmd/hearth/
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/hearth-server ./cmd/hearth
 
 FROM alpine:3.20
 RUN apk add --no-cache tini
