@@ -12,6 +12,12 @@ function seg(group, opts, sel) {
     opts.map((o) => `<button type="button" class="seg-opt ${o === sel ? 'on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`).join('') +
     `</div>`;
 }
+export function iconGrid(group, opts, sel) {
+  return `<div class="icongrid" data-icongrid="${group}">` +
+    opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
+      `<svg class="icon"><use href="#${o.icon}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
+    `</div>`;
+}
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
