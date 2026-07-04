@@ -19,15 +19,18 @@ let _tapResetTimer = null;
 export function isDevMode() { return localStorage.getItem(DEV_MODE_KEY) === '1'; }
 
 // Android-style hidden unlock: tap the build stamp 10× within 2s of each tap.
+// Returns { enabled, remaining } so callers can toast countdown progress on
+// intermediate taps. `remaining` is how many more taps are needed (0 on the
+// 10th tap once dev mode flips on, 10 on the no-op already-enabled path).
 export function tapVersion() {
-  if (isDevMode()) return false;
+  if (isDevMode()) return { enabled: false, remaining: 0 };
   clearTimeout(_tapResetTimer);
   _versionTaps++;
   _tapResetTimer = setTimeout(() => { _versionTaps = 0; }, 2000);
-  if (_versionTaps < 10) return false;
+  if (_versionTaps < 10) return { enabled: false, remaining: 10 - _versionTaps };
   _versionTaps = 0;
   localStorage.setItem(DEV_MODE_KEY, '1');
-  return true;
+  return { enabled: true, remaining: 0 };
 }
 
 function sw(path, on) {
