@@ -44,7 +44,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('a Mixed diaper entry saves wetSize and dirtySize', savedMixed && savedMixed.wetSize === 'Small' && savedMixed.dirtySize === 'Large', JSON.stringify(savedMixed));
     check('a Mixed diaper entry saves size: null, not a stale single value', savedMixed && savedMixed.size === null, JSON.stringify(savedMixed));
 
-    const metaShowsSplitSize = await page.$eval('.row .meta', (el) => el.textContent.includes('Small/Large'));
+    const metaShowsSplitSize = await page.$eval('.row .meta', (el) => el.textContent.includes('Little/Large'));
     check('home card meta shows the wet/dirty size split for a Mixed entry', metaShowsSplitSize);
 
     // Reopen for edit: Mixed should show the split selectors, reselected.
@@ -125,7 +125,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
       return e ? e.id : null;
     });
     const rashMixedMeta = rashMixedId ? await page.$eval(`[data-id="${rashMixedId}"] .meta`, (el) => el.textContent) : '';
-    check('a Mixed entry with rash shows both the size split and Rash in the meta', rashMixedMeta.includes('Small/Large') && rashMixedMeta.includes('Rash'), rashMixedMeta);
+    check('a Mixed entry with rash shows both the size split and Rash in the meta', rashMixedMeta.includes('Little/Large') && rashMixedMeta.includes('Rash'), rashMixedMeta);
 
     // Legacy data: a Mixed entry logged before this feature only has `size`.
     // Loading it must not lose that size, and editing it must not silently
