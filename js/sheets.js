@@ -12,6 +12,12 @@ function seg(group, opts, sel) {
     opts.map((o) => `<button type="button" class="seg-opt ${o === sel ? 'on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`).join('') +
     `</div>`;
 }
+export function iconGrid(group, opts, sel) {
+  return `<div class="icongrid" data-icongrid="${group}">` +
+    opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
+      `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
+    `</div>`;
+}
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
@@ -449,7 +455,24 @@ const FORMS = {
     ${field('Fell asleep', dtPair('f-time', nowLocalDT()))}
     ${field('Woke (leave blank if still asleep)', dtPair('f-end', ''))}
     ${field('Quality', seg('quality', ['Restless', 'Okay', 'Good', 'Great'], 'Good'))}
-    ${noteRow()}`,
+    ${noteRow()}
+    <details class="sleep-details">
+      <summary>Details - Optional <svg class="icon sleep-details-chevron"><use href="#chevron-down"></use></svg></summary>
+      ${field('Mood at bedtime', seg('startMood', ['Upset', 'Content'], null))}
+      ${field('Time to fall asleep', seg('fallAsleep', ['Under 10 min', '10-20 min', 'Long time to fall asleep'], null))}
+      ${field('How it happened', iconGrid('method', [
+        { val: 'On own in bed', icon: 'bed-single', label: 'On own' },
+        { val: 'Nursing', icon: 'milk', label: 'Nursing' },
+        { val: 'Worn or held', icon: 'user', label: 'Held' },
+        { val: 'Next to carer', icon: 'users', label: 'Next to carer' },
+        { val: 'Co-sleep', icon: 'bed-double', label: 'Co-sleep' },
+        { val: 'Bottle', icon: 'icon-bottle', label: 'Bottle' },
+        { val: 'Stroller', icon: 'footprints', label: 'Stroller' },
+        { val: 'Car', icon: 'car', label: 'Car' },
+        { val: 'Swing', icon: 'wind', label: 'Swing' }
+      ], null))}
+      ${field('How sleep ended', seg('endMood', ['Woke up child', 'Upset', 'Content'], null))}
+    </details>`,
   feed: () => `
     ${field('Side', seg('side', ['Left', 'Right', 'Both'], 'Left'))}
     ${stepperField('Duration (min)', 'f-dur', 0, 120, 1, 15)}
@@ -498,6 +521,11 @@ function gather(type) {
     base.quality = segVal('quality');
     const endLocal = readDT('f-end');
     base.end = endLocal ? dtToISO(endLocal) : null;
+    base.startMood = segVal('startMood');
+    base.fallAsleep = segVal('fallAsleep');
+    const m = $('[data-icongrid="method"] .icongrid-opt.on');
+    base.method = m ? m.dataset.val : null;
+    base.endMood = segVal('endMood');
   } else if (type === 'feed') {
     base.side = segVal('side'); base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'bottle' || type === 'pump') {
@@ -571,6 +599,10 @@ function setSeg(group, val) {
   const g = $(`[data-seg="${group}"]`); if (!g || val == null) return;
   $$('.seg-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
+function setIconGrid(group, val) {
+  const g = $(`[data-icongrid="${group}"]`); if (!g || val == null) return;
+  $$('.icongrid-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
+}
 export function syncDiaperSizeVisibility(kind) {
   const single = $('#diaper-size-single'), mixed = $('#diaper-size-mixed');
   if (!single || !mixed) return;
@@ -581,7 +613,13 @@ export function syncDiaperSizeVisibility(kind) {
 function prefill(type, e) {
   writeDT('f-time', e.start);
   if ($('#f-note')) $('#f-note').value = e.note || '';
-  if (type === 'sleep') { setSeg('quality', e.quality); if (e.end) writeDT('f-end', e.end); }
+  if (type === 'sleep') {
+    setSeg('quality', e.quality); if (e.end) writeDT('f-end', e.end);
+    setSeg('startMood', e.startMood); setSeg('fallAsleep', e.fallAsleep);
+    setIconGrid('method', e.method); setSeg('endMood', e.endMood);
+    const details = $('.sleep-details');
+    if (details && (e.startMood || e.fallAsleep || e.method || e.endMood)) details.open = true;
+  }
   else if (type === 'feed') { setSeg('side', e.side); const fdur = $('#f-dur'); if (fdur) { fdur.dataset.value = e.duration || 0; fdur.textContent = e.duration || 0; } }
   else if (type === 'bottle' || type === 'pump') {
     setSeg('side', e.side); setSeg('contents', e.contents);

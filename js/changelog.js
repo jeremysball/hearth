@@ -4,7 +4,9 @@ export const CHANGELOG = [
   {
     date: '2026-07-04',
     version: '2026-07-04',
-    features: [],
+    features: [
+      'Added optional sleep details: bedtime mood, time to fall asleep, how it happened, and how sleep ended. Tap "Details - Optional" on the sleep log sheet.'
+    ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
       'Fixed a rare case where an entry logged right before the app closed could be lost instead of syncing on next launch.',
