@@ -839,6 +839,31 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 }
 [data-mode="dark"] .seg-opt.on { color: var(--accent); }
 
+.icongrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.icongrid-opt {
+  all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 6px; border-radius: 14px; text-align: center;
+  font-size: 11px; font-weight: 700; color: var(--soft);
+  background: color-mix(in oklch, var(--accent-tint) 55%, transparent);
+  transition: color .15s, background .15s;
+}
+.icongrid-opt .icon { width: 20px; height: 20px; }
+.icongrid-opt.on { color: var(--accent-ink); background: var(--accent-tint); }
+[data-mode="dark"] .icongrid-opt { background: oklch(0.26 0.022 48 / 0.45); }
+[data-mode="dark"] .icongrid-opt.on { color: var(--accent); background: oklch(0.30 0.030 48); }
+
+.sleep-details { display: flex; flex-direction: column; gap: 13px; }
+.sleep-details summary {
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--soft);
+  list-style: none; padding: 4px 0;
+  display: flex; align-items: center; gap: 4px;
+}
+.sleep-details summary::-webkit-details-marker { display: none; }
+.sleep-details-chevron { width: 14px; height: 14px; transition: transform .15s; }
+.sleep-details[open] .sleep-details-chevron { transform: rotate(180deg); }
+
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .18s; }
 .scrim.show { background: oklch(0.3 0.03 25 / .42); pointer-events: auto; }
