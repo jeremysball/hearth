@@ -170,6 +170,32 @@ func applyMigration(db *sql.DB, version int, sqlText string) error {
 	return tx.Commit()
 }
 
+// maxKnownMigrationVersion returns the highest migration version this binary
+// ships. Used by verifySchemaHash to tell "an older binary wrote this db,
+// forward migrations just caught it up" (safe to re-stamp) apart from "a
+// newer binary wrote this db" (never safe — this binary doesn't know what
+// those migrations mean).
+func maxKnownMigrationVersion() (int, error) {
+	entries, err := migrationsFS.ReadDir("migrations")
+	if err != nil {
+		return 0, fmt.Errorf("read migrations dir: %w", err)
+	}
+	max := 0
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
+			continue
+		}
+		v, err := parseMigrationVersion(e.Name())
+		if err != nil {
+			return 0, err
+		}
+		if v > max {
+			max = v
+		}
+	}
+	return max, nil
+}
+
 func parseMigrationVersion(name string) (int, error) {
 	i := strings.IndexByte(name, '_')
 	if i <= 0 {
@@ -198,30 +224,36 @@ func schemaHash() (int32, error) {
 	return int32(binary.LittleEndian.Uint32(sum[:4])), nil
 }
 
-// verifySchemaHash refuses to start a database whose stamped schema
-// version does not match this binary's schema.sql. Mismatch means the
-// DB was last opened by a different binary and we have no idea what
-// state it's in.
+// verifySchemaHash runs after runMigrations, by which point every migration
+// this binary knows about is recorded in schema_migrations. A stale stamp
+// at this point just means an older binary wrote this db before forward
+// migrations caught it up to this binary's schema.sql — safe to re-stamp.
+// The one case that isn't safe is a db carrying a migration version this
+// binary has never heard of: that means a *newer* binary touched it, and
+// this binary must refuse rather than guess what those rows mean.
 func verifySchemaHash(db *sql.DB) error {
 	var stamped int64
 	if err := db.QueryRow("PRAGMA user_version").Scan(&stamped); err != nil {
 		return fmt.Errorf("read user_version: %w", err)
 	}
-	if stamped == 0 {
-		// First-ever open: migrations already ran; stamp now.
-		h, err := schemaHash()
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec("PRAGMA user_version = " + strconv.FormatInt(int64(h), 10))
-		return err
-	}
 	h, err := schemaHash()
 	if err != nil {
 		return err
 	}
-	if int32(stamped) != h {
+	if stamped != 0 && int32(stamped) == h {
+		return nil
+	}
+	maxKnown, err := maxKnownMigrationVersion()
+	if err != nil {
+		return err
+	}
+	var maxApplied int
+	if err := db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_migrations").Scan(&maxApplied); err != nil {
+		return fmt.Errorf("read schema_migrations: %w", err)
+	}
+	if maxApplied > maxKnown {
 		return fmt.Errorf("schema hash mismatch: db=0x%08x binary=0x%08x — refusing to start; update the binary or restore a compatible database", uint32(stamped), uint32(h))
 	}
-	return nil
+	_, err = db.Exec("PRAGMA user_version = " + strconv.FormatInt(int64(h), 10))
+	return err
 }
