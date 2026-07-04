@@ -16,7 +16,7 @@ func TestCreateSessionInsertsRow(t *testing.T) {
 		t.Fatal("expected non-empty token")
 	}
 	var caregiverID string
-	if err := db.QueryRow(`SELECT caregiver_id FROM sessions WHERE token = ?`, token).Scan(&caregiverID); err != nil {
+	if err := db.QueryRow(`SELECT caregiver_id FROM sessions WHERE token_hash = ?`, hashForTest(t, token)).Scan(&caregiverID); err != nil {
 		t.Fatalf("querying session: %v", err)
 	}
 	if caregiverID != "cg1" {

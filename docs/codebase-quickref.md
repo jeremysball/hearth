@@ -11,7 +11,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 - **All user events are delegated** through one `click` handler in `app.js`, dispatched via `data-action="verb:noun"` on elements. Swipe/drag handled separately.
 - **State lives in `store.js`**: a single `_state` object, loaded from `localStorage` via `load()`, mutated by exported helpers, persisted by `save()`. Access read-only via `state()`.
 - **Sheets (bottom drawers)** are opened via `sheet.open(html, opts)` from `ui.js`. Log-entry and card-config sheets are in `sheets.js`.
-- **Go server** handles auth (Tailscale session + optional OAuth), sync, SSE push, and serves the embedded frontend binary. Schema is applied as a numbered, ordered migration sequence (`server/migrations/0001_*.sql` → `0009_*.sql`); `schema.sql` describes the canonical end state and its hash is stamped on `PRAGMA user_version` to detect a binary/DB mismatch.
+- **Go server** handles auth (Tailscale session + optional OAuth), sync, SSE push, and serves the embedded frontend binary. Schema is applied as a numbered, ordered migration sequence (`server/migrations/0001_*.sql` → `0011_*.sql`); `schema.sql` describes the canonical end state and its hash is stamped on `PRAGMA user_version` to detect a binary/DB mismatch. Migration `0011` renames the four bearer-token columns to `token_hash` and, in the same transaction, HMAC-SHA256-hashes any pre-existing plaintext values (see `server/tokens.go`).
 
 ---
 
@@ -90,8 +90,8 @@ A dense orientation doc for new sessions. Read before exploring files.
 | `main.go` | Entry: load config, open DB, build mux, serve |
 | `router.go` | `newRouter()`: wires all HTTP routes |
 | `db.go` | `openDB()`: opens SQLite, runs migrations, stamps schema hash, returns `*sql.DB` |
-| `migrate.go` | `runMigrations()` applies numbered `.sql` files in order; `schema_migrations` table records applied versions; `PRAGMA user_version` carries the `schema.sql` hash as a "this binary already opened this DB" sentinel |
-| `migrations/0001…0009_*.sql` | Numbered, ordered, idempotent schema migrations; one logical change per file |
+| `migrate.go` | `runMigrations()` applies numbered `.sql` files in order; `schema_migrations` table records applied versions; `PRAGMA user_version` carries the `schema.sql` hash as a "this binary already opened this DB" sentinel; `postMigrationHooks` runs Go-side data rewrites (e.g. token hashing) that plain SQL can't express, exactly once, in the same transaction as the migration that needs them |
+| `migrations/0001…0011_*.sql` | Numbered, ordered, idempotent schema migrations; one logical change per file |
 | `schema.sql` | Authoritative description of the post-migration end state; hash source for the user_version stamp; the consistency test in `migrate_test.go` asserts the migrations produce this exact shape |
 | `auth.go` | Session cookie auth, `requireAuth` middleware |
 | `oauth.go` | OAuth begin/callback routes via `markbates/goth` (Google + Apple) |
@@ -100,11 +100,13 @@ A dense orientation doc for new sessions. Read before exploring files.
 | `entries.go` | Log entry CRUD endpoints |
 | `caregivers.go` | Caregiver list/remove endpoints |
 | `invites.go` | Invite-link create/join endpoints |
+| `launch_tokens.go` | Launch-token create/redeem endpoints (single-use, short-TTL session bootstrap) |
 | `family.go` | Family record endpoints |
 | `me.go` | `/api/me`: current user/session info |
 | `push.go` | Web Push subscription endpoints and reminder scheduler |
 | `reconcile.go` | Data-safe conflict reconciliation during OAuth link/restore |
 | `config.go` | `loadConfig()`: reads env vars into `Config` struct |
+| `tokens.go` | `loadPeppers`, `hashToken`, `allHashes`, `lookupByToken` — HMAC-SHA256 hashing of every bearer token, keyed by the `PEPPER` env var |
 | `testutil_test.go` | `newTestDB()`: in-memory SQLite for Go tests |
 
 ---
