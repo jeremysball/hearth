@@ -136,9 +136,16 @@ async function runSuite(base) {
 
   // ---------- Reduced motion: no animations ----------
   console.log('\n--- Animations: prefers-reduced-motion suppresses all animations ---');
-  const page2 = await browser.newPage();
+  // Only one family may exist per server instance — page2 must inherit page's
+  // onboarded storage state instead of onboarding fresh against the same
+  // server, which would now correctly hit the "already provisioned" screen.
+  const storageState = await page.context().storageState();
+  const page2Ctx = await browser.newContext({ storageState });
+  const page2 = await page2Ctx.newPage();
   await page2.emulateMedia({ reducedMotion: 'reduce' });
-  await page2.goto(base + '/', { waitUntil: 'networkidle' });
+  // 'networkidle' can hang past Playwright's 30s timeout under CI load (see
+  // the comment above); 'load' is deterministic regardless of SW activity.
+  await page2.goto(base + '/', { waitUntil: 'load' });
   await page2.waitForTimeout(500);
   await onboard(page2);
   await page2.waitForTimeout(300);
@@ -151,6 +158,7 @@ async function runSuite(base) {
   console.log('  bar animations under reduced-motion:', reducedBarAnims);
   check('no bar animations under prefers-reduced-motion', reducedBarAnims === 0, reducedBarAnims);
   await page2.close();
+  await page2Ctx.close();
 
   const exitCode = tally() === 0 ? 0 : 1;
   await browser.close();

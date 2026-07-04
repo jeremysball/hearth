@@ -12,7 +12,8 @@ export const CHANGELOG = [
       'Added a default bottle amount setting, set it once from the Bottle card, and every new bottle log starts prefilled with it.',
       'Added an "Add or edit medicines" shortcut right in the medicine log form, so you no longer have to leave it to manage your medicine list.',
       'Pulling down further on refresh now syncs right away instead of waiting for you to let go.',
-      'Renamed the smallest diaper size from "Small" to "Little" throughout the app.'
+      'Renamed the smallest diaper size from "Small" to "Little" throughout the app.',
+      'A Hearth instance now shows a sign-in screen instead of the setup form once it already has a family.'
     ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
@@ -23,7 +24,8 @@ export const CHANGELOG = [
       'Fixed the notifications setting getting stuck with no way to re-enable push, and made push automatically re-attach on next visit if the browser still had a saved subscription.',
       'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.',
       'Fixed missed reminders resending every 5 minutes instead of backing off.',
-      'Fixed reminders still firing for cards you\'d hidden from Home.'
+      'Fixed reminders still firing for cards you\'d hidden from Home.',
+      'Fixed a sheet opened right after closing another sometimes showing empty.'
     ]
   },
   {

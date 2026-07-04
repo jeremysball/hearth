@@ -16,7 +16,12 @@ function buildServer() {
 
 async function startServer(port = 18787) {
   port = Number(process.env.TEST_PORT) || port;
-  buildServer();
+  // tests/run.js builds the binary once up front and sets this before
+  // spawning each suite's process — rebuilding again per suite (30x in the
+  // full run) is pure redundant CPU/disk churn right before that suite's
+  // Chromium launch, which is exactly the kind of contention that turns a
+  // borderline-timed waitForSelector into a flaky failure.
+  if (process.env.HEARTH_SERVER_PREBUILT !== '1') buildServer();
   const dbPath = `/tmp/hearth-test-${process.pid}.db`;
   rmSync(dbPath, { force: true });
   const proc = spawn(BIN, [], {
@@ -73,6 +78,10 @@ async function launchBrowser() {
 }
 
 async function onboard(page) {
+  // init() awaits a /api/status fetch before rendering onboarding or the app
+  // shell, so #app is briefly empty right after goto() resolves — wait for
+  // either to show up before deciding whether to fill the form.
+  await page.waitForSelector('#onb-name, .tabbar', { timeout: 10000 });
   // Skip onboarding if already done; fill otherwise.
   if (await page.$('#onb-name')) {
     await page.fill('#onb-name', 'Test');
