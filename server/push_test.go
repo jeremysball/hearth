@@ -37,6 +37,23 @@ func TestValidateVAPIDEnvPassesWithAllKeys(t *testing.T) {
 	}
 }
 
+func TestVapidSubscriberStripsMailtoPrefixExactlyOnce(t *testing.T) {
+	// webpush-go's own JWT builder re-adds "mailto:" to any subscriber that
+	// doesn't start with "https:", so a pre-prefixed VAPID_SUBJECT (the
+	// documented example format) must come out bare here or Apple's push
+	// service 403s every send on a malformed "mailto:mailto:..." sub claim.
+	cases := map[string]string{
+		"mailto:you@example.com": "you@example.com",
+		"you@example.com":        "you@example.com",
+		"https://example.com":    "https://example.com",
+	}
+	for in, want := range cases {
+		if got := vapidSubscriber(in); got != want {
+			t.Errorf("vapidSubscriber(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestHandlePushPublicKeyRequiresEnv(t *testing.T) {
 	t.Setenv("VAPID_PUBLIC_KEY", "")
 	req := httptest.NewRequest("GET", "/api/push/public-key", nil)
