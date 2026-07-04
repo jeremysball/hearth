@@ -11,7 +11,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 - **All user events are delegated** through one `click` handler in `app.js`, dispatched via `data-action="verb:noun"` on elements. Swipe/drag handled separately.
 - **State lives in `store.js`**: a single `_state` object, loaded from `localStorage` via `load()`, mutated by exported helpers, persisted by `save()`. Access read-only via `state()`.
 - **Sheets (bottom drawers)** are opened via `sheet.open(html, opts)` from `ui.js`. Log-entry and card-config sheets are in `sheets.js`.
-- **Go server** handles auth (Tailscale session + optional OAuth), sync, SSE push, and serves the embedded frontend binary. Schema is applied with `CREATE TABLE IF NOT EXISTS` on every startup: no migration runner.
+- **Go server** handles auth (Tailscale session + optional OAuth), sync, SSE push, and serves the embedded frontend binary. Schema is applied with `CREATE TABLE IF NOT EXISTS` on every startup; a one-time in-place migration hashes any pre-existing `sessions`/`invites`/`launch_tokens`/`pending_auth` tokens with HMAC-SHA256 (see `server/tokens.go`). No migration runner beyond that.
 
 ---
 
@@ -98,11 +98,13 @@ A dense orientation doc for new sessions. Read before exploring files.
 | `entries.go` | Log entry CRUD endpoints |
 | `caregivers.go` | Caregiver list/remove endpoints |
 | `invites.go` | Invite-link create/join endpoints |
+| `launch_tokens.go` | Launch-token create/redeem endpoints (single-use, short-TTL session bootstrap) |
 | `family.go` | Family record endpoints |
 | `me.go` | `/api/me`: current user/session info |
 | `push.go` | Web Push subscription endpoints and reminder scheduler |
 | `reconcile.go` | Data-safe conflict reconciliation during OAuth link/restore |
 | `config.go` | `loadConfig()`: reads env vars into `Config` struct |
+| `tokens.go` | `loadPeppers`, `hashToken`, `allHashes`, `lookupByToken` — HMAC-SHA256 hashing of every bearer token, keyed by the `PEPPER` env var |
 | `testutil_test.go` | `newTestDB()`: in-memory SQLite for Go tests |
 
 ---
