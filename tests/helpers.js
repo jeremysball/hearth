@@ -32,6 +32,7 @@ async function startServer(port = 18787) {
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || 'test-public-key',
       VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || 'test-private-key',
       VAPID_SUBJECT: process.env.VAPID_SUBJECT || 'mailto:test@example.com',
+      PEPPER: process.env.PEPPER || 'test-pepper-must-be-at-least-32-bytes-long',
     },
     stdio: 'pipe',
   });
