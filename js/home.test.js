@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 class MemoryStorage { constructor(){this.s={};} getItem(k){return Object.prototype.hasOwnProperty.call(this.s,k)?this.s[k]:null;} setItem(k,v){this.s[k]=String(v);} removeItem(k){delete this.s[k];} }
 globalThis.localStorage = new MemoryStorage();
 globalThis.window = globalThis;
-globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
+globalThis.document = {
+  querySelector: () => null, querySelectorAll: () => [],
+  hidden: true, addEventListener: () => {},
+  documentElement: { classList: { toggle: () => {} } },
+};
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { bathDaysSinceLabel, home } = await import('./home.js');
@@ -44,4 +48,25 @@ test('home hero rail renders a prediction source info button while awake', () =>
 
   assert.match(html, /data-action="prediction:info"/);
   assert.match(html, /class="src-info-btn src-generic"/);
+});
+
+test('home hero renders the sky scene wrapping the timer content', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => home());
+  assert.match(html, /class="card hero hero-sky"/);
+  assert.match(html, /data-sky-mode="/);
+  assert.match(html, /class="sky" data-sky="/);
+  assert.match(html, /--light-x:/);
+  assert.match(html, /hero-fg/);
+  assert.doesNotMatch(html, /hero-moon/);
+});
+
+test('home hero replaces the coal bed with an ember-glow field', () => {
+  reset();
+  const html = withMockedNow('2026-01-01T09:00:00', () => home()); // awake state
+  assert.match(html, /class="ember-glow"/);
+  assert.match(html, /class="ember-ground"/);
+  assert.match(html, /class="ember-field"/);
+  assert.doesNotMatch(html, /class="sh-bed/);
+  assert.doesNotMatch(html, /class="coal/);
 });

@@ -985,125 +985,25 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 [data-sweet="entering"] .sh-sweet-lbl { color: oklch(0.52 0.13 280); }
 [data-sweet="now"] .sh-sweet-lbl { color: oklch(0.46 0.16 280); }
 [data-sweet="passing"] .sh-sweet-lbl { color: oklch(0.52 0.11 280); }
-/* Ember Bed: the rail IS the fire, coals ignite left→right across the awake window */
+/* Ember-glow: replaces the 16-coal bed with a card-level ambient field — the
+   same warm ember material, painted as a continuous glow instead of discrete
+   tiles. .ember-ground washes the bottom edge; .ember-field is the moving
+   hotspot tracking sleep-pressure position. Both are screen-blended over the
+   sky scene, so they only ever brighten, and their colors/opacity are set
+   inline per-render from emberGlow() in home.js. */
 .sh-rail-wrap { margin-top: 8px; }
-.sh-bed {
-  display: flex; gap: 3px; padding: 5px 6px; border-radius: 9px;
-  background: linear-gradient(180deg, oklch(0.30 0.03 40 / 0.20), oklch(0.18 0.02 35 / 0.30));
-  box-shadow: inset 0 2px 6px oklch(0.20 0.04 35 / 0.45), inset 0 -1px 0 oklch(0.95 0.02 70 / 0.20), 0 1px 0 oklch(0.97 0.01 80 / 0.30);
-}
-.coal {
-  flex: 1; height: 16px; border-radius: 4px;
-  background: linear-gradient(180deg, oklch(0.42 0.03 45), oklch(0.30 0.025 40));
-  box-shadow: inset 0 1px 0 oklch(0.60 0.04 55 / 0.30), inset 0 -1px 1px oklch(0.18 0.02 35 / 0.50);
-  transition: background 0.7s ease, box-shadow 0.7s ease, transform 0.4s ease;
-}
-/* dark mode cold-coal base: placed before the state rules so lit/caught/toohot
-   (equal specificity) still win their colors in dark mode via source order */
-[data-mode="dark"] .coal {
-  background: linear-gradient(180deg, oklch(0.30 0.025 40), oklch(0.20 0.02 35));
-  box-shadow: inset 0 1px 0 oklch(0.48 0.04 55 / 0.25), inset 0 -1px 1px oklch(0.10 0.01 30 / 0.60);
-}
-/* lit ember: warm, glowing, breathing with the fire vars */
-.coal.lit {
-  background: linear-gradient(180deg, var(--ember-mid), var(--ember-cool));
-  box-shadow:
-    inset 0 1px 0 oklch(0.92 0.10 70 / 0.45),
-    inset 0 -1px 2px oklch(0.40 0.14 35 / 0.55),
-    0 0 calc(3px + var(--fire-b, 0.06) * 18px) oklch(0.66 0.18 44 / calc(0.30 + var(--fire-b, 0.06) * 1.6));
-}
-/* leading coal: hottest, most active flicker */
-.coal.front {
-  background: linear-gradient(180deg, oklch(0.92 0.16 66), var(--ember-mid));
-  box-shadow:
-    inset 0 1px 0 oklch(0.96 0.10 75 / 0.60),
-    inset 0 -1px 2px oklch(0.45 0.16 38 / 0.55),
-    0 0 calc(5px + var(--fire-a, 0.06) * 30px) oklch(0.78 0.20 50 / calc(0.45 + var(--fire-a, 0.06) * 2.2));
-}
-/* sweetspot coal waiting to catch: dim gold rim, the target */
-.coal.ready {
-  background: linear-gradient(180deg, oklch(0.50 0.06 85), oklch(0.38 0.05 80));
-  box-shadow:
-    inset 0 0 0 1px oklch(0.82 0.12 88 / 0.50),
-    inset 0 1px 0 oklch(0.88 0.10 90 / 0.30);
-}
-/* sweetspot coal that has caught: full gold bloom, lifts slightly */
-.coal.caught {
-  background: linear-gradient(180deg, oklch(0.90 0.16 92), oklch(0.78 0.15 85));
-  box-shadow:
-    inset 0 1px 0 oklch(0.97 0.10 95 / 0.65),
-    inset 0 -1px 2px oklch(0.55 0.14 80 / 0.45),
-    0 0 calc(5px + var(--fire-b, 0.06) * 26px) oklch(0.85 0.16 90 / calc(0.45 + var(--fire-b, 0.06) * 2.0));
-  transform: translateY(-1px);
-}
-/* overtired overshoot: too-hot orange-red, hardest flicker */
-.coal.toohot {
-  background: linear-gradient(180deg, oklch(0.66 0.25 30), oklch(0.52 0.22 28));
-  box-shadow:
-    inset 0 1px 0 oklch(0.80 0.18 40 / 0.50),
-    inset 0 -1px 2px oklch(0.40 0.20 25 / 0.60),
-    0 0 calc(5px + var(--fire-a, 0.06) * 34px) oklch(0.62 0.26 28 / calc(0.50 + var(--fire-a, 0.06) * 2.6));
-}
-/* banked overnight embers: asleep view, low and slow */
-.sh-bed.banked .coal.banked {
-  background: linear-gradient(180deg, oklch(0.46 0.10 40), oklch(0.34 0.08 35));
-  box-shadow:
-    inset 0 1px 0 oklch(0.62 0.10 55 / 0.30),
-    inset 0 -1px 2px oklch(0.24 0.06 30 / 0.55),
-    0 0 calc(2px + var(--fire-c, 0.10) * 10px) oklch(0.52 0.14 38 / calc(0.20 + var(--fire-c, 0.10) * 1.0));
-}
-/* dark mode: deeper trough, lit/caught/toohot embers brighten via --ember-* tokens */
-[data-mode="dark"] .sh-bed {
-  background: linear-gradient(180deg, oklch(0.16 0.02 35 / 0.55), oklch(0.10 0.015 30 / 0.65));
-  box-shadow: inset 0 2px 6px oklch(0.06 0.01 30 / 0.70), inset 0 -1px 0 oklch(0.70 0.06 60 / 0.12);
-}
+.ember-glow { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.ember-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; mix-blend-mode: screen; }
+.ember-field { position: absolute; bottom: -30%; filter: blur(3px); mix-blend-mode: screen; }
 .sh-rail-cap { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; }
 /* Past-window "nap overdue" flag next to timer */
 .overtired-flag { font-family: var(--font-sans); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: oklch(0.55 0.18 25); background: oklch(0.96 0.06 25 / 0.30); border: 1px solid oklch(0.70 0.14 25 / 0.35); border-radius: 8px; padding: 3px 8px; vertical-align: middle; margin-left: 10px; }
 [data-mode="dark"] .overtired-flag { color: oklch(0.82 0.14 25); background: oklch(0.38 0.10 25 / 0.30); border-color: oklch(0.60 0.12 25 / 0.40); }
-/* Hero card pulses red border when overtired */
-.card.hero[data-overtired] { animation: overtired-pulse 3s ease-in-out infinite; }
-@keyframes overtired-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.18 25 / 0); }
-  50% { box-shadow: 0 0 0 2px oklch(0.65 0.18 25 / 0.45), 0 4px 20px oklch(0.60 0.15 25 / 0.18); }
-}
-@media (prefers-reduced-motion: reduce) { .card.hero[data-overtired] { animation: none; } }
 /* Cue 2: hero card border + glow blooms during sweetspot */
 .card.hero[data-sweet="entering"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.38), 0 6px 28px oklch(0.62 0.10 280 / 0.16); }
 .card.hero[data-sweet="now"] { box-shadow: 0 0 0 1.5px oklch(0.64 0.14 280 / 0.68), 0 6px 36px oklch(0.58 0.14 280 / 0.28); }
 .card.hero[data-sweet="passing"] { box-shadow: 0 0 0 1px oklch(0.68 0.10 280 / 0.28), 0 6px 22px oklch(0.62 0.10 280 / 0.12); }
-/* ---- hero card: moon glow ---- */
 .card.hero { position: relative; }
-.card.hero::before {
-  content: '';
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none; border-radius: inherit;
-  background:
-    radial-gradient(ellipse 55% 60% at 92% 20%, oklch(0.90 0.07 292 / 0.38), transparent 62%),
-    radial-gradient(ellipse 30% 75% at 99% 65%, oklch(0.76 0.10 270 / 0.20), transparent 66%);
-  mix-blend-mode: soft-light;
-  opacity: 0.6; transition: opacity 1s ease;
-}
-/* real crescent moon, top-right, sitting in the glow */
-.card.hero .hero-moon {
-  position: absolute; top: 15px; right: 17px;
-  width: 30px; height: 30px; z-index: 1;
-  color: oklch(0.85 0.11 90);
-  opacity: 0.95; pointer-events: none;
-  filter: drop-shadow(0 1px 1px oklch(0.55 0.09 60 / 0.25)) drop-shadow(0 0 10px oklch(0.9 0.1 92 / 0.45));
-}
-[data-mode="dark"] .card.hero .hero-moon {
-  color: oklch(0.93 0.08 95);
-  filter: drop-shadow(0 0 14px oklch(0.9 0.12 90 / 0.8));
-}
-[data-mode="dark"] .card.hero::before { mix-blend-mode: screen; opacity: 0.78; }
-[data-sweet="entering"] .card.hero::before,
-.card.hero[data-sweet="entering"]::before { opacity: 0.78; }
-.card.hero[data-sweet="now"]::before { opacity: 1; }
-.card.hero[data-sweet="passing"]::before { opacity: 0.85; }
-[data-mode="dark"] .card.hero[data-sweet="now"]::before { opacity: 1; }
-.card.hero > * { position: relative; z-index: 1; }
-.card.hero::before { z-index: 0; }
 
 /* ---- glassmorphism ---- */
 @supports (backdrop-filter: blur(1px)) {
@@ -1256,3 +1156,190 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .regression-banner {
   border-left: 3px solid var(--accent);
 }
+
+/* ---- hero sky scene ---- */
+/* The card is a window: the scene fills it edge to edge behind .hero-fg. */
+.card.hero.hero-sky { display: flex; flex-direction: column; min-height: 240px; overflow: hidden; }
+.card.hero.hero-sky .hero-fg { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
+.card.hero.hero-sky .hero-fg .sh-rail-wrap { margin-top: auto; }
+.sky { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; container-type: size; pointer-events: none; }
+.sky-l { position: absolute; inset: 0; }
+.sky-grad { background: linear-gradient(180deg, var(--sky-zenith) 0%, var(--sky-horizon) 56%, var(--sky-glow) 72%, var(--sky-horizon) 100%); }
+
+/* night: a richer star field (varied size + a little warm/cool color) instead
+   of uniform box-shadow noise, a soft atmospheric wash for depth, and the
+   birth constellation turned up from an 8%-opacity secret into something
+   quietly present. */
+.sky-stars-rich { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Fade stars out before the bottom band where .ember-glow sits (ember-ground
+   starts at 58% down) — a screen-blended glow brightening a star field looks
+   like the ember is lighting the sky itself, so stars are masked out of that
+   band instead of shining through it. Scoped to :has(.ember-glow) because
+   deep-night and the circadian night-wake scene never render an ember-glow
+   (heroCard()'s sp.night branch returns before building one) — masking
+   there would just dim the star field's lower band for no reason. */
+.card.hero.hero-sky:has(.ember-glow) .sky-stars-rich {
+  mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 68%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 68%);
+}
+.sky-stars-rich .star-big { filter: drop-shadow(0 0 0.4px currentColor); }
+.star-twinkle { animation: star-twinkle var(--tw-d, 2.6s) ease-in-out infinite; animation-delay: var(--tw-o, 0s); transform-box: fill-box; transform-origin: center; }
+@keyframes star-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.32; transform: scale(0.82); } }
+.night-wash {
+  position: absolute; inset: -15% -10%; pointer-events: none; mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 65% 42% at 26% 12%, oklch(from var(--sky-glow) l c h / .22) 0%, transparent 62%),
+    radial-gradient(ellipse 50% 34% at 78% 58%, oklch(from var(--sky-horizon) l c h / .13) 0%, transparent 65%);
+}
+/* z-fix: the moon (72% night / 58% deep-night, always y22%) used to land
+   inside the constellation's box at left:56% top:8%, so lines/points crossed
+   and kissed the disc — accidental, not composed. The constellation only ever
+   renders alongside the moon (see skyScene()'s `spec.moon ?` guard), so one
+   direct placement — open sky below and right of the moon, moon centres at
+   y22% with a bottom edge around y29% — is enough; no mode-conditional
+   override needed. The moon still paints after the stars in the DOM, so it
+   stays unambiguously in front. */
+.sky-constellation { position: absolute; left: 56%; top: 35%; width: 38%; opacity: 1; }
+.sky-constellation line { stroke: oklch(0.95 0.03 90 / 0.28); stroke-width: 0.16; }
+.sky-constellation circle { r: 0.62; fill: oklch(0.98 0.02 90 / 0.95); filter: drop-shadow(0 0 1.1px oklch(0.92 0.05 85 / .75)); }
+[data-sky="twilight"] .sky-stars { opacity: .5; }
+
+/* sun: a lit sphere (off-center specular highlight, warm rim via SVG gradient
+   in sunSVG()) instead of a flat disc + ring stack; grows and warms at low
+   elevation same as before. Fill comes from the SVG's own gradient url, so no
+   CSS `fill` override belongs here — one would beat the element's own fill. */
+.sky-sun { position: absolute; left: var(--sun-x, 50%); top: var(--sun-y, 30%); width: 36px; height: 36px; overflow: visible; transform: translate(-50%, -50%) scale(calc(1 + var(--sun-warm, 0) * 0.45)); }
+
+/* sun-rays: a soft rotating ray field behind the disc, screen-blended so it
+   only ever brightens — a hint of dancing light rather than a static bloom.
+   Glacial rotation + a shallow corona breathe: alive in peripheral vision,
+   never twitchy. skyScene() never emits .sun-rays at night (no sun in the
+   DOM at all then), so this display:none is belt-and-suspenders, not a fix
+   for stale state — kept in case a future scene ever leaves the element in
+   place across mode changes. */
+.sun-rays {
+  position: absolute; left: var(--sun-x, 50%); top: var(--sun-y, 30%); width: 96px; height: 96px;
+  transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: screen; filter: blur(0.4px);
+  animation: sun-rays-rot 240s linear infinite, sun-rays-breathe 19s ease-in-out infinite alternate;
+}
+.sun-rays-fill { fill: oklch(0.95 0.05 85 / .9); }
+@keyframes sun-rays-rot {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes sun-rays-breathe { from { opacity: .72; } to { opacity: 1; } }
+[data-sky="night"] .sun-rays, [data-sky="deep-night"] .sun-rays { display: none; }
+
+/* moon: a lit body, not a sticker — gradient surface + faint maria, a tight
+   silver corona at the limb, and a wide halo that lifts the sky around it */
+.sky-moon { position: absolute; left: var(--moon-x, 72%); top: var(--moon-y, 22%); width: 33px; height: 33px; overflow: visible; transform: translate(-50%, -50%); }
+.sky-moon::before { /* soft glow hugging the disc, fading into the sky — no ring */
+  content: ''; position: absolute; left: 50%; top: 50%; width: 380%; height: 380%;
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(closest-side,
+    oklch(0.94 0.02 250 / 0.20) 24%, oklch(0.89 0.035 262 / 0.10) 44%, transparent 72%);
+}
+.moon-body { filter: drop-shadow(0 0 0.4px oklch(0.95 0.02 250 / 0.5)); } /* faint limb glow */
+[data-sky="deep-night"] .sky-moon { width: 37px; height: 37px; }
+[data-sky="deep-night"] .sky-moon::before {
+  background: radial-gradient(closest-side,
+    oklch(0.95 0.025 250 / 0.24) 24%, oklch(0.90 0.04 262 / 0.12) 44%, transparent 72%);
+}
+
+/* clouds: a real lit/shadow gradient per puff (painted in JS), tied to the
+   sky's own palette via CSS relative-color so it tracks every state; coprime
+   drift durations as before. Opacity now lives on the layer (.c1/.c2/.c3),
+   not the svg, since the svg's fill is the gradient url, not a flat color. */
+.sky-clouds { overflow: hidden; }
+.sky-cloud {
+  position: absolute; left: 0; width: 46%; animation: cloud-drift linear infinite;
+  --cloud-hi: oklch(from var(--sky-horizon) min(l + 0.10, 0.92) c h);
+  --cloud-mid: var(--sky-horizon);
+  --cloud-sh: oklch(from var(--sky-zenith) calc(l - 0.04) c h);
+}
+.sky-cloud svg { width: 100%; filter: blur(3.5px); }
+/* shading overlay: the same FLUX image, self-masked, blended soft-light —
+   reintroduces the painted lobes/crevices as real tonal shading on top of the
+   flat palette gradient instead of discarding that detail once the
+   silhouette is cut. */
+.cloud-shade { mix-blend-mode: soft-light; opacity: 0.8; }
+/* directional hotspot: warm screen-blended bloom, positioned toward the sun
+   (cx computed per-render in JS — see cloudsHTML() in sky.js). Opacity scales
+   with --sun-warm so it fades out near midday and strengthens at golden
+   hour/morning, exactly like the sun's own scale/warmth. Defaults to 0 (no
+   sun rendered, e.g. night) since --sun-warm is only ever set alongside
+   --sun-x. */
+.cloud-hotspot { mix-blend-mode: screen; opacity: calc(var(--sun-warm, 0) * 0.55); }
+.sky-cloud.c1 { top: 12%; animation-duration: 173s; opacity: .62; }
+.sky-cloud.c2 { top: 27%; width: 36%; animation-duration: 251s; opacity: .46; }
+.sky-cloud.c2 svg { filter: blur(4px); }
+.sky-cloud.c3 { top: 5%; width: 30%; animation-duration: 293s; opacity: .32; }
+.sky-cloud.c3 svg { filter: blur(5.5px); }
+@keyframes cloud-drift { from { transform: translateX(-50%); } to { transform: translateX(260%); } }
+
+/* depth in the drift: the flat translateX scroll above still carries each
+   layer sideways, but the inner puff also breathes on a gentle vertical bob +
+   faint opacity swell. Nearer layers (c1) bob more and faster, far layers
+   (c3) barely stir. Compositor-only (transform + opacity), coprime-ish
+   periods so nothing beats in sync. Bob rides the svg child, drift the
+   parent, so the two transforms compose cleanly. */
+.sky-cloud svg { animation: cloud-bob 41s ease-in-out infinite alternate; }
+.sky-cloud.c1 svg { --bob: 4px; animation-duration: 37s; animation-delay: -6s; }
+.sky-cloud.c2 svg { --bob: 2.6px; animation-duration: 43s; animation-delay: -20s; }
+.sky-cloud.c3 svg { --bob: 1.6px; animation-duration: 53s; animation-delay: -33s; }
+@keyframes cloud-bob {
+  from { transform: translateY(calc(var(--bob, 3px) * -1)); opacity: .84; }
+  to { transform: translateY(var(--bob, 3px)); opacity: 1; }
+}
+
+/* particle canvas, grain, grade */
+.sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sky-grain { filter: url(#sky-grain-f); opacity: 0.05; mix-blend-mode: overlay; background: #808080; }
+.sky-grade {
+  background:
+    radial-gradient(120% 100% at 50% 118%, oklch(0.35 0.06 45 / 0.22), transparent 55%),
+    radial-gradient(140% 120% at 50% -20%, transparent 60%, oklch(0.30 0.04 300 / 0.16) 100%);
+}
+[data-sky="golden"] .sky-grade, [data-sky="twilight"] .sky-grade, [data-sky="night"] .sky-grade, [data-sky="deep-night"] .sky-grade {
+  background:
+    linear-gradient(180deg, oklch(0.18 0.03 300 / 0.30), transparent 52%),
+    radial-gradient(120% 100% at 50% 118%, oklch(0.30 0.05 40 / 0.25), transparent 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-cloud, .sky-cloud svg, .sun-rays, .star-twinkle { animation: none !important; }
+}
+
+/* text contrast: dark scenes flip the hero ink light; the grade guarantees it.
+   morning/day are bright skies and need the opposite fix — the theme's default
+   --soft/--muted are tuned for the card's normal (often dark) background and
+   wash out against a pale sky, so they get a forced dark ink instead of inherit. */
+.hero-sky[data-sky-mode="golden"] .hero-fg, .hero-sky[data-sky-mode="twilight"] .hero-fg,
+.hero-sky[data-sky-mode="night"] .hero-fg, .hero-sky[data-sky-mode="deep-night"] .hero-fg {
+  --hero-ink: oklch(0.97 0.015 90);
+  --hero-ink-soft: oklch(0.90 0.03 85 / 0.94);
+}
+.hero-sky[data-sky-mode="morning"] .hero-fg, .hero-sky[data-sky-mode="day"] .hero-fg,
+.hero-sky[data-sky-mode="newborn"] .hero-fg {
+  --hero-ink: oklch(0.30 0.035 50);
+  --hero-ink-soft: oklch(0.40 0.035 50 / 0.92);
+}
+.hero-sky .hero-fg .timer { color: var(--hero-ink, inherit); }
+.hero-sky[data-sky-mode="golden"] .hero-fg .timer, .hero-sky[data-sky-mode="twilight"] .hero-fg .timer,
+.hero-sky[data-sky-mode="night"] .hero-fg .timer, .hero-sky[data-sky-mode="deep-night"] .hero-fg .timer {
+  text-shadow: 0 1px 10px oklch(0.22 0.04 300 / 0.55);
+}
+.hero-sky[data-sky-mode="morning"] .hero-fg .timer, .hero-sky[data-sky-mode="day"] .hero-fg .timer,
+.hero-sky[data-sky-mode="newborn"] .hero-fg .timer {
+  text-shadow: 0 1px 10px oklch(0.97 0.02 90 / 0.55);
+}
+.hero-sky .hero-fg .state-lbl, .hero-sky .hero-fg .hero-sub { color: var(--hero-ink-soft, var(--soft)); }
+.hero-sky .hero-fg .sh-sweet-lbl, .hero-sky .hero-fg .sh-rail-cap, .hero-sky .hero-fg .timer .u { color: var(--hero-ink-soft, var(--muted)); }
+
+/* low battery: static painterly scene remains; drift slows to near-still */
+.sky-low-power .sky-cloud { animation-duration: 700s !important; }
+.sky-low-power .sky-cloud svg { animation-duration: 900s !important; }
+.sky-low-power .sun-rays { animation: none !important; }
+
+/* parallax: depth-scaled transform from tilt (stars 0.15 · clouds 0.3) */
+.sky-stars, .sky-clouds { transform: translate(calc(var(--par-x, 0) * -3px), calc(var(--par-y, 0) * -2px)); }
