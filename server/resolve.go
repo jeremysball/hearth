@@ -41,8 +41,9 @@ func handleConflictInfo(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.PathValue("pending")
 		var provider, email, target, current string
-		err := db.QueryRow(`SELECT provider, COALESCE(email,''), target_family_id, current_family_id FROM pending_auth WHERE token = ?`, token).
-			Scan(&provider, &email, &target, &current)
+		_, err := lookupByToken(db, `
+			SELECT token_hash, provider, COALESCE(email,''), target_family_id, current_family_id
+			FROM pending_auth WHERE token_hash IN (%s)`, token, &provider, &email, &target, &current)
 		if err == sql.ErrNoRows {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
@@ -75,8 +76,9 @@ func handleResolve(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		var provider, providerUserID, email, target, current, currentCare string
-		err := db.QueryRow(`SELECT provider, provider_user_id, COALESCE(email,''), target_family_id, current_family_id, current_caregiver_id FROM pending_auth WHERE token = ?`, req.Pending).
-			Scan(&provider, &providerUserID, &email, &target, &current, &currentCare)
+		matchedHash, err := lookupByToken(db, `
+			SELECT token_hash, provider, provider_user_id, COALESCE(email,''), target_family_id, current_family_id, current_caregiver_id
+			FROM pending_auth WHERE token_hash IN (%s)`, req.Pending, &provider, &providerUserID, &email, &target, &current, &currentCare)
 		if err == sql.ErrNoRows {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
@@ -86,7 +88,7 @@ func handleResolve(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		finish := func() { db.Exec(`DELETE FROM pending_auth WHERE token = ?`, req.Pending) }
+		finish := func() { db.Exec(`DELETE FROM pending_auth WHERE token_hash = ?`, matchedHash) }
 
 		switch req.Choice {
 		case "keep":
