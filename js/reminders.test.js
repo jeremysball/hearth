@@ -116,7 +116,11 @@ const initialState = {
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
     ],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
-    reminders: { naps: false, bottle: true, meds: false, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
+    // quietStart === quietEnd disables the quiet-hours window (see isQuiet()
+    // in reminders.js): the default 20:00-07:00 would nondeterministically
+    // suppress this test's past-due reminder whenever the real wall-clock
+    // time it runs at falls inside that 11-hour window.
+    reminders: { naps: false, bottle: true, meds: false, lead: 0, quietStart: '00:00', quietEnd: '00:00' },
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
     clock24: '12h',

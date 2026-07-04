@@ -1,4 +1,4 @@
-const { startServer, launchBrowser, onboard, check, tally } = require('./helpers');
+const { startServer, launchBrowser, check, tally } = require('./helpers');
 
 (async () => {
   const srv = await startServer(18794);
@@ -6,24 +6,39 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   const page = await browser.newPage();
   try {
     await page.setViewportSize({ width: 320, height: 800 });
-    await page.goto(srv.base + '/');
-    await onboard(page);
-    // Log a couple of entries so the timeline has content.
-    await page.click('[data-action="log:open"][data-type="diaper"]');
-    await page.click('[data-action="log:save"][data-type="diaper"]');
-    await page.waitForTimeout(500);
-
-    // Seed one entry with a note and one without, to check the note indicator dot.
-    await page.evaluate(() => {
-      const raw = localStorage.getItem('hearth.state.v1');
-      const st = JSON.parse(raw);
+    // Pre-seed localStorage before the app ever boots, instead of onboarding
+    // through the UI and injecting entries afterward. Onboarding's seed()
+    // replaces the whole log, and any add-entry after it kicks off async
+    // save()/sync work; overwriting the log from outside afterward raced
+    // that in-flight work, which could clobber the overwrite depending on
+    // timing. Seeding pre-boot means the app's very first read of state
+    // already has the entries we want, and since setup is already true,
+    // onboarding never runs at all.
+    await page.addInitScript(() => {
       const now = new Date().toISOString();
-      st.log.unshift({ id: 'note-test', type: 'bottle', start: now, amount: 120, note: 'Fussy today' });
-      st.log.unshift({ id: 'no-note-test', type: 'bottle', start: now, amount: 90 });
-      st.log.unshift({ id: 'bath-note-test', type: 'bath', start: now, note: 'Loved the water' });
-      localStorage.setItem('hearth.state.v1', JSON.stringify(st));
+      localStorage.setItem('hearth.state.v1', JSON.stringify({
+        setup: true,
+        synced: false,
+        baby: { name: 'Test', birthdate: '2025-01-01', theme: 'girl', photo: null, caregiver: 'Maya' },
+        settings: {
+          theme: '', bottleIntervalH: 3,
+          meds: [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }],
+          playTypes: ['Tummy time', 'Reading', 'Outdoor'],
+          units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
+          reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
+          cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
+          sound: true, clock24: '12h', darkMode: 'auto', seenChangelog: ''
+        },
+        log: [
+          { id: 'diaper-test', type: 'diaper', start: now, kind: 'Wet' },
+          { id: 'note-test', type: 'bottle', start: now, amount: 120, note: 'Fussy today' },
+          { id: 'no-note-test', type: 'bottle', start: now, amount: 90 },
+          { id: 'bath-note-test', type: 'bath', start: now, note: 'Loved the water' },
+        ],
+        growth: [], caregivers: [], currentCaregiverId: ''
+      }));
     });
-    await page.reload();
+    await page.goto(srv.base + '/');
     await page.waitForSelector('.actions');
 
     const homeDotOnNoted = await page.$('[data-id="note-test"] .row-note-dot');
