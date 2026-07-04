@@ -14,7 +14,13 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     // the entry we want, and since setup is already true, onboarding never
     // runs at all.
     await page.addInitScript(() => {
-      const now = Date.now();
+      // Anchor to noon today, not an offset from "now": the app's derive.today()
+      // filters entries by local calendar day (startOfDay), so a fixed
+      // hours-before-now offset can silently land in "yesterday" whenever the
+      // test happens to run within a couple hours after local midnight,
+      // making the row vanish from Home with no error.
+      const n = new Date();
+      const noon = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12, 0, 0);
       localStorage.setItem('hearth.state.v1', JSON.stringify({
         setup: true,
         synced: false,
@@ -32,25 +38,16 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
           {
             id: 'sleep-test',
             type: 'sleep',
-            start: new Date(now - 2 * 3600000).toISOString(),
-            end: new Date(now - 3600000).toISOString(),
+            start: new Date(noon.getTime() - 2 * 3600000).toISOString(),
+            end: new Date(noon.getTime() - 3600000).toISOString(),
           },
         ],
         growth: [], caregivers: [], currentCaregiverId: ''
       }));
     });
-    page.on('console', (msg) => console.log('  [page]', msg.text()));
-    page.on('pageerror', (err) => console.log('  [pageerror]', err.message));
     await page.goto(srv.base + '/');
 
-    try {
-      await page.click('[data-id="sleep-test"]');
-    } catch (e) {
-      const present = await page.evaluate(() => !!document.querySelector('[data-id="sleep-test"]'));
-      const rowIds = await page.evaluate(() => Array.from(document.querySelectorAll('.row[data-id]')).map((el) => el.dataset.id));
-      console.log('  [debug] sleep-test present:', present, 'row ids:', JSON.stringify(rowIds));
-      throw e;
-    }
+    await page.click('[data-id="sleep-test"]');
     await page.waitForSelector('[data-action="entry:edit"][data-id="sleep-test"]');
     await page.click('[data-action="entry:edit"][data-id="sleep-test"]');
     await page.waitForSelector('#f-end-date');
