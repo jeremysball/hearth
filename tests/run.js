@@ -17,7 +17,7 @@ const CONCURRENCY = Math.min(Number(process.env.TEST_CONCURRENCY) || 1, E2E_SUIT
 const E2E_ONLY = process.argv.includes('--e2e-only');
 
 function buildServer() {
-  spawnSync('go', ['build', '-o', BIN, '.'], { cwd: path.join(ROOT, 'server'), stdio: 'pipe' });
+  spawnSync('go', ['build', '-o', BIN, './cmd/hearth'], { cwd: ROOT, stdio: 'pipe' });
 }
 
 function runBuffered(label, cmd, args) {
