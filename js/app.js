@@ -1,7 +1,7 @@
 // app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount } from './sync.js';
-import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
+import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
 import { trends } from './trends.js';
@@ -275,6 +275,7 @@ document.addEventListener('click', (ev) => {
       toast('Entry deleted', () => { if (e) { addEntry(e); router.refresh(); } });
     },
     'toast:undo': () => runUndo(),
+    'toast:dismiss': () => dismissToast(),
     'onboard:theme': () => onboardTheme(d.theme),
     'onboard:photo': () => onboardPhoto(),
     'onboard:finish': () => onboardFinish(),
