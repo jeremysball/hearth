@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearth — a free, private baby tracker</title>
+<meta name="description" content="Hearth is a free, private baby tracker you self-host. No accounts, no ads, no cloud.">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --day-bg: oklch(0.918 0.075 46);
+    --day-ink: oklch(0.30 0.045 42);
+    --day-muted: oklch(0.50 0.035 45);
+    --paper: oklch(0.965 0.028 55);
+    --ember-core: oklch(0.86 0.20 56);
+    --ember-mid: oklch(0.74 0.19 42);
+    --ember-cool: oklch(0.58 0.16 33);
+    --night-bg: oklch(0.190 0.068 47);
+    --night-ink: oklch(0.93 0.016 65);
+    --night-muted: oklch(0.68 0.03 55);
+    --hair-day: oklch(0.30 0.045 42 / 0.14);
+    --hair-night: oklch(0.93 0.016 65 / 0.14);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: 'Archivo', system-ui, sans-serif;
+    color: var(--day-ink);
+    background: linear-gradient(
+      180deg,
+      var(--day-bg) 0%,
+      var(--day-bg) 30%,
+      oklch(0.72 0.14 46) 55%,
+      oklch(0.42 0.13 44) 72%,
+      var(--night-bg) 88%,
+      var(--night-bg) 100%
+    );
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ---------- Hero ---------- */
+
+  .hero {
+    padding: 96px 24px 72px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ember-cool);
+    background: var(--paper);
+    border: 1px solid var(--hair-day);
+    padding: 7px 16px;
+    border-radius: 999px;
+    box-shadow: 0 1px 2px oklch(0.3 0.04 42 / 0.08);
+  }
+
+  .ember-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid));
+    box-shadow: 0 0 6px 1px oklch(0.74 0.19 42 / 0.6);
+    animation: glow 4.3s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    0%, 100% { opacity: 0.55; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+
+  h1.wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(56px, 11vw, 108px);
+    line-height: 1;
+    margin: 28px 0 20px;
+    background: linear-gradient(180deg, var(--day-ink) 0%, var(--ember-cool) 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hook {
+    font-size: clamp(19px, 2.6vw, 24px);
+    max-width: 560px;
+    margin: 0 auto 12px;
+    color: var(--day-ink);
+    font-weight: 500;
+  }
+
+  .subhook {
+    font-size: 16px;
+    max-width: 480px;
+    margin: 0 auto 40px;
+    color: var(--day-muted);
+    line-height: 1.55;
+  }
+
+  .cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+  }
+
+  .btn:hover { transform: translateY(-1px); }
+
+  .btn.primary {
+    background: linear-gradient(180deg, var(--ember-mid) 0%, var(--ember-cool) 100%);
+    color: oklch(0.98 0.01 60);
+    box-shadow: 0 6px 18px oklch(0.55 0.16 40 / 0.35);
+  }
+
+  .btn.secondary {
+    background: var(--paper);
+    color: var(--day-ink);
+    border: 1px solid var(--hair-day);
+  }
+
+  /* ---------- Screenshots ---------- */
+
+  .showcase {
+    padding: 40px 24px 96px;
+  }
+
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .phone-card {
+    background: var(--paper);
+    border-radius: 28px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 12px 32px oklch(0.3 0.04 42 / 0.14);
+  }
+
+  .phone-card img {
+    width: 100%;
+    border-radius: 18px;
+    display: block;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 14px oklch(0.2 0.03 40 / 0.25);
+  }
+
+  .phone-card .label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ember-cool);
+  }
+
+  .showcase-caption {
+    text-align: center;
+    max-width: 480px;
+    margin: 32px auto 0;
+    color: var(--day-muted);
+    font-size: 15px;
+  }
+
+  /* ---------- Features ---------- */
+
+  .features {
+    padding: 64px 24px 96px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(30px, 4vw, 42px);
+    text-align: center;
+    margin: 0 0 48px;
+    color: var(--day-ink);
+  }
+
+  .chip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 16px 18px;
+    box-shadow: 0 3px 10px oklch(0.3 0.04 42 / 0.08);
+  }
+
+  .chip .swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .chip .text strong { display: block; font-size: 15px; }
+  .chip .text span { display: block; font-size: 13px; color: var(--day-muted); }
+
+  .sleep-swatch   { background: radial-gradient(circle at 35% 30%, oklch(0.80 0.12 145), oklch(0.56 0.08 135)); }
+  .nursing-swatch { background: radial-gradient(circle at 35% 30%, oklch(0.86 0.10 42), oklch(0.66 0.12 40)); }
+  .bottle-swatch  { background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid)); }
+  .diaper-swatch  { background: radial-gradient(circle at 35% 30%, oklch(0.88 0.09 85), oklch(0.72 0.10 75)); }
+  .medicine-swatch{ background: radial-gradient(circle at 35% 30%, oklch(0.87 0.08 20), oklch(0.72 0.10 15)); }
+  .pump-swatch    { background: radial-gradient(circle at 35% 30%, oklch(0.85 0.06 210), oklch(0.66 0.08 210)); }
+  .sweetspot-swatch{ background: radial-gradient(circle at 35% 30%, oklch(0.88 0.11 95), oklch(0.70 0.14 60)); }
+  .sharing-swatch { background: radial-gradient(circle at 35% 30%, oklch(0.80 0.09 280), oklch(0.62 0.11 285)); }
+
+  /* ---------- Night pitch ---------- */
+
+  .pitch {
+    position: relative;
+    padding: 120px 24px 140px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .pitch::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -10%;
+    width: 140%;
+    height: 60%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse 60% 100% at 50% 100%, oklch(0.55 0.20 44 / 0.35), transparent 70%);
+    pointer-events: none;
+  }
+
+  .pitch h2 {
+    position: relative;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(34px, 6vw, 58px);
+    line-height: 1.15;
+    color: var(--night-ink);
+    margin: 0 0 20px;
+    text-shadow: 0 0 40px oklch(0.55 0.20 44 / 0.4);
+  }
+
+  .pitch p {
+    position: relative;
+    color: var(--night-muted);
+    max-width: 480px;
+    margin: 0 auto;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  /* ---------- Install ---------- */
+
+  .install {
+    padding: 0 24px 120px;
+  }
+
+  .terminal {
+    max-width: 640px;
+    margin: 0 auto;
+    background: oklch(0.13 0.012 50);
+    border: 1px solid oklch(0.32 0.022 50 / 0.6);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px oklch(0 0 0 / 0.4);
+  }
+
+  .terminal-bar {
+    display: flex;
+    gap: 7px;
+    padding: 12px 16px;
+    border-bottom: 1px solid oklch(0.32 0.022 50 / 0.6);
+  }
+
+  .terminal-bar span {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: oklch(0.4 0.02 50);
+  }
+
+  .terminal pre {
+    margin: 0;
+    padding: 22px 20px 26px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--night-ink);
+    overflow-x: auto;
+  }
+
+  .terminal .prompt { color: var(--ember-core); }
+  .terminal .comment { color: var(--night-muted); }
+
+  .install-caption {
+    text-align: center;
+    color: var(--night-muted);
+    max-width: 480px;
+    margin: 24px auto 0;
+    font-size: 14px;
+  }
+
+  /* ---------- Footer ---------- */
+
+  footer {
+    padding: 40px 24px 64px;
+    text-align: center;
+    color: var(--night-muted);
+    font-size: 13px;
+  }
+
+  footer .badges {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  footer .badges img { height: 20px; }
+
+  footer a.repo-link {
+    color: var(--night-ink);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid oklch(0.68 0.03 55 / 0.4);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ember-dot { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 620px) {
+    .phones { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <section class="hero">
+    <span class="eyebrow"><span class="ember-dot"></span>Self-hosted · MIT licensed</span>
+    <h1 class="wordmark">Hearth</h1>
+    <p class="hook">A free, private baby tracker. No accounts, no ads, no cloud.</p>
+    <p class="subhook">Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your device — install it as a PWA and it works offline.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/jeremysball/hearth">View on GitHub</a>
+      <a class="btn secondary" href="#install">Self-host it</a>
+    </div>
+  </section>
+
+  <section class="showcase">
+    <div class="phones">
+      <div class="phone-card">
+        <img src="screenshots/readme-hero-light.png" alt="Hearth's hero card in daylight, showing an awake timer and nap window prediction">
+        <div class="label">Day</div>
+      </div>
+      <div class="phone-card">
+        <img src="screenshots/readme-hero-dark.png" alt="Hearth's hero card at night, showing an awake timer and nap window prediction">
+        <div class="label">Night</div>
+      </div>
+    </div>
+    <p class="showcase-caption">The hero card tracks awake time and predicts the next nap window — logging a bottle takes two taps.</p>
+  </section>
+
+  <section class="features">
+    <h2 class="section-title">What it tracks</h2>
+    <div class="chip-grid">
+      <div class="chip"><span class="swatch sleep-swatch"></span><span class="text"><strong>Sleep</strong><span>Start, end, and quality</span></span></div>
+      <div class="chip"><span class="swatch nursing-swatch"></span><span class="text"><strong>Nursing</strong><span>Side, duration, and time</span></span></div>
+      <div class="chip"><span class="swatch bottle-swatch"></span><span class="text"><strong>Bottles</strong><span>Contents and volume</span></span></div>
+      <div class="chip"><span class="swatch diaper-swatch"></span><span class="text"><strong>Diapers</strong><span>Wet, dirty, or mixed</span></span></div>
+      <div class="chip"><span class="swatch medicine-swatch"></span><span class="text"><strong>Medicine</strong><span>Doses and interval reminders</span></span></div>
+      <div class="chip"><span class="swatch pump-swatch"></span><span class="text"><strong>Pumping</strong><span>Side, volume, and time</span></span></div>
+      <div class="chip"><span class="swatch sweetspot-swatch"></span><span class="text"><strong>SweetSpot</strong><span>Predicts the next ideal nap window</span></span></div>
+      <div class="chip"><span class="swatch sharing-swatch"></span><span class="text"><strong>Sharing</strong><span>Invite caregivers to log together</span></span></div>
+    </div>
+  </section>
+
+  <section class="pitch">
+    <h2>No accounts.<br>No ads.<br>No cloud.</h2>
+    <p>Hearth runs on hardware you control. Your family's data never leaves your network unless you decide to share it.</p>
+  </section>
+
+  <section class="install" id="install">
+    <div class="terminal">
+      <div class="terminal-bar"><span></span><span></span><span></span></div>
+      <pre><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span>
+<span class="prompt">$</span> git clone https://github.com/jeremysball/hearth.git
+<span class="prompt">$</span> cd hearth
+<span class="prompt">$</span> cp .env.example .env
+<span class="comment"># fill in TS_AUTHKEY, CERT_FILE, and KEY_FILE</span>
+<span class="prompt">$</span> sudo docker compose up -d</pre>
+    </div>
+    <p class="install-caption">Runs behind Tailscale — only devices on your tailnet can reach it. No exposed ports, no reverse proxy to configure.</p>
+  </section>
+
+  <footer>
+    <div class="badges">
+      <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
+      <img src="https://img.shields.io/badge/go-1.26-00ADD8.svg" alt="Go 1.26">
+      <img src="https://img.shields.io/badge/PWA-ready-5A0FC8.svg" alt="PWA">
+      <img src="https://img.shields.io/badge/self--hosted-yes-success.svg" alt="Self-hosted">
+    </div>
+    <p>MIT licensed. <a class="repo-link" href="https://github.com/jeremysball/hearth">github.com/jeremysball/hearth</a></p>
+  </footer>
+
+</body>
+</html>
