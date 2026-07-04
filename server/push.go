@@ -341,10 +341,18 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		Intervals map[string]float64 `json:"intervals"`
 	}
 	json.Unmarshal([]byte(cardsJSON), &cards)
+	var cardsRaw map[string]json.RawMessage
+	json.Unmarshal([]byte(cardsJSON), &cardsRaw)
 	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true}
 	for cardType, intervalH := range cards.Intervals {
-		if excluded[cardType] {
+		if excluded[cardType] || cardType == "" {
 			continue
+		}
+		if raw, ok := cardsRaw[cardType]; ok {
+			var visible bool
+			if err := json.Unmarshal(raw, &visible); err == nil && !visible {
+				continue
+			}
 		}
 		var lastStart string
 		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, cardType).Scan(&lastStart)
