@@ -552,12 +552,14 @@ function gather(type) {
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
+    if (!m) return base;
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
     base.playType = segVal('playType') || null;
   } else if (type === 'hygiene') {
     const id = $('#f-hyg').value;
     const it = state().settings.hygiene.find((x) => x.id === id);
+    if (!it) return base;
     base.itemId = id; base.name = it.name;
   }
   return base;
@@ -726,7 +728,7 @@ export function openHygieneCard() {
   if (items.length === 1) { logHygieneItem(items[0].id); return; }
   sheet.open(
     `<div class="chooser">` + items.map((it) => `
-      <button class="chooser-item" data-action="hygiene:log" data-hid="${it.id}">
+      <button class="chooser-item" data-action="hygiene:log" data-hid="${esc(it.id)}">
         <span class="chooser-ic tone-hygiene"><svg class="icon"><use href="#icon-hygiene"></use></svg></span>
         <span>${esc(it.name)}</span>
       </button>`).join('') + `</div>`,
@@ -858,12 +860,12 @@ function hygieneForm() {
     <button class="btn-ghost" data-action="card:hide" data-card="hygiene">Hide this card</button>`;
 }
 export function hygieneRow(it) {
-  return `<div class="med-edit" data-hid="${it.id}">
+  return `<div class="med-edit" data-hid="${esc(it.id)}">
     <input class="hyg-name" placeholder="Name" value="${esc(it.name)}" />
     <div class="med-sub">
       <span class="med-every">every</span>
       <input class="hyg-eh" type="number" min="1" max="720" value="${it.everyH}" /><span class="med-every">h</span>
-      <button class="med-del" data-action="hygiene:remove" data-hid="${it.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
+      <button class="med-del" data-action="hygiene:remove" data-hid="${esc(it.id)}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>
   </div>`;
 }
