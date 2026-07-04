@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 class MemoryStorage { constructor(){this.s={};} getItem(k){return Object.prototype.hasOwnProperty.call(this.s,k)?this.s[k]:null;} setItem(k,v){this.s[k]=String(v);} removeItem(k){delete this.s[k];} }
 globalThis.localStorage = new MemoryStorage();
 globalThis.window = globalThis;
-globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
+globalThis.document = {
+  querySelector: () => null, querySelectorAll: () => [],
+  hidden: true, addEventListener: () => {},
+  documentElement: { classList: { toggle: () => {} } },
+};
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { groupByDay } = await import('./timeline.js');

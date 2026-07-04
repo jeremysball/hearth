@@ -24,6 +24,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 | `ui.js` | DOM helpers (`$`, `$$`, `esc`), formatters (`fmt`), icon helper, sheet machinery (`sheet.open/close`), toast, theme, `nowLocalDT`, `initThumbs`, `positionThumb` |
 | `sheets.js` | Log-entry bottom sheet (`openLog`, `saveLog`, `openTypeChooser`), card-config sheets (`editCard`, `openMedCard`, etc.), spinner (`openSpinner`) |
 | `home.js` | Home screen view: hero awake timer, card grid, today summary |
+| `sky.js` | Hero sky scene: palette/moon/sun math, scene HTML builder, canvas particle engine (`initSky`) |
 | `sleep.js` | Sleep view |
 | `trends.js` | Trends view |
 | `growth.js` | Growth view + chart |
@@ -70,6 +71,15 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `router.go(view)`: full nav to named view + `initThumbs`
 - `router.refresh()`: re-render current view + `initThumbs`
 - `router.boot()`: inject shell HTML (tabs + `#view`)
+
+**`sky.js`**
+- `moonPhase(date)`, `sunPosition(elapsedMin, highMin)`, `skyPalette(elevation)`: pure scene math
+- `sceneSpec(inputs)`: maps hero status to a scene mode (`morning`/`day`/`golden`/`twilight`/`night`/`deep-night`/`newborn`)
+- `emberGlow(heat)`: pure color/opacity/size for the hero card's ambient ember field (replaces the old 16-coal bed)
+- `heroSky(st, sp)`: scene HTML + `--light-x/--light-y` card style for `home.js`'s hero
+- `initSky()`: sizes the particle canvas and schedules events; called by the router after every render
+- No landscape: the scene is sky only (sun/moon/clouds/stars) — no ridges, no house
+- **Assets:** `assets/sky/moon.webp` (moon disc), `cloud-tower.webp`/`cloud-classic.webp`/`cloud-hazybank.webp` (c1/c2/c3 cloud shapes), `sun-starburst.webp` (ray field) — all opaque grayscale WebP used as SVG `<mask>` luminance sources, never as final-color images; color always comes from `skyPalette()`.
 
 ---
 
@@ -126,6 +136,13 @@ npm test
 
 ---
 
+## Dev Scripts
+
+- `scripts/bump-version.sh`: cache-buster version bump (see below).
+- `scripts/sky-phases.js`: screenshots the hero sky scene in all 7 modes (morning/day/golden/twilight/night/deep-night/newborn) against a running dev server. Run after any `js/sky.js` change to compare before/after across the whole scene set: `BASE_URL=https://localhost:9878 OUT_DIR=/tmp node scripts/sky-phases.js` (server must already be running — see the `run` skill).
+
+---
+
 ## Version Bump (required before every frontend commit)
 
 Two files, one timestamp, must match:
@@ -147,3 +164,4 @@ TS=$(date -u +%Y-%m-%dT%H:%MZ)
 - **Shape language:** pills for controls, large radii for cards, circles for identity/avatars.
 - **Animations:** one ambient concept at a time. Fire system (`fire-a/b/c`) is the explicit exception (three coprime keyframes = one fire effect).
 - **No external stylesheets**: all CSS in `styles.css` and `<style>` blocks in `index.html`.
+- **Hero sky scene** (`js/sky.js`): sun position = wake-window fraction. Continuous motion is compositor-only; the canvas rAF loop runs only while a particle is live. The scene replaces the old hero moon glow and the red overtired pulse.
