@@ -209,7 +209,9 @@ let _undo = null;
 export function toast(msg, undo, label = 'Undo') {
   let el = $('#toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
-  el.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button data-action="toast:undo">${esc(label)}</button>` : '');
+  el.innerHTML = `<span>${esc(msg)}</span>` +
+    `<button class="x" data-action="toast:dismiss" aria-label="Dismiss"><svg class="icon"><use href="#x"></use></svg></button>` +
+    (undo ? `<button data-action="toast:undo">${esc(label)}</button>` : '');
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), undo ? 4500 : 2200);
@@ -217,6 +219,11 @@ export function toast(msg, undo, label = 'Undo') {
 }
 export function runUndo() {
   if (_undo) { _undo(); _undo = null; }
+  const el = $('#toast'); if (el) el.classList.remove('show');
+}
+export function dismissToast() {
+  clearTimeout(toastTimer);
+  _undo = null;
   const el = $('#toast'); if (el) el.classList.remove('show');
 }
 
