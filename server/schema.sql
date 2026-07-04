@@ -73,6 +73,15 @@ CREATE TABLE IF NOT EXISTS log_entries (
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev);
 
+CREATE TABLE IF NOT EXISTS push_reminder_state (
+  family_id     TEXT NOT NULL,
+  reminder_key  TEXT NOT NULL,
+  due_at        TEXT NOT NULL,
+  stage         INTEGER NOT NULL DEFAULT 0,
+  last_sent_at  TEXT,
+  PRIMARY KEY (family_id, reminder_key)
+);
+
 CREATE TABLE IF NOT EXISTS launch_tokens (
   token_hash   TEXT PRIMARY KEY,
   caregiver_id TEXT NOT NULL,
