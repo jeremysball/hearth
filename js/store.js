@@ -363,6 +363,10 @@ function morningWakes() {
     if (en.getTime() < cutoff) return false;
     const durMin = (en - s) / MIN;
     if (durMin < 180) return false;
+    // Cap at 16h: a sleep longer than that is almost always a data error or
+    // an auto-closed ongoing sleep (the previous sleep gets end=now when a new
+    // one starts). Neither is a legitimate morning wake.
+    if (durMin > 16 * 60) return false;
     const h = en.getHours() + en.getMinutes() / 60;
     return h >= 4 && h < 10;
   }).map((e) => {
