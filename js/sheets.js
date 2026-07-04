@@ -9,9 +9,22 @@ import { addableCardTypes } from './home.js';
 function seg(group, opts, sel) {
   return `<div class="segctl" data-seg="${group}">` +
     `<div class="seg-thumb"></div>` +
-    opts.map((o) => `<button type="button" class="seg-opt ${o === sel ? 'on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`).join('') +
+    opts.map((o) => {
+      const val = typeof o === 'string' ? o : o.val;
+      const label = typeof o === 'string' ? o : o.label;
+      return `<button type="button" class="seg-opt ${val === sel ? 'on' : ''}" data-val="${esc(val)}">${esc(label)}</button>`;
+    }).join('') +
     `</div>`;
 }
+
+// Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
+// "Small" option is rendered as "Little" in the UI. Keep this in sync with
+// `sizeLabel` in home.js.
+const SIZE_OPTS = [
+  { val: 'Small', label: 'Little' },
+  { val: 'Medium', label: 'Medium' },
+  { val: 'Large', label: 'Large' },
+];
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
@@ -483,10 +496,10 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
-    <div id="diaper-size-single">${field('Size', seg('size', ['Small', 'Medium', 'Large'], 'Medium'))}</div>
+    <div id="diaper-size-single">${field('Size', seg('size', SIZE_OPTS, 'Medium'))}</div>
     <div id="diaper-size-mixed" hidden>
-      ${field('Wet size', seg('wetSize', ['Small', 'Medium', 'Large'], 'Medium'))}
-      ${field('Dirty size', seg('dirtySize', ['Small', 'Medium', 'Large'], 'Medium'))}
+      ${field('Wet size', seg('wetSize', SIZE_OPTS, 'Medium'))}
+      ${field('Dirty size', seg('dirtySize', SIZE_OPTS, 'Medium'))}
     </div>
     ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,

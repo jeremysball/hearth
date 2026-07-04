@@ -11,7 +11,8 @@ export const CHANGELOG = [
       'Collapsed older changelog entries behind a "Show older updates" button so the Changelog card stays short.',
       'Added a default bottle amount setting, set it once from the Bottle card, and every new bottle log starts prefilled with it.',
       'Added an "Add or edit medicines" shortcut right in the medicine log form, so you no longer have to leave it to manage your medicine list.',
-      'Pulling down further on refresh now syncs right away instead of waiting for you to let go.'
+      'Pulling down further on refresh now syncs right away instead of waiting for you to let go.',
+      'Renamed the smallest diaper size from "Small" to "Little" throughout the app.'
     ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
