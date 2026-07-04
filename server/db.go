@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -83,7 +85,72 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev)`); err != nil {
 		return nil, err
 	}
+	for _, table := range []string{"sessions", "invites", "launch_tokens", "pending_auth"} {
+		if err := migrateTokenHash(db, table); err != nil {
+			return nil, err
+		}
+	}
+	log.Printf("migration: token-hash rewrite complete")
 	return db, nil
+}
+
+// migrateTokenHash renames table's legacy `token` column to `token_hash`
+// (tolerating both a fresh install, where the column never existed, and an
+// already-migrated database, where the rename already ran), adds the
+// token_hashed sentinel column, then rewrites any un-hashed rows in place.
+// The token_hashed = 0 guard on the UPDATE makes this safe to re-run: only
+// rows a previous, possibly crashed, run left un-rewritten get touched.
+func migrateTokenHash(db *sql.DB, table string) error {
+	if _, err := db.Exec(fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN token TO token_hash`, table)); err != nil &&
+		!strings.Contains(err.Error(), "no such column") && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err := db.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN token_hashed INTEGER NOT NULL DEFAULT 0`, table)); err != nil &&
+		!strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.Query(fmt.Sprintf(`SELECT token_hash FROM %s WHERE token_hashed = 0`, table))
+	if err != nil {
+		return err
+	}
+	var raws []string
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			rows.Close()
+			return err
+		}
+		raws = append(raws, raw)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+
+	n := 0
+	for _, raw := range raws {
+		res, err := tx.Exec(fmt.Sprintf(`UPDATE %s SET token_hash = ?, token_hashed = 1 WHERE token_hash = ? AND token_hashed = 0`, table),
+			hashToken(raw), raw)
+		if err != nil {
+			return err
+		}
+		if affected, _ := res.RowsAffected(); affected > 0 {
+			n++
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	log.Printf("migration: token-hash rewrite %s n=%d", table, n)
+	return nil
 }
 
 // bumpRev advances a family's revision counter within tx and returns the new
