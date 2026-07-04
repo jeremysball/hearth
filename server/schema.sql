@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS invites (
 CREATE TABLE IF NOT EXISTS settings (
   family_id TEXT PRIMARY KEY REFERENCES families(id),
   bottle_interval_h REAL NOT NULL DEFAULT 3,
+  bottle_amount_default REAL NOT NULL DEFAULT 120,
   meds_json TEXT NOT NULL DEFAULT '[]',
   hygiene_json TEXT NOT NULL DEFAULT '[]',
   units_json TEXT NOT NULL DEFAULT '{}',

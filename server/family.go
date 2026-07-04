@@ -145,13 +145,14 @@ func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
 }
 
 type patchSettingsRequest struct {
-	BottleIntervalH float64         `json:"bottleIntervalH"`
-	Meds            json.RawMessage `json:"meds"`
-	Hygiene         json.RawMessage `json:"hygiene"`
-	Units           json.RawMessage `json:"units"`
-	Reminders       json.RawMessage `json:"reminders"`
-	Cards           json.RawMessage `json:"cards"`
-	PlayTypes       json.RawMessage `json:"playTypes"`
+	BottleIntervalH     float64         `json:"bottleIntervalH"`
+	BottleAmountDefault float64         `json:"bottleAmountDefault"`
+	Meds                json.RawMessage `json:"meds"`
+	Hygiene             json.RawMessage `json:"hygiene"`
+	Units               json.RawMessage `json:"units"`
+	Reminders           json.RawMessage `json:"reminders"`
+	Cards               json.RawMessage `json:"cards"`
+	PlayTypes           json.RawMessage `json:"playTypes"`
 }
 
 func rawOrNull(r json.RawMessage) string {
@@ -185,8 +186,8 @@ func handlePatchSettings(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handl
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		res, err := tx.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, hygiene_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
-			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Hygiene), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, rev, session.FamilyID)
+		res, err := tx.Exec(`UPDATE settings SET bottle_interval_h = ?, bottle_amount_default = ?, meds_json = ?, hygiene_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
+			req.BottleIntervalH, req.BottleAmountDefault, rawOrNull(req.Meds), rawOrNull(req.Hygiene), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, rev, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
