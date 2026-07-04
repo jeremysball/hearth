@@ -1,5 +1,7 @@
 certs/
 .worktrees/
+site/icon.png
+site/screenshots/
 .prettierrc
 .env
 *.db

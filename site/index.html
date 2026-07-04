@@ -6,14 +6,33 @@
 <title>Hearth — a free, private baby tracker</title>
 <meta name="description" content="Hearth is a free, private baby tracker you self-host. No accounts, no ads, no cloud.">
 <link rel="icon" href="icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  @font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('fonts/archivo-variable-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400 500;
+    font-display: swap;
+    src: url('fonts/jetbrains-mono-variable-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+    src: url('fonts/playfair-display-italic-700-latin.woff2') format('woff2');
+  }
+
   :root {
     --day-bg: oklch(0.918 0.075 46);
     --day-ink: oklch(0.30 0.045 42);
-    --day-muted: oklch(0.50 0.035 45);
+    --day-muted: oklch(0.42 0.04 45);
     --paper: oklch(0.965 0.028 55);
     --ember-core: oklch(0.86 0.20 56);
     --ember-mid: oklch(0.74 0.19 42);
@@ -21,6 +40,7 @@
     --night-bg: oklch(0.190 0.068 47);
     --night-ink: oklch(0.93 0.016 65);
     --night-muted: oklch(0.68 0.03 55);
+    --night-comment: oklch(0.80 0.03 55);
     --hair-day: oklch(0.30 0.045 42 / 0.14);
     --hair-night: oklch(0.93 0.016 65 / 0.14);
   }
@@ -46,12 +66,6 @@
   }
 
   a { color: inherit; }
-
-  .wrap {
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
 
   /* ---------- Hero ---------- */
 
@@ -212,6 +226,7 @@
     text-align: center;
     margin: 0 0 48px;
     color: var(--day-ink);
+    text-shadow: 0 2px 30px oklch(0.97 0.02 60 / 0.6);
   }
 
   .chip-grid {
@@ -332,7 +347,7 @@
   }
 
   .terminal .prompt { color: var(--ember-core); }
-  .terminal .comment { color: var(--night-muted); }
+  .terminal .comment { color: var(--night-comment); }
 
   .install-caption {
     text-align: center;
@@ -354,12 +369,30 @@
   footer .badges {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
-  footer .badges img { height: 20px; }
+  footer .badges span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid oklch(0.68 0.03 55 / 0.28);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--night-muted);
+  }
+
+  footer .badges span::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ember-mid);
+  }
 
   footer a.repo-link {
     color: var(--night-ink);
@@ -371,6 +404,22 @@
   @media (prefers-reduced-motion: reduce) {
     .ember-dot { animation: none; }
     html { scroll-behavior: auto; }
+    .btn, .btn:hover { transition: none; transform: none; }
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--paper);
+    color: var(--day-ink);
+    padding: 10px 18px;
+    border-radius: 0 0 12px 0;
+    z-index: 10;
+  }
+
+  .skip-link:focus {
+    left: 0;
   }
 
   @media (max-width: 620px) {
@@ -380,7 +429,11 @@
 </head>
 <body>
 
-  <section class="hero">
+  <a class="skip-link" href="#install">Skip to install instructions</a>
+
+  <main>
+
+  <section class="hero" aria-label="Introduction">
     <span class="eyebrow"><span class="ember-dot"></span>Self-hosted · MIT licensed</span>
     <h1 class="wordmark">Hearth</h1>
     <p class="hook">A free, private baby tracker. No accounts, no ads, no cloud.</p>
@@ -391,7 +444,7 @@
     </div>
   </section>
 
-  <section class="showcase">
+  <section class="showcase" aria-label="Screenshots">
     <div class="phones">
       <div class="phone-card">
         <img src="screenshots/readme-hero-light.png" alt="Hearth's hero card in daylight, showing an awake timer and nap window prediction">
@@ -405,8 +458,8 @@
     <p class="showcase-caption">The hero card tracks awake time and predicts the next nap window — logging a bottle takes two taps.</p>
   </section>
 
-  <section class="features">
-    <h2 class="section-title">What it tracks</h2>
+  <section class="features" aria-labelledby="features-title">
+    <h2 class="section-title" id="features-title">What it tracks</h2>
     <div class="chip-grid">
       <div class="chip"><span class="swatch sleep-swatch"></span><span class="text"><strong>Sleep</strong><span>Start, end, and quality</span></span></div>
       <div class="chip"><span class="swatch nursing-swatch"></span><span class="text"><strong>Nursing</strong><span>Side, duration, and time</span></span></div>
@@ -419,12 +472,12 @@
     </div>
   </section>
 
-  <section class="pitch">
+  <section class="pitch" aria-label="Privacy">
     <h2>No accounts.<br>No ads.<br>No cloud.</h2>
     <p>Hearth runs on hardware you control. Your family's data never leaves your network unless you decide to share it.</p>
   </section>
 
-  <section class="install" id="install">
+  <section class="install" id="install" aria-label="Install instructions">
     <div class="terminal">
       <div class="terminal-bar"><span></span><span></span><span></span></div>
       <pre><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span>
@@ -437,14 +490,17 @@
     <p class="install-caption">Runs behind Tailscale — only devices on your tailnet can reach it. No exposed ports, no reverse proxy to configure.</p>
   </section>
 
+  </main>
+
   <footer>
     <div class="badges">
-      <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
-      <img src="https://img.shields.io/badge/go-1.26-00ADD8.svg" alt="Go 1.26">
-      <img src="https://img.shields.io/badge/PWA-ready-5A0FC8.svg" alt="PWA">
-      <img src="https://img.shields.io/badge/self--hosted-yes-success.svg" alt="Self-hosted">
+      <span>MIT licensed</span>
+      <span>Go 1.26</span>
+      <span>PWA ready</span>
+      <span>Self-hosted</span>
+      <span>No cloud</span>
     </div>
-    <p>MIT licensed. <a class="repo-link" href="https://github.com/jeremysball/hearth">github.com/jeremysball/hearth</a></p>
+    <p><a class="repo-link" href="https://github.com/jeremysball/hearth">github.com/jeremysball/hearth</a></p>
   </footer>
 
 </body>
