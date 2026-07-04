@@ -4,6 +4,7 @@ import { toast } from './ui.js';
 import { router } from './app.js';
 
 let _granted = false;
+let _hasLocalSub = false;
 let _scheduled = {};
 
 const NOTIFIED_KEY = 'hearth.notified.v1';
@@ -72,6 +73,7 @@ export async function enableNotifs() {
     const reg = await navigator.serviceWorker.ready;
     try {
       await subscribePush(reg);
+      await refreshSubState();
     } catch (err) {
       toast('Reminders enabled, but push failed: ' + (err?.message || err));
       scheduleReminders();
@@ -85,7 +87,28 @@ export async function enableNotifs() {
   else toast('Permission denied, enable in browser settings');
 }
 
-export function notifsGranted() { return _granted; }
+export async function refreshSubState() {
+  if (!('serviceWorker' in navigator)) { _hasLocalSub = false; return false; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    _hasLocalSub = !!(reg?.pushManager && await reg.pushManager.getSubscription());
+  } catch {
+    _hasLocalSub = false;
+  }
+  return _hasLocalSub;
+}
+
+export async function initNotifState() {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    await refreshSubState();
+    if (_hasLocalSub) {
+      _granted = true;
+      scheduleReminders();
+    }
+  }
+}
+
+export function notifsGranted() { return _granted && _hasLocalSub; }
 
 export function scheduleReminders() {
   // clear old
@@ -130,9 +153,4 @@ function isQuiet(at, qStart, qEnd) {
 setInterval(() => { if (_granted) scheduleReminders(); }, 5 * 60000);
 
 // check existing permission on load
-document.addEventListener('DOMContentLoaded', () => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    _granted = true;
-    scheduleReminders();
-  }
-});
+document.addEventListener('DOMContentLoaded', () => { initNotifState(); });
