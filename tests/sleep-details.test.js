@@ -44,8 +44,10 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.waitForSelector('.sleep-details');
     const startMoodOn = await page.$eval('[data-seg="startMood"] [data-val="Content"]', (el) => el.classList.contains('on'));
     const methodOn = await page.$eval('[data-icongrid="method"] [data-val="Nursing"]', (el) => el.classList.contains('on'));
+    const detailsOpen = await page.$eval('.sleep-details', (el) => el.open);
     check('editing a sleep entry restores startMood selection', startMoodOn);
     check('editing a sleep entry restores method selection', methodOn);
+    check('editing a sleep entry with saved details auto-expands the details section', detailsOpen);
 
     // A sleep entry with no details set at all must save cleanly (fields stay null).
     const beforeCount = await page.evaluate(() => {

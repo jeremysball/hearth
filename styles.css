@@ -858,10 +858,11 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sleep-details summary {
   cursor: pointer; font-size: 12px; font-weight: 700; color: var(--soft);
   list-style: none; padding: 4px 0;
+  display: flex; align-items: center; gap: 4px;
 }
 .sleep-details summary::-webkit-details-marker { display: none; }
-.sleep-details summary::before { content: '▸ '; }
-.sleep-details[open] summary::before { content: '▾ '; }
+.sleep-details-chevron { width: 14px; height: 14px; transition: transform .15s; }
+.sleep-details[open] .sleep-details-chevron { transform: rotate(180deg); }
 
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .18s; }
