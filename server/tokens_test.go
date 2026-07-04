@@ -129,3 +129,56 @@ func TestLookupByTokenNoMatchReturnsErrNoRows(t *testing.T) {
 		t.Fatalf("err = %v, want sql.ErrNoRows", err)
 	}
 }
+
+func TestMigrateTokenHashRewritesLegacyRows(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`CREATE TABLE probe_tokens (token TEXT PRIMARY KEY, note TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO probe_tokens (token, note) VALUES ('raw-value', 'hello')`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := migrateTokenHash(db, "probe_tokens"); err != nil {
+		t.Fatalf("migrateTokenHash: %v", err)
+	}
+
+	var hash, note string
+	var hashed int
+	if err := db.QueryRow(`SELECT token_hash, token_hashed, note FROM probe_tokens WHERE note = 'hello'`).Scan(&hash, &hashed, &note); err != nil {
+		t.Fatalf("querying migrated row: %v", err)
+	}
+	if hashed != 1 {
+		t.Fatalf("token_hashed = %d, want 1", hashed)
+	}
+	if hash != hashToken("raw-value") {
+		t.Fatalf("token_hash = %q, want hashToken(raw-value) = %q", hash, hashToken("raw-value"))
+	}
+
+	if err := migrateTokenHash(db, "probe_tokens"); err != nil {
+		t.Fatalf("second migrateTokenHash call: %v", err)
+	}
+	var hash2 string
+	db.QueryRow(`SELECT token_hash FROM probe_tokens WHERE note = 'hello'`).Scan(&hash2)
+	if hash2 != hash {
+		t.Fatalf("re-running migration changed the hash: %q != %q", hash2, hash)
+	}
+}
+
+func TestMigrateTokenHashIsNoOpOnFreshSchema(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`CREATE TABLE probe_fresh (token_hash TEXT PRIMARY KEY, token_hashed INTEGER NOT NULL DEFAULT 0)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateTokenHash(db, "probe_fresh"); err != nil {
+		t.Fatalf("migrateTokenHash on fresh schema: %v", err)
+	}
+}

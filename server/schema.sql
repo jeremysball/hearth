@@ -31,7 +31,8 @@ CREATE INDEX IF NOT EXISTS idx_caregivers_family ON caregivers(family_id);
 CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS sessions (
-  token TEXT PRIMARY KEY,
+  token_hash TEXT PRIMARY KEY,
+  token_hashed INTEGER NOT NULL DEFAULT 0,
   caregiver_id TEXT NOT NULL REFERENCES caregivers(id),
   family_id TEXT NOT NULL REFERENCES families(id),
   created_at TEXT NOT NULL,
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS invites (
-  token TEXT PRIMARY KEY,
+  token_hash TEXT PRIMARY KEY,
+  token_hashed INTEGER NOT NULL DEFAULT 0,
   family_id TEXT NOT NULL REFERENCES families(id),
   created_by TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -73,7 +75,8 @@ CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS launch_tokens (
-  token        TEXT PRIMARY KEY,
+  token_hash   TEXT PRIMARY KEY,
+  token_hashed INTEGER NOT NULL DEFAULT 0,
   caregiver_id TEXT NOT NULL,
   family_id    TEXT NOT NULL,
   expires_at   TEXT NOT NULL,
@@ -106,7 +109,8 @@ CREATE TABLE IF NOT EXISTS identities (
 CREATE INDEX IF NOT EXISTS idx_identities_caregiver ON identities(caregiver_id);
 
 CREATE TABLE IF NOT EXISTS pending_auth (
-  token                TEXT PRIMARY KEY,
+  token_hash           TEXT PRIMARY KEY,
+  token_hashed         INTEGER NOT NULL DEFAULT 0,
   provider             TEXT NOT NULL,
   provider_user_id     TEXT NOT NULL,
   email                TEXT,
