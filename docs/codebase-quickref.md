@@ -78,8 +78,8 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `emberGlow(heat)`: pure color/opacity/size for the hero card's ambient ember field (replaces the old 16-coal bed)
 - `heroSky(st, sp)`: scene HTML + `--light-x/--light-y` card style for `home.js`'s hero
 - `initSky()`: sizes the particle canvas and schedules events; called by the router after every render
-- No landscape: the scene is sky only (sun/moon/clouds/stars) — no ridges, no house
-- **Assets:** `assets/sky/moon.webp` (moon disc), `cloud-tower.webp`/`cloud-classic.webp`/`cloud-hazybank.webp` (c1/c2/c3 cloud shapes), `sun-starburst.webp` (ray field) — all opaque grayscale WebP used as SVG `<mask>` luminance sources, never as final-color images; color always comes from `skyPalette()`.
+- No landscape: the scene is sky only (sun/moon/clouds/stars), no ridges, no house
+- **Assets:** `assets/sky/moon.webp` (moon disc), `cloud-tower.webp`/`cloud-classic.webp`/`cloud-hazybank.webp` (c1/c2/c3 cloud shapes), `sun-starburst.webp` (ray field). All are opaque grayscale WebP used as SVG `<mask>` luminance sources, never as final-color images; color always comes from `skyPalette()`.
 
 ---
 
@@ -109,7 +109,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 
 ## Testing
 
-`npm test` runs everything — lint, unit, Go, and Playwright E2E — via
+`npm test` runs everything (lint, unit, Go, and Playwright E2E) via
 `tests/run.js`. CI runs the same four legs in parallel as a matrix
 (`.github/workflows/ci.yml`). Use the standalone commands below to run just
 one thing while iterating:
@@ -139,7 +139,7 @@ npm test
 ## Dev Scripts
 
 - `scripts/bump-version.sh`: cache-buster version bump (see below).
-- `scripts/sky-phases.js`: screenshots the hero sky scene in all 7 modes (morning/day/golden/twilight/night/deep-night/newborn) against a running dev server. Run after any `js/sky.js` change to compare before/after across the whole scene set: `BASE_URL=https://localhost:9878 OUT_DIR=/tmp node scripts/sky-phases.js` (server must already be running — see the `run` skill).
+- `scripts/sky-phases.js`: screenshots the hero sky scene in all 7 modes (morning/day/golden/twilight/night/deep-night/newborn) against a running dev server. Run after any `js/sky.js` change to compare before/after across the whole scene set: `BASE_URL=https://localhost:9878 OUT_DIR=/tmp node scripts/sky-phases.js` (server must already be running; see the `run` skill).
 
 ---
 

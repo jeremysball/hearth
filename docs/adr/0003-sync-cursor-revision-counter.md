@@ -38,5 +38,5 @@ A row's `rev` and the family's `rev_counter` bump commit in one transaction, so 
 
 ## Alternatives considered
 
-- **Timestamp cursor with a safety margin** — trades permanent loss for duplicate delivery or a smaller residual race. Rejected: it shrinks the window without closing it.
-- **Dual-mode server that also parses legacy timestamp `since`** — extra code for no gain over treating a non-numeric cursor as a full resync, since `mergeById` is idempotent. Rejected.
+- **Timestamp cursor with a safety margin.** Trades permanent loss for duplicate delivery or a smaller residual race. Rejected: it shrinks the window without closing it.
+- **Dual-mode server that also parses legacy timestamp `since`.** Extra code for no gain over treating a non-numeric cursor as a full resync, since `mergeById` is idempotent. Rejected.
