@@ -446,8 +446,9 @@ document.addEventListener('touchmove', blockScroll, { passive: false });
 let ptrActive = false, ptrPid = null, ptrStartY = 0, ptrArmed = false, ptrSyncing = false, ptrTimeout = null;
 let ptrPulling = false, ptrRafId = null, ptrLatestY = 0;
 const PTR_THRESHOLD = 70; // visual px to arm refresh
-const PTR_MAX = 80;       // visual px cap
-// Must match .ptr-wrap height in CSS: PTR_MAX (80) + padding-bottom (12).
+const PTR_COMMIT = 90;    // visual px past threshold to auto-commit without waiting for release
+const PTR_MAX = 100;      // visual px cap
+// Must match .ptr-wrap height in CSS: PTR_MAX (100) + padding-bottom (12).
 const PTR_WRAP_H = PTR_MAX + 12;
 
 function ptrDist(raw) {
@@ -469,6 +470,10 @@ function ptrUpdate() {
     spinner.style.opacity = String(Math.min(1, dist / 28));
   }
   if (!ptrArmed && dist >= PTR_THRESHOLD) { ptrArmed = true; buzz(12); }
+  if (ptrArmed && !ptrSyncing && dist >= PTR_COMMIT) {
+    ptrActive = false; ptrPid = null; ptrPulling = false;
+    ptrCommit();
+  }
 }
 
 function ptrReset() {
@@ -502,6 +507,21 @@ function ptrCollapse() {
   ptrReset();
 }
 
+function ptrCommit() {
+  ptrArmed = false;
+  ptrSyncing = true;
+  const ptr = document.getElementById('ptr');
+  if (ptr) {
+    ptr.style.transition = 'transform .3s ease-out';
+    ptr.style.transform = 'translateY(0)';
+    const spinner = ptr.querySelector('.ptr-spinner');
+    if (spinner) spinner.style.transform = '';
+    ptr.classList.add('ptr-spinning');
+  }
+  ptrTimeout = setTimeout(ptrCollapse, 4000);
+  syncOnce().then(ptrCollapse);
+}
+
 document.addEventListener('pointerdown', (e) => {
   if (ptrSyncing || e.pointerType === 'mouse') return;
   const screen = e.target.closest('.screen');
@@ -522,18 +542,7 @@ document.addEventListener('pointermove', (e) => {
   if (!ptrActive || e.pointerId !== ptrPid) return;
   ptrActive = false; ptrPid = null; ptrPulling = false;
   if (ptrArmed && !ptrSyncing) {
-    ptrArmed = false;
-    ptrSyncing = true;
-    const ptr = document.getElementById('ptr');
-    if (ptr) {
-      ptr.style.transition = 'transform .3s ease-out';
-      ptr.style.transform = 'translateY(0)';
-      const spinner = ptr.querySelector('.ptr-spinner');
-      if (spinner) spinner.style.transform = '';
-      ptr.classList.add('ptr-spinning');
-    }
-    ptrTimeout = setTimeout(ptrCollapse, 4000);
-    syncOnce().then(ptrCollapse);
+    ptrCommit();
   } else {
     ptrArmed = false;
     ptrReset();
