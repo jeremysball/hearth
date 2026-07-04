@@ -24,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/stage-site-assets.sh
+      - run: bash scripts/generate-seo.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
