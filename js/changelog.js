@@ -7,7 +7,8 @@ export const CHANGELOG = [
     features: [],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
-      'Fixed a rare case where an entry logged right before the app closed could be lost instead of syncing on next launch.'
+      'Fixed a rare case where an entry logged right before the app closed could be lost instead of syncing on next launch.',
+      'Fixed the wake time anchor sometimes including a sleep that should have been closed, which could nudge the predicted wake window.'
     ]
   },
   {
