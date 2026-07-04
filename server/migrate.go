@@ -108,15 +108,15 @@ func loadAppliedMigrations(db *sql.DB) (map[int]bool, error) {
 // applies, only the one time the migration is actually being applied (never
 // on a startup where it's already recorded in schema_migrations). This is
 // what makes the token-hash rewrite exactly-once instead of a per-startup
-// rescan: by the time any request handler can insert a row, migration 10
+// rescan: by the time any request handler can insert a row, migration 11
 // has already run, so every row present when the hook fires is legacy
 // plaintext by construction.
 var postMigrationHooks = map[int]func(tx *sql.Tx) error{
-	10: hashLegacyTokens,
+	11: hashLegacyTokens,
 }
 
 // hashLegacyTokens rewrites the plaintext values left in token_hash by
-// 0010_token_hash.sql's column rename into HMAC-SHA256 hashes. Every row
+// 0011_token_hash.sql's column rename into HMAC-SHA256 hashes. Every row
 // in these tables at this point predates token hashing entirely (this
 // hook only ever runs once, guarded by schema_migrations), so it hashes
 // unconditionally rather than filtering on a sentinel column.
@@ -183,16 +183,19 @@ func parseMigrationVersion(name string) (int, error) {
 }
 
 // schemaHash returns the first 4 bytes of sha256(schema.sql) as a little-
-// endian uint32. PRAGMA user_version is a 32-bit integer; 4 bytes is
-// enough to act as a "did the schema change" sentinel (collision odds
-// ~1 in 2^32). Edit schema.sql, rebuild, next openDB produces a new hash.
-func schemaHash() (uint32, error) {
+// endian int32 (not uint32: PRAGMA user_version is SQLite's signed 32-bit
+// integer, and a uint32 value at or above 2^31 silently fails to round-trip
+// through it — SQLite stores whatever fits and reads back 0, permanently
+// defeating the "did the schema change" check). 4 bytes is enough to act
+// as that sentinel (collision odds ~1 in 2^32). Edit schema.sql, rebuild,
+// next openDB produces a new hash.
+func schemaHash() (int32, error) {
 	b, err := schemaFS.ReadFile("schema.sql")
 	if err != nil {
 		return 0, fmt.Errorf("read schema.sql: %w", err)
 	}
 	sum := sha256.Sum256(b)
-	return binary.LittleEndian.Uint32(sum[:4]), nil
+	return int32(binary.LittleEndian.Uint32(sum[:4])), nil
 }
 
 // verifySchemaHash refuses to start a database whose stamped schema
@@ -205,25 +208,20 @@ func verifySchemaHash(db *sql.DB) error {
 		return fmt.Errorf("read user_version: %w", err)
 	}
 	if stamped == 0 {
-		// First-ever open: migrations already ran; stamp now. PRAGMA
-		// user_version is a signed 32-bit field — format the hash through
-		// int32 so a hash with the top bit set (roughly half of all
-		// hashes) doesn't silently fail to persist. uint32(stamped) below
-		// undoes this by truncating back to the same bit pattern, so the
-		// comparison is unaffected by the signedness round-trip.
+		// First-ever open: migrations already ran; stamp now.
 		h, err := schemaHash()
 		if err != nil {
 			return err
 		}
-		_, err = db.Exec("PRAGMA user_version = " + strconv.FormatInt(int64(int32(h)), 10))
+		_, err = db.Exec("PRAGMA user_version = " + strconv.FormatInt(int64(h), 10))
 		return err
 	}
 	h, err := schemaHash()
 	if err != nil {
 		return err
 	}
-	if uint32(stamped) != h {
-		return fmt.Errorf("schema hash mismatch: db=0x%08x binary=0x%08x — refusing to start; update the binary or restore a compatible database", uint32(stamped), h)
+	if int32(stamped) != h {
+		return fmt.Errorf("schema hash mismatch: db=0x%08x binary=0x%08x — refusing to start; update the binary or restore a compatible database", uint32(stamped), uint32(h))
 	}
 	return nil
 }
