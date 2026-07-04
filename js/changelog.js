@@ -24,7 +24,8 @@ export const CHANGELOG = [
       'Fixed the notifications setting getting stuck with no way to re-enable push, and made push automatically re-attach on next visit if the browser still had a saved subscription.',
       'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.',
       'Fixed missed reminders resending every 5 minutes instead of backing off.',
-      'Fixed reminders still firing for cards you\'d hidden from Home.'
+      'Fixed reminders still firing for cards you\'d hidden from Home.',
+      'Fixed a sheet opened right after closing another sometimes showing empty.'
     ]
   },
   {
