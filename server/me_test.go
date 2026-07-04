@@ -63,7 +63,7 @@ func TestSignoutDeletesSession(t *testing.T) {
 		t.Fatalf("status = %d, want 204", rec.Code)
 	}
 	var n int
-	db.QueryRow(`SELECT COUNT(*) FROM sessions WHERE token = ?`, token).Scan(&n)
+	db.QueryRow(`SELECT COUNT(*) FROM sessions WHERE token_hash = ?`, hashForTest(t, token)).Scan(&n)
 	if n != 0 {
 		t.Fatalf("session not deleted, count=%d", n)
 	}

@@ -20,6 +20,7 @@ func Run() {
 		log.Fatal(err)
 	}
 	initProviders(cfg)
+	peppers = loadPeppers() // fail-fast at startup, same spot as setupGeoIP/initProviders
 
 	log.Printf("Hearth starting up")
 	log.Printf("  db:     %s", cfg.DBPath)

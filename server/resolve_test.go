@@ -55,7 +55,8 @@ func TestResolveSwitchIssuesSessionForTarget(t *testing.T) {
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('A', ?), ('B', ?)`, now, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','A','A','Parent',?),('cgB','B','B','Parent',?)`, now, now)
 	db.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES ('google','sub','cgB','e',?)`, now)
-	db.Exec(`INSERT INTO pending_auth (token, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES ('p','google','sub','e','B','A','cgA',?)`, now)
+	db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,'google','sub','e','B','A','cgA',?)`,
+		hashForTest(t, "p"), now)
 	req := httptest.NewRequest("POST", "/api/auth/resolve", strings.NewReader(`{"pending":"p","choice":"switch"}`))
 	rec := httptest.NewRecorder()
 	handleResolve(db)(rec, req)
@@ -67,7 +68,7 @@ func TestResolveSwitchIssuesSessionForTarget(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("expected 1 session for B, got %d", n)
 	}
-	db.QueryRow(`SELECT COUNT(*) FROM pending_auth WHERE token='p'`).Scan(&n)
+	db.QueryRow(`SELECT COUNT(*) FROM pending_auth WHERE token_hash = ?`, hashForTest(t, "p")).Scan(&n)
 	if n != 0 {
 		t.Fatalf("pending row not cleared")
 	}

@@ -102,6 +102,54 @@ func loadAppliedMigrations(db *sql.DB) (map[int]bool, error) {
 	return out, rows.Err()
 }
 
+// postMigrationHooks runs Go-side data rewrites a migration's plain SQL
+// file can't express — e.g. computing an HMAC hash. Keyed by version, run
+// inside the same transaction immediately after that version's SQL text
+// applies, only the one time the migration is actually being applied (never
+// on a startup where it's already recorded in schema_migrations). This is
+// what makes the token-hash rewrite exactly-once instead of a per-startup
+// rescan: by the time any request handler can insert a row, migration 11
+// has already run, so every row present when the hook fires is legacy
+// plaintext by construction.
+var postMigrationHooks = map[int]func(tx *sql.Tx) error{
+	11: hashLegacyTokens,
+}
+
+// hashLegacyTokens rewrites the plaintext values left in token_hash by
+// 0011_token_hash.sql's column rename into HMAC-SHA256 hashes. Every row
+// in these tables at this point predates token hashing entirely (this
+// hook only ever runs once, guarded by schema_migrations), so it hashes
+// unconditionally rather than filtering on a sentinel column.
+func hashLegacyTokens(tx *sql.Tx) error {
+	for _, table := range []string{"sessions", "invites", "launch_tokens", "pending_auth"} {
+		rows, err := tx.Query(fmt.Sprintf(`SELECT token_hash FROM %s`, table))
+		if err != nil {
+			return fmt.Errorf("select %s: %w", table, err)
+		}
+		var raws []string
+		for rows.Next() {
+			var raw string
+			if err := rows.Scan(&raw); err != nil {
+				rows.Close()
+				return err
+			}
+			raws = append(raws, raw)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return err
+		}
+		rows.Close()
+		for _, raw := range raws {
+			if _, err := tx.Exec(fmt.Sprintf(`UPDATE %s SET token_hash = ? WHERE token_hash = ?`, table),
+				hashToken(raw), raw); err != nil {
+				return fmt.Errorf("hash %s row: %w", table, err)
+			}
+		}
+	}
+	return nil
+}
+
 func applyMigration(db *sql.DB, version int, sqlText string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -110,6 +158,11 @@ func applyMigration(db *sql.DB, version int, sqlText string) error {
 	defer tx.Rollback()
 	if _, err := tx.Exec(sqlText); err != nil && !isDuplicateColumnError(err) {
 		return err
+	}
+	if hook, ok := postMigrationHooks[version]; ok {
+		if err := hook(tx); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.Exec("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)", version, nowISO()); err != nil {
 		return err

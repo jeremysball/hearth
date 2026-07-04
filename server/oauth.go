@@ -68,6 +68,20 @@ func handleAuthBegin(cfg Config) http.HandlerFunc {
 	}
 }
 
+// lookupExistingSession resolves the caregiver/family for a raw session
+// token, or nil if it doesn't match any session. Split out from
+// handleAuthCallback so the OAuth "does the browser already have a session"
+// branch is testable without mocking the goth provider flow.
+func lookupExistingSession(db *sql.DB, token string) *SessionInfo {
+	var familyID, caregiverID string
+	_, err := lookupByToken(db, `SELECT token_hash, family_id, caregiver_id FROM sessions WHERE token_hash IN (%s)`,
+		token, &familyID, &caregiverID)
+	if err != nil {
+		return nil
+	}
+	return &SessionInfo{FamilyID: familyID, CaregiverID: caregiverID}
+}
+
 func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("provider")
@@ -114,10 +128,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 
 		var cur *SessionInfo
 		if sc, err := r.Cookie(sessionCookieName); err == nil {
-			var fam, cg string
-			if e := db.QueryRow(`SELECT family_id, caregiver_id FROM sessions WHERE token = ?`, sc.Value).Scan(&fam, &cg); e == nil {
-				cur = &SessionInfo{FamilyID: fam, CaregiverID: cg}
-			}
+			cur = lookupExistingSession(db, sc.Value)
 		}
 
 		res, err := reconcile(db, name, gu.UserID, gu.Email, cur)
@@ -137,8 +148,8 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			http.Redirect(w, r, "/?auth=ok", http.StatusFound)
 		case "conflict":
 			pending := newID()
-			if _, e := db.Exec(`INSERT INTO pending_auth (token, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,
-				pending, name, gu.UserID, gu.Email, res.TargetFamily, res.CurrentFamily, res.CurrentCaregiver, nowISO()); e != nil {
+			if _, e := db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,
+				hashToken(pending), name, gu.UserID, gu.Email, res.TargetFamily, res.CurrentFamily, res.CurrentCaregiver, nowISO()); e != nil {
 				http.Redirect(w, r, "/?auth=error", http.StatusFound)
 				return
 			}
