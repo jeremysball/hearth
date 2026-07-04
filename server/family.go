@@ -110,14 +110,33 @@ func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
 			return
 		}
 		now := nowISO()
-		res, err := db.Exec(`UPDATE babies SET name = ?, birthdate = ?, theme = ?, photo = ?, updated_at = ? WHERE family_id = ?`,
-			req.Name, req.Birthdate, req.Theme, req.Photo, now, session.FamilyID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE babies SET name = ?, birthdate = ?, theme = ?, photo = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
+			req.Name, req.Birthdate, req.Theme, req.Photo, now, rev, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			http.Error(w, "baby not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		hub.Broadcast(session.FamilyID)
@@ -150,14 +169,33 @@ func handlePatchSettings(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handl
 			return
 		}
 		now := nowISO()
-		res, err := db.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ? WHERE family_id = ?`,
-			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, session.FamilyID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
+			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, rev, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			http.Error(w, "settings not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		hub.Broadcast(session.FamilyID)
