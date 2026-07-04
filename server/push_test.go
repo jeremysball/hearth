@@ -438,3 +438,152 @@ func TestScheduleFamilyReplacesStaleTimers(t *testing.T) {
 	s.byFamily = map[string]map[string]bool{}
 	s.mu.Unlock()
 }
+
+func TestBackoffFireAtSchedule(t *testing.T) {
+	due := time.Date(2026, 7, 2, 10, 0, 0, 0, time.UTC)
+	cases := []struct {
+		stage int
+		want  time.Time
+		ok    bool
+	}{
+		{0, due, true},
+		{1, due.Add(15 * time.Minute), true},
+		{2, due.Add(75 * time.Minute), true},
+		{3, time.Time{}, false},
+		{4, time.Time{}, false},
+	}
+	for _, c := range cases {
+		got, ok := backoffFireAt(due, c.stage)
+		if ok != c.ok || (ok && !got.Equal(c.want)) {
+			t.Errorf("backoffFireAt(due, %d) = (%v, %v), want (%v, %v)", c.stage, got, ok, c.want, c.ok)
+		}
+	}
+}
+
+func TestResolveScheduledFirstSeenFiresAtDue(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	s := newPushScheduler(db)
+	due := time.Now().UTC().Add(-time.Hour)
+	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
+
+	out := s.resolveScheduled("fam1", raw)
+
+	if len(out) != 1 || !out[0].At.Equal(due) || !out[0].DueAt.Equal(due) {
+		t.Fatalf("resolveScheduled first-seen = %+v, want At=DueAt=%v", out, due)
+	}
+	var stage int
+	var storedDue string
+	db.QueryRow(`SELECT stage, due_at FROM push_reminder_state WHERE family_id = 'fam1' AND reminder_key = 'bottle'`).Scan(&stage, &storedDue)
+	if stage != 0 || storedDue != due.UTC().Format(time.RFC3339Nano) {
+		t.Fatalf("persisted state = stage=%d due=%s, want stage=0 due=%s", stage, storedDue, due.UTC().Format(time.RFC3339Nano))
+	}
+}
+
+func TestResolveScheduledAfterSendMovesToPlus15(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	s := newPushScheduler(db)
+	due := time.Now().UTC().Add(-time.Hour)
+	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
+
+	first := s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", first[0])
+
+	second := s.resolveScheduled("fam1", raw)
+
+	if len(second) != 1 || !second[0].At.Equal(due.Add(15*time.Minute)) {
+		t.Fatalf("resolveScheduled after one send = %+v, want At=%v", second, due.Add(15*time.Minute))
+	}
+}
+
+func TestResolveScheduledStopsAfterThirdSend(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	s := newPushScheduler(db)
+	due := time.Now().UTC().Add(-time.Hour)
+	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
+
+	out := s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", out[0])
+	out = s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", out[0])
+	out = s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", out[0])
+
+	final := s.resolveScheduled("fam1", raw)
+	if len(final) != 0 {
+		t.Fatalf("expected no more reminders after 3 sends, got %+v", final)
+	}
+}
+
+func TestResolveScheduledResetsWhenDueTimeChanges(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	s := newPushScheduler(db)
+	due := time.Now().UTC().Add(-time.Hour)
+	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
+
+	out := s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", out[0])
+	out = s.resolveScheduled("fam1", raw)
+	s.advanceStage("fam1", out[0])
+
+	newDue := time.Now().UTC().Add(2 * time.Hour)
+	rawUpdated := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: newDue}}
+	reset := s.resolveScheduled("fam1", rawUpdated)
+
+	if len(reset) != 1 || !reset[0].At.Equal(newDue) {
+		t.Fatalf("resolveScheduled after due-time change = %+v, want a fresh stage-0 reminder at %v", reset, newDue)
+	}
+	var stage int
+	db.QueryRow(`SELECT stage FROM push_reminder_state WHERE family_id = 'fam1' AND reminder_key = 'bottle'`).Scan(&stage)
+	if stage != 0 {
+		t.Fatalf("stage after due-time change = %d, want 0 (reset)", stage)
+	}
+}
+
+func TestScheduleFamilyStableKeyAcrossRepeatedTicksBeforeFire(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', '{"bottle":true,"meds":false,"quietStart":"00:00","quietEnd":"00:00"}', '{}', ?)`, "fam1", now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	// Bottle interval is 3h; logged 1h ago, so it's due 2h from now — the
+	// timer never fires during this test, so there's no race with
+	// advanceStage() running inside the timer callback (see the
+	// TestResolveScheduled* suite above for the actual backoff-stage
+	// transitions, which exercise resolveScheduled/advanceStage directly).
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().UTC().Add(-1*time.Hour).Format(time.RFC3339Nano), now)
+
+	s := newPushScheduler(db)
+	var keys []string
+	for i := 0; i < 3; i++ {
+		s.ScheduleFamily("fam1")
+		s.mu.Lock()
+		var key string
+		for k := range s.byFamily["fam1"] {
+			key = k
+		}
+		count := len(s.byFamily["fam1"])
+		s.mu.Unlock()
+		if count != 1 {
+			t.Fatalf("tick %d: expected exactly one pending bottle reminder, got %d", i, count)
+		}
+		keys = append(keys, key)
+	}
+	s.mu.Lock()
+	for _, sp := range s.pending {
+		sp.timer.Stop()
+	}
+	s.pending = map[string]scheduledPush{}
+	s.byFamily = map[string]map[string]bool{}
+	s.mu.Unlock()
+
+	for i := 1; i < len(keys); i++ {
+		if keys[i] != keys[0] {
+			t.Fatalf("tick %d key %q differs from tick 0 key %q; repeated ScheduleFamily calls before the reminder fires must keep scheduling the same fire time", i, keys[i], keys[0])
+		}
+	}
+}
