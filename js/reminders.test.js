@@ -267,6 +267,28 @@ test('initNotifState re-POSTs existing local sub to the server', async () => {
   assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
 });
 
+test('refreshSubState reports false when the server rejects the re-POST', async () => {
+  // Regression test: a browser-side subscription existing is not proof the
+  // server has a matching row. If the re-POST to /api/push/subscribe fails,
+  // notifsGranted() must flip to false rather than staying stuck "on" with
+  // no working push (the bug this whole flag exists to catch).
+  await enableNotifs();
+  assert.ok(notifsGranted(), 'precondition: notifsGranted true after a clean enable');
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    if (String(url) === '/api/push/subscribe') return { ok: false, status: 500, json: async () => ({}) };
+    return originalFetch(url, opts);
+  };
+  try {
+    await refreshSubState();
+    assert.equal(notifsGranted(), false, 'notifsGranted should be false when the server rejects the re-POST');
+  } finally {
+    globalThis.fetch = originalFetch;
+    await refreshSubState();
+  }
+});
+
 test('initNotifState does nothing when permission is not granted', async () => {
   const prevPerm = Notification.permission;
   Object.defineProperty(globalThis.Notification, 'permission', { value: 'default', configurable: true });
