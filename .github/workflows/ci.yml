@@ -61,9 +61,9 @@ jobs:
 
       - name: Run E2E tests
         if: matrix.leg == 'e2e'
+        # Parallel Chromium instances oversubscribed the runner's CPU, causing
+        # arbitrary timing-sensitive assertions to intermittently miss their
+        # margin under contention (a different suite each run). Run fully
+        # sequential (tests/run.js defaults CONCURRENCY to 1) instead of
+        # tuning the parallelism down further.
         run: npm run test:e2e
-        env:
-          # 4-way parallel Chromium instances oversubscribed the runner's CPU,
-          # causing arbitrary timing-sensitive assertions to intermittently
-          # miss their margin under contention (a different suite each run).
-          TEST_CONCURRENCY: 2
