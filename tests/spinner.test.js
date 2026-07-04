@@ -192,14 +192,19 @@ async function runSuite(base) {
   await closeOverlay();
 
   // ---------- Boundary: heavy drag past min, no negatives ----------
+  // Drag distance scales with the current value (carried over from earlier
+  // tests, not a fresh 120 every time): a fixed pixel distance that's enough
+  // to reach 0 from a low starting value falls short from a high one.
   console.log('\n--- Spinner: drag past min (boundary) ---');
   const overlay4 = await openSpinner();
+  const boundaryStartVal = await page.$eval('.stepper-val', el => parseFloat(el.dataset.value));
   const w4 = await (await overlay4.$('.spinner-window')).boundingBox();
   const cx4 = w4.x + w4.width / 2;
   const cy4 = w4.y + w4.height / 2;
+  const dragDistance = Math.max(2000, Math.ceil(boundaryStartVal / stepAttr) * rowH * 2);
   await page.mouse.move(cx4, cy4);
   await page.mouse.down();
-  for (let y = 0; y <= 2000; y += 200) {
+  for (let y = 0; y <= dragDistance; y += 200) {
     await page.mouse.move(cx4, cy4 + y, { steps: 3 });
     await page.waitForTimeout(5);
   }
@@ -218,8 +223,12 @@ async function runSuite(base) {
   await closeOverlay();
 
   // ---------- Tap without drag: no value change ----------
+  // Compares against the value read right after opening (not a hardcoded
+  // literal): the amount field carries over whatever the previous test left
+  // it at, so asserting a fixed number here couples this test to test order.
   console.log('\n--- Spinner: tap without drag ---');
   const overlay5 = await openSpinner();
+  const preTapVal = await (await page.$('.stepper-val')).getAttribute('data-value');
   const w5 = await (await overlay5.$('.spinner-window')).boundingBox();
   const cx5 = w5.x + w5.width / 2;
   const cy5 = w5.y + w5.height / 2;
@@ -228,8 +237,8 @@ async function runSuite(base) {
   await page.mouse.up();
   await page.waitForTimeout(500);
   const tapVal = await (await page.$('.stepper-val')).getAttribute('data-value');
-  console.log('  value after tap:', tapVal);
-  check('tap keeps value at 120', tapVal === '120', tapVal);
+  console.log('  value before tap:', preTapVal, 'after tap:', tapVal);
+  check('tap keeps value unchanged', tapVal === preTapVal, preTapVal + ' -> ' + tapVal);
   await closeOverlay();
 
   // ---------- Tap-to-type: click centered value, type a new value, commit ----------

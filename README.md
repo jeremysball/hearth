@@ -24,7 +24,12 @@ Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your dev
 
 ### Docker + Tailscale
 
-Hearth uses Tailscale for networking and auth. The `docker-compose.yml` runs two containers: Tailscale joins your tailnet and advertises the hostname `hearth`, and the app shares its network namespace. Only devices on your tailnet can reach it. Tailscale handles TLS.
+Hearth uses Tailscale for networking and auth. The `docker-compose.yml` runs
+three containers: Tailscale joins your tailnet and advertises the hostname
+`hearth`, the app shares its network namespace, and Watchtower polls
+[GHCR](https://ghcr.io/jeremysball/hearth) every 60s and recreates the app
+container when a new `:latest` image lands. Only devices on your tailnet can
+reach the app. Tailscale handles TLS.
 
 ```bash
 git clone https://github.com/jeremysball/hearth.git
@@ -34,10 +39,18 @@ cd hearth
 cp .env.example .env
 # Fill in TS_AUTHKEY, CERT_FILE, and KEY_FILE
 
+sudo docker compose pull
 sudo docker compose up -d
 ```
 
-The app runs at `https://hearth.<your-tailnet>.ts.net:8443`.
+The app runs at `https://hearth.<your-tailnet>.ts.net:8443`. Every merge to
+`main` builds a new image and rolls the host within about a minute — the app
+is briefly unreachable (~2–5s) while Watchtower recreates the container. To
+roll back, pin the `app` image to a specific `:sha-<hash>` tag in
+`docker-compose.yml` (find the hash in the
+[GHCR package versions](https://github.com/jeremysball/hearth/pkgs/container/hearth))
+and run `sudo docker compose up -d` — Watchtower ignores pinned non-`:latest`
+tags.
 
 ### Without Docker
 

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -34,6 +38,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("opening database %s: %v", cfg.DBPath, err)
 	}
+	// Closing the last connection to a WAL-mode database triggers SQLite's
+	// automatic checkpoint, folding the -wal file back into the main db file.
+	// Without a graceful shutdown path, SIGTERM (docker stop, or Watchtower's
+	// auto-update restarts) kills the process before this deferred Close ever
+	// runs, leaving recent writes parked in the -wal file instead of the
+	// single-file snapshot a backup would expect.
 	defer db.Close()
 	log.Printf("  db open OK")
 
@@ -51,12 +61,29 @@ func main() {
 	hub := newHub()
 	mux := newRouter(db, hub, cfg.StaticDir, cfg, pushes)
 	addr := cfg.Host + ":" + cfg.Port
+	srv := &http.Server{Addr: addr, Handler: mux}
 
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sig
+		log.Printf("shutting down")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("shutdown: %v", err)
+		}
+	}()
+
+	var serveErr error
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
 		log.Printf("listening on https://%s (TLS)", addr)
-		log.Fatal(http.ListenAndServeTLS(addr, cfg.CertFile, cfg.KeyFile, mux))
+		serveErr = srv.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 	} else {
 		log.Printf("listening on http://%s", addr)
-		log.Fatal(http.ListenAndServe(addr, mux))
+		serveErr = srv.ListenAndServe()
+	}
+	if serveErr != nil && serveErr != http.ErrServerClosed {
+		log.Fatal(serveErr)
 	}
 }

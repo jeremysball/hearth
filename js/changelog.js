@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-03',
+    version: '2026-07-03',
+    fixes: [
+      'Fixed sync sometimes getting stuck right after creating a new account, blocking future updates from syncing.',
+      'Fixed settings occasionally failing to save right after creating a new account.'
+    ]
+  },
+  {
     date: '2026-07-02',
     version: '2026-07-02',
     features: [
