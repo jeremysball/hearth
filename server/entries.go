@@ -29,15 +29,34 @@ func handleUpsertEntry(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handler
 			return
 		}
 		now := nowISO()
-		_, err = db.Exec(`
-			INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		_, err = tx.Exec(`
+			INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at, rev)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
 				type = excluded.type, start = excluded.start, payload_json = excluded.payload_json,
-				updated_at = excluded.updated_at, deleted_at = NULL
+				updated_at = excluded.updated_at, rev = excluded.rev, deleted_at = NULL
 			WHERE log_entries.family_id = excluded.family_id`,
-			id, session.FamilyID, meta.Type, meta.Start, string(bodyBytes), session.CaregiverID, now)
+			id, session.FamilyID, meta.Type, meta.Start, string(bodyBytes), session.CaregiverID, now, rev)
 		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if err := tx.Commit(); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
@@ -54,14 +73,33 @@ func handleDeleteEntry(db *sql.DB, hub *Hub) http.HandlerFunc {
 		session := sessionFrom(r)
 		id := r.PathValue("id")
 		now := nowISO()
-		res, err := db.Exec(`UPDATE log_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND family_id = ?`,
-			now, now, id, session.FamilyID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE log_entries SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ?`,
+			now, now, rev, id, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		hub.Broadcast(session.FamilyID)

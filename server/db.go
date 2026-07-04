@@ -62,7 +62,40 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN playtypes_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return nil, err
 	}
+	for _, stmt := range []string{
+		`ALTER TABLE families ADD COLUMN rev_counter INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE babies ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE settings ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE caregivers ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE log_entries ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE growth_entries ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
+	} {
+		if _, err := db.Exec(stmt); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return nil, err
+		}
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev)`); err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev)`); err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev)`); err != nil {
+		return nil, err
+	}
 	return db, nil
+}
+
+// bumpRev atomically advances a family's revision counter within tx and
+// returns the new value. Every write that touches a sync-visible row must
+// call this and stamp the row's own `rev` column with the result, in the
+// same transaction as the row write, so a concurrent reader's snapshot never
+// sees the counter advance without also seeing the row it covers (or vice
+// versa) — see docs/superpowers/specs/2026-07-04-sync-cursor-revision-counter.md.
+func bumpRev(tx *sql.Tx, familyID string) (int64, error) {
+	var rev int64
+	err := tx.QueryRow(`UPDATE families SET rev_counter = rev_counter + 1 WHERE id = ? RETURNING rev_counter`, familyID).Scan(&rev)
+	return rev, err
 }
 
 func nowISO() string {

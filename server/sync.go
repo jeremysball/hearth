@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
+	"strconv"
 )
 
 type syncResponse struct {
-	ServerTime         string            `json:"serverTime"`
+	ServerRev          int64             `json:"serverRev"`
 	Baby               json.RawMessage   `json:"baby,omitempty"`
 	Settings           json.RawMessage   `json:"settings,omitempty"`
 	Entries            []json.RawMessage `json:"entries"`
@@ -18,29 +18,55 @@ type syncResponse struct {
 	CurrentCaregiverID string            `json:"currentCaregiverId"`
 }
 
+// sinceRev parses the client's cursor as an integer revision. A missing or
+// non-numeric value (empty string, or a pre-upgrade client still sending an
+// RFC3339 timestamp) is treated as -1, which is always below every row's
+// `rev` (rows default to 0), forcing one full resync. mergeById on the
+// client is idempotent and keyed by id, so a forced full resync just costs
+// one oversized poll, not a correctness problem.
+func sinceRev(raw string) int64 {
+	v, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return -1
+	}
+	return v
+}
+
 func handleSync(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
-		since := r.URL.Query().Get("since")
-		lowerBound := syncLowerBound(since)
+		since := sinceRev(r.URL.Query().Get("since"))
 
-		resp := syncResponse{ServerTime: nowISO(), Entries: []json.RawMessage{}, Growth: []json.RawMessage{}, Caregivers: []json.RawMessage{}, CurrentCaregiverID: session.CaregiverID}
+		resp := syncResponse{Entries: []json.RawMessage{}, Growth: []json.RawMessage{}, Caregivers: []json.RawMessage{}, CurrentCaregiverID: session.CaregiverID}
+
+		tx, err := db.BeginTx(r.Context(), &sql.TxOptions{ReadOnly: true})
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		if err := tx.QueryRow(`SELECT rev_counter FROM families WHERE id = ?`, session.FamilyID).Scan(&resp.ServerRev); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
 
 		var name, birthdate, theme string
 		var photo sql.NullString
-		var babyUpdatedAt string
-		err := db.QueryRow(`SELECT name, birthdate, theme, photo, updated_at FROM babies WHERE family_id = ?`, session.FamilyID).
-			Scan(&name, &birthdate, &theme, &photo, &babyUpdatedAt)
-		if err == nil && changedAfter(babyUpdatedAt, since) {
+		var babyRev int64
+		err = tx.QueryRow(`SELECT name, birthdate, theme, photo, rev FROM babies WHERE family_id = ?`, session.FamilyID).
+			Scan(&name, &birthdate, &theme, &photo, &babyRev)
+		if err == nil && babyRev > since {
 			b, _ := json.Marshal(map[string]any{"name": name, "birthdate": birthdate, "theme": theme, "photo": photo.String})
 			resp.Baby = b
 		}
 
 		var bottleIntervalH float64
-		var medsJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON, settingsUpdatedAt string
-		err = db.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, playtypes_json, updated_at FROM settings WHERE family_id = ?`, session.FamilyID).
-			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsUpdatedAt)
-		if err == nil && changedAfter(settingsUpdatedAt, since) {
+		var medsJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON string
+		var settingsRev int64
+		err = tx.QueryRow(`SELECT bottle_interval_h, meds_json, units_json, reminders_json, cards_json, playtypes_json, rev FROM settings WHERE family_id = ?`, session.FamilyID).
+			Scan(&bottleIntervalH, &medsJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsRev)
+		if err == nil && settingsRev > since {
 			s, _ := json.Marshal(map[string]any{
 				"bottleIntervalH": bottleIntervalH,
 				"meds":            json.RawMessage(medsJSON),
@@ -53,17 +79,14 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		}
 
 		adminID := ""
-		db.QueryRow(`SELECT id FROM caregivers WHERE family_id = ? AND removed_at = '' ORDER BY created_at LIMIT 1`, session.FamilyID).Scan(&adminID)
-		caregiverRows, err := db.Query(`SELECT id, display_name, role, photo, updated_at, removed_at FROM caregivers WHERE family_id = ? AND updated_at > ? ORDER BY created_at`, session.FamilyID, lowerBound)
+		tx.QueryRow(`SELECT id FROM caregivers WHERE family_id = ? AND removed_at = '' ORDER BY created_at LIMIT 1`, session.FamilyID).Scan(&adminID)
+		caregiverRows, err := tx.Query(`SELECT id, display_name, role, photo, removed_at FROM caregivers WHERE family_id = ? AND rev > ? ORDER BY created_at`, session.FamilyID, since)
 		if err == nil {
 			defer caregiverRows.Close()
 			for caregiverRows.Next() {
-				var id, displayName, role, photo, updatedAt, removedAt string
-				if err := caregiverRows.Scan(&id, &displayName, &role, &photo, &updatedAt, &removedAt); err != nil {
+				var id, displayName, role, photo, removedAt string
+				if err := caregiverRows.Scan(&id, &displayName, &role, &photo, &removedAt); err != nil {
 					log.Printf("sync: scan caregivers family=%s: %v", session.FamilyID, err)
-					continue
-				}
-				if !changedAfter(updatedAt, since) {
 					continue
 				}
 				b, _ := json.Marshal(caregiverInfo{ID: id, DisplayName: displayName, Role: role, Photo: photo, RemovedAt: removedAt, IsAdmin: removedAt == "" && id == adminID})
@@ -71,35 +94,29 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		rows, err := db.Query(`SELECT payload_json, created_by, deleted_at, updated_at FROM log_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
+		rows, err := tx.Query(`SELECT payload_json, created_by, deleted_at FROM log_entries WHERE family_id = ? AND rev > ?`, session.FamilyID, since)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
-				var payload, createdBy, updatedAt string
+				var payload, createdBy string
 				var deletedAt sql.NullString
-				if err := rows.Scan(&payload, &createdBy, &deletedAt, &updatedAt); err != nil {
+				if err := rows.Scan(&payload, &createdBy, &deletedAt); err != nil {
 					log.Printf("sync: scan log_entries family=%s: %v", session.FamilyID, err)
-					continue
-				}
-				if !changedAfter(updatedAt, since) {
 					continue
 				}
 				resp.Entries = append(resp.Entries, tombstoneOrPayload(payload, deletedAt, createdBy))
 			}
 		}
 
-		grows, err := db.Query(`SELECT id, date, weight_kg, height_cm, head_cm, note, deleted_at, updated_at FROM growth_entries WHERE family_id = ? AND updated_at > ?`, session.FamilyID, lowerBound)
+		grows, err := tx.Query(`SELECT id, date, weight_kg, height_cm, head_cm, note, deleted_at FROM growth_entries WHERE family_id = ? AND rev > ?`, session.FamilyID, since)
 		if err == nil {
 			defer grows.Close()
 			for grows.Next() {
-				var id, date, updatedAt string
+				var id, date string
 				var weightKg, heightCm, headCm sql.NullFloat64
 				var note, deletedAt sql.NullString
-				if err := grows.Scan(&id, &date, &weightKg, &heightCm, &headCm, &note, &deletedAt, &updatedAt); err != nil {
+				if err := grows.Scan(&id, &date, &weightKg, &heightCm, &headCm, &note, &deletedAt); err != nil {
 					log.Printf("sync: scan growth_entries family=%s: %v", session.FamilyID, err)
-					continue
-				}
-				if !changedAfter(updatedAt, since) {
 					continue
 				}
 				if deletedAt.Valid && deletedAt.String != "" {
@@ -119,36 +136,6 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
-}
-
-func syncLowerBound(since string) string {
-	if since == "" {
-		return ""
-	}
-	s, err := time.Parse(time.RFC3339Nano, since)
-	if err != nil {
-		log.Printf("sync: invalid since %q: %v; falling back to lexical lower bound", since, err)
-		return since
-	}
-	return s.UTC().Format("2006-01-02T15:04:05")
-}
-
-func changedAfter(updatedAt, since string) bool {
-	if since == "" {
-		return true
-	}
-	u, uErr := time.Parse(time.RFC3339Nano, updatedAt)
-	s, sErr := time.Parse(time.RFC3339Nano, since)
-	if uErr == nil && sErr == nil {
-		return u.After(s)
-	}
-	if uErr != nil {
-		log.Printf("sync: invalid updated_at %q: %v; falling back to lexical comparison", updatedAt, uErr)
-	}
-	if sErr != nil {
-		log.Printf("sync: invalid since %q: %v; falling back to lexical comparison", since, sErr)
-	}
-	return updatedAt > since
 }
 
 func tombstoneOrPayload(payload string, deletedAt sql.NullString, caregiverID string) json.RawMessage {

@@ -1,7 +1,7 @@
 // sync.js: offline outbox queue + server sync merge logic (no DOM dependency, unit-testable).
 import { log } from './log.js';
 const OUTBOX_KEY = 'hearth.outbox.v1';
-const LAST_SYNC_KEY = 'hearth.lastsync.v1';
+const LAST_SYNC_REV_KEY = 'hearth.lastsyncrev.v1';
 
 export function loadOutbox() {
   try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (e) { return []; }
@@ -15,8 +15,15 @@ export function enqueue(op) {
   saveOutbox(ops);
 }
 
-export function getLastSync() { return localStorage.getItem(LAST_SYNC_KEY) || ''; }
-export function setLastSync(ts) { localStorage.setItem(LAST_SYNC_KEY, ts); }
+// The sync cursor is the server's per-family revision counter, not a
+// timestamp — see docs/superpowers/specs/2026-07-04-sync-cursor-revision-counter.md
+// for why timestamps can silently and permanently lose entries under
+// concurrent writes. A missing or non-numeric value here (a fresh client, or
+// a pre-upgrade client with a leftover ISO-timestamp string) is sent as-is;
+// the server treats anything it can't parse as an integer as "since the
+// beginning" and returns a full resync.
+export function getLastSyncRev() { return localStorage.getItem(LAST_SYNC_REV_KEY) || ''; }
+export function setLastSyncRev(rev) { localStorage.setItem(LAST_SYNC_REV_KEY, String(rev)); }
 
 // Drains the outbox to the server in order, stopping at the first failure so
 // nothing is lost or reordered. Safe to call repeatedly (e.g. on a timer):

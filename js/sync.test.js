@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSync, setLastSync, syncChangeCount } = await import('./sync.js');
+const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount } = await import('./sync.js');
 
 test('enqueue appends an op and loadOutbox reads it back', () => {
   saveOutbox([]);
@@ -99,9 +99,9 @@ test('drainOutbox does not lose an op enqueued while a slow send is in flight', 
   assert.equal(loadOutbox().length, 0);
 });
 
-test('getLastSync defaults to empty string, setLastSync round-trips', () => {
-  localStorage.removeItem('hearth.lastsync.v1');
-  assert.equal(getLastSync(), '');
-  setLastSync('2026-06-23T00:00:00Z');
-  assert.equal(getLastSync(), '2026-06-23T00:00:00Z');
+test('getLastSyncRev defaults to empty string, setLastSyncRev round-trips', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  assert.equal(getLastSyncRev(), '');
+  setLastSyncRev(42);
+  assert.equal(getLastSyncRev(), '42');
 });
