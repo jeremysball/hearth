@@ -3,7 +3,6 @@ import { state, save } from './store.js';
 import { esc, sheet, toast } from './ui.js';
 
 let cachedMe = { identity: null };
-export function meSnapshot() { return cachedMe; }
 export async function loadMe() {
   try {
     const res = await fetch('/api/me', { credentials: 'include' });

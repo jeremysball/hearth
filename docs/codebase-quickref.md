@@ -49,7 +49,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `normalizeSettings(s)`: coerces legacy `clock24` boolean → string, in-place; called inside `load()`
 - `normalizeLog(log)`: fixes swapped sleep start/end
 - `derive`: object of computed getters (last sleep, last feed, awake time, etc.)
-- `awakeWindowMin()`: returns age-appropriate recommended awake window in minutes
+- `wakeWindowRange(position)`: age-appropriate awake window `{low, high, midpoint, ...}` in minutes
 - `ageLabel()`: human-readable age string
 - `applySyncResponse(resp)`: merges server sync data into state
 - `enqueueBabySync()`, `enqueueSettingsSync()`: mark items for next sync
