@@ -31,6 +31,8 @@ export function summary(e) {
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'hygiene') {
+    label = e.name || 'Hygiene'; detail = fmt.clock(e.start); meta = e.note || '';
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
