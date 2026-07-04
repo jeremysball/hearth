@@ -44,7 +44,7 @@ func TestHandleCreateLaunchTokenReturnsToken(t *testing.T) {
 		t.Fatal("expected non-empty token")
 	}
 	var caregiverID string
-	if err := db.QueryRow(`SELECT caregiver_id FROM launch_tokens WHERE token = ?`, resp.Token).Scan(&caregiverID); err != nil {
+	if err := db.QueryRow(`SELECT caregiver_id FROM launch_tokens WHERE token_hash = ?`, hashForTest(t, resp.Token)).Scan(&caregiverID); err != nil {
 		t.Fatalf("querying launch_token: %v", err)
 	}
 	if caregiverID != "cg1" {
@@ -69,8 +69,8 @@ func TestHandleRedeemLaunchTokenExpired(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
-	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at) VALUES ('lt1', 'cg1', 'fam1', ?)`,
-		"2000-01-01T00:00:00Z")
+	db.Exec(`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at) VALUES (?, 'cg1', 'fam1', ?)`,
+		hashForTest(t, "lt1"), "2000-01-01T00:00:00Z")
 
 	req := httptest.NewRequest("GET", "/api/launch/lt1", nil)
 	req.SetPathValue("token", "lt1")
@@ -87,8 +87,8 @@ func TestHandleRedeemLaunchTokenAlreadyUsed(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
-	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at, used_at) VALUES ('lt1', 'cg1', 'fam1', ?, ?)`,
-		"2099-01-01T00:00:00Z", nowISO())
+	db.Exec(`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at, used_at) VALUES (?, 'cg1', 'fam1', ?, ?)`,
+		hashForTest(t, "lt1"), "2099-01-01T00:00:00Z", nowISO())
 
 	req := httptest.NewRequest("GET", "/api/launch/lt1", nil)
 	req.SetPathValue("token", "lt1")
@@ -105,8 +105,8 @@ func TestHandleRedeemLaunchTokenSetsSessionCookieAndMarksUsed(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
-	db.Exec(`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at) VALUES ('lt1', 'cg1', 'fam1', ?)`,
-		"2099-01-01T00:00:00Z")
+	db.Exec(`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at) VALUES (?, 'cg1', 'fam1', ?)`,
+		hashForTest(t, "lt1"), "2099-01-01T00:00:00Z")
 
 	req := httptest.NewRequest("GET", "/api/launch/lt1", nil)
 	req.SetPathValue("token", "lt1")
@@ -122,7 +122,7 @@ func TestHandleRedeemLaunchTokenSetsSessionCookieAndMarksUsed(t *testing.T) {
 		t.Fatalf("expected a %s cookie, got %v", sessionCookieName, cookies)
 	}
 	var usedAt sql.NullString
-	if err := db.QueryRow(`SELECT used_at FROM launch_tokens WHERE token = 'lt1'`).Scan(&usedAt); err != nil {
+	if err := db.QueryRow(`SELECT used_at FROM launch_tokens WHERE token_hash = ?`, hashForTest(t, "lt1")).Scan(&usedAt); err != nil {
 		t.Fatal(err)
 	}
 	if !usedAt.Valid || usedAt.String == "" {

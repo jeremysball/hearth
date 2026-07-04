@@ -210,13 +210,20 @@ func backoffFireAt(due time.Time, stage int) (time.Time, bool) {
 // entirely once fully escalated); a reminder whose due time has moved
 // (the activity was logged, or its interval changed) resets to stage 0.
 func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []pushReminder {
+	var remindersJSON string
+	s.db.QueryRow(`SELECT reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&remindersJSON)
+	settings := parseReminderSettings(remindersJSON)
 	out := make([]pushReminder, 0, len(raw))
 	for _, r := range raw {
 		dueISO := r.At.UTC().Format(time.RFC3339Nano)
 		var storedDue string
 		var stage int
 		err := s.db.QueryRow(`SELECT due_at, stage FROM push_reminder_state WHERE family_id = ? AND reminder_key = ?`, familyID, r.Key).Scan(&storedDue, &stage)
-		if err != nil || storedDue != dueISO {
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("push: resolveScheduled family=%s key=%s: read state failed: %v", familyID, r.Key, err)
+			continue
+		}
+		if err == sql.ErrNoRows || storedDue != dueISO {
 			stage = 0
 			if _, execErr := s.db.Exec(`INSERT INTO push_reminder_state (family_id, reminder_key, due_at, stage, last_sent_at) VALUES (?, ?, ?, 0, NULL)
 				ON CONFLICT(family_id, reminder_key) DO UPDATE SET due_at = excluded.due_at, stage = 0, last_sent_at = NULL`, familyID, r.Key, dueISO); execErr != nil {
@@ -226,6 +233,14 @@ func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []
 		}
 		fireAt, ok := backoffFireAt(r.At, stage)
 		if !ok {
+			continue
+		}
+		// A backoff retry (unlike the original due time, already filtered by
+		// familyReminders) can land inside quiet hours on its own — e.g. a
+		// reminder due at 19:50 retries at 20:05, inside a 20:00 quiet
+		// start. Drop it for this tick; the next tick after quiet hours end
+		// picks it up at the same stage (delay clamps to 0 for a past fireAt).
+		if isQuietAt(fireAt, settings.QuietStart, settings.QuietEnd) {
 			continue
 		}
 		out = append(out, pushReminder{Key: r.Key, Title: r.Title, Body: r.Body, At: fireAt, DueAt: r.At})
@@ -296,8 +311,13 @@ func (s *pushScheduler) ScheduleFamily(familyID string) {
 func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, delay time.Duration) {
 	reminder := rem
 	s.pending[key] = scheduledPush{timer: time.AfterFunc(delay, func() {
-		s.sendFamily(familyID, reminder)
+		// advanceStage runs before sendFamily (which does synchronous
+		// network I/O per subscription) so a concurrent ScheduleFamily —
+		// the 5-min ScheduleAll tick or a log-entry handler racing this
+		// fire — sees the new stage immediately instead of re-arming a
+		// duplicate send at the same stage while this one is in flight.
 		s.advanceStage(familyID, reminder)
+		s.sendFamily(familyID, reminder)
 		s.mu.Lock()
 		delete(s.pending, key)
 		delete(s.byFamily[familyID], key)
