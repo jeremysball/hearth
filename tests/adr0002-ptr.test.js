@@ -54,7 +54,7 @@ async function runSuite(base) {
         window.__syncCalled = true;
         if (window.__syncMode === 'fulfill') {
           return Promise.resolve(new Response(
-            JSON.stringify({ serverTime: '', log: [], growth: [], baby: null, settings: null }),
+            JSON.stringify({ serverRev: 0, log: [], growth: [], baby: null, settings: null }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }
           ));
         }

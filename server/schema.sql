@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS families (
   id TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  rev_counter INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS babies (
@@ -10,7 +11,8 @@ CREATE TABLE IF NOT EXISTS babies (
   birthdate TEXT NOT NULL DEFAULT '',
   theme TEXT NOT NULL DEFAULT 'girl',
   photo TEXT,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_babies_family ON babies(family_id);
 
@@ -22,9 +24,11 @@ CREATE TABLE IF NOT EXISTS caregivers (
   photo TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
-  removed_at TEXT NOT NULL DEFAULT ''
+  removed_at TEXT NOT NULL DEFAULT '',
+  rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_caregivers_family ON caregivers(family_id);
+CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
@@ -50,7 +54,8 @@ CREATE TABLE IF NOT EXISTS settings (
   reminders_json TEXT NOT NULL DEFAULT '{}',
   cards_json TEXT NOT NULL DEFAULT '{}',
   playtypes_json TEXT NOT NULL DEFAULT '[]',
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  rev INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS log_entries (
@@ -61,9 +66,11 @@ CREATE TABLE IF NOT EXISTS log_entries (
   payload_json TEXT NOT NULL,
   created_by TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  deleted_at TEXT
+  deleted_at TEXT,
+  rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS launch_tokens (
   token        TEXT PRIMARY KEY,
@@ -82,9 +89,11 @@ CREATE TABLE IF NOT EXISTS growth_entries (
   head_cm REAL,
   note TEXT,
   updated_at TEXT NOT NULL,
-  deleted_at TEXT
+  deleted_at TEXT,
+  rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_growth_entries_family_updated ON growth_entries(family_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS identities (
   provider          TEXT NOT NULL,

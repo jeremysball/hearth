@@ -1,6 +1,6 @@
 // app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
-import { drainOutbox, getLastSync, setLastSync, syncChangeCount } from './sync.js';
+import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
@@ -797,12 +797,12 @@ async function syncOnce() {
   const drained = await drainOutbox(fetch);
   if (!drained) { log.warn('sync', 'outbox drain failed, aborting pull'); return; }
   try {
-    const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSync()), { credentials: 'include' });
+    const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
     const data = await res.json();
     const n = syncChangeCount(data);
     applySyncResponse(data);
-    setLastSync(data.serverTime);
+    setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) router.refresh();
   } catch (e) {
