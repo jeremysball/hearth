@@ -53,6 +53,18 @@ export default [
     },
   },
 
+  // Node-run CommonJS dev scripts (e.g. scripts/sky-phases.js): same shape as
+  // tests/ — Node globals for the script itself, browser globals for the
+  // in-page callbacks passed to page.evaluate().
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'commonjs',
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+
   // Test files also live under js/ (e.g. js/store.test.js, run via `node:test`).
   // The js/**/*.js block above only gives them browser globals; layer Node globals
   // on top for ANY *.test.js regardless of directory. Only contributes globals, so

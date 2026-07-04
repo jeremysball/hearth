@@ -244,13 +244,18 @@ function heroCard() {
     : 0.95;
   const glow = emberGlow(heat);
 
+  // Bottom-left previously repeated "Awake since" from the state line above.
+  // Show the sweetspot boundary instead: the window's start before it opens,
+  // its end (the latest good time to start the nap) once it's open or past.
+  const railTime = now < sf ? `Starts ${fmt.clock(sp.from)}` : `Ends ${fmt.clock(sp.to)}`;
+
   return open(`data-sweet="${sweetState}" data-state="awake"${pastWindow ? ' data-overtired' : ''}`, emberGlowHTML(nowPct, glow)) + `
     <div class="state"><span class="livedot"></span><span class="state-lbl">Awake since ${fmt.clock(st.since)}</span></div>
     <div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span>${pastWindow ? '<span class="overtired-flag">past window</span>' : ''}</div>
     <div class="hero-sub">${healthy}</div>
     <div class="sh-sweet-lbl">${sweetLabel}${clockTimeNote}</div>
     <div class="sh-rail-wrap">
-      <div class="sh-rail-cap"><span>${fmt.clock(st.since)}</span><span>${sp.prediction.label}<button class="src-info-btn ${predictionSourceInfo(sp.prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button></span></div>
+      <div class="sh-rail-cap"><span>${railTime}</span><span>${sp.prediction.label}<button class="src-info-btn ${predictionSourceInfo(sp.prediction).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button></span></div>
     </div>` + close;
 }
 

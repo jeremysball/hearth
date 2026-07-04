@@ -1305,16 +1305,26 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   .sky-cloud, .sky-cloud svg, .sun-rays, .star-twinkle { animation: none !important; }
 }
 
-/* text contrast: dark scenes flip the hero ink light; the grade guarantees it */
+/* text contrast: dark scenes flip the hero ink light; the grade guarantees it.
+   morning/day are bright skies and need the opposite fix — the theme's default
+   --soft/--muted are tuned for the card's normal (often dark) background and
+   wash out against a pale sky, so they get a forced dark ink instead of inherit. */
 .hero-sky[data-sky-mode="golden"] .hero-fg, .hero-sky[data-sky-mode="twilight"] .hero-fg,
 .hero-sky[data-sky-mode="night"] .hero-fg, .hero-sky[data-sky-mode="deep-night"] .hero-fg {
   --hero-ink: oklch(0.97 0.015 90);
   --hero-ink-soft: oklch(0.90 0.03 85 / 0.94);
 }
+.hero-sky[data-sky-mode="morning"] .hero-fg, .hero-sky[data-sky-mode="day"] .hero-fg {
+  --hero-ink: oklch(0.30 0.035 50);
+  --hero-ink-soft: oklch(0.40 0.035 50 / 0.92);
+}
 .hero-sky .hero-fg .timer { color: var(--hero-ink, inherit); }
 .hero-sky[data-sky-mode="golden"] .hero-fg .timer, .hero-sky[data-sky-mode="twilight"] .hero-fg .timer,
 .hero-sky[data-sky-mode="night"] .hero-fg .timer, .hero-sky[data-sky-mode="deep-night"] .hero-fg .timer {
   text-shadow: 0 1px 10px oklch(0.22 0.04 300 / 0.55);
+}
+.hero-sky[data-sky-mode="morning"] .hero-fg .timer, .hero-sky[data-sky-mode="day"] .hero-fg .timer {
+  text-shadow: 0 1px 10px oklch(0.97 0.02 90 / 0.55);
 }
 .hero-sky .hero-fg .state-lbl, .hero-sky .hero-fg .hero-sub { color: var(--hero-ink-soft, var(--soft)); }
 .hero-sky .hero-fg .sh-sweet-lbl, .hero-sky .hero-fg .sh-rail-cap, .hero-sky .hero-fg .timer .u { color: var(--hero-ink-soft, var(--muted)); }
