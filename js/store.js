@@ -65,6 +65,7 @@ export function normalizeSettings(s) {
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
+  if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
   return s;
 }
 
