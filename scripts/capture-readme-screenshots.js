@@ -28,11 +28,24 @@ async function scrollToTop(page) {
   const browser = await chromium.launch({ args: ['--ignore-certificate-errors'] });
   const page = await browser.newPage({ deviceScaleFactor: 2 });
   await page.setViewportSize({ width: 390, height: 844 });
+
+  // Pin the clock to a fixed afternoon so the hero card's sky mode and the
+  // baby's computed age are deterministic regardless of when this script
+  // runs (same rationale as scripts/sky-phases.js).
+  const afternoon = new Date();
+  afternoon.setHours(14, 0, 0, 0);
+  await page.clock.install({ time: afternoon });
+
+  // 90 days old at capture time, matching the "3 months" copy the
+  // screenshots are meant to show.
+  const birthdate = new Date(afternoon.getTime() - 90 * 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
+
   await page.goto(baseUrl);
   await page.waitForTimeout(1500);
 
   await page.fill('input[placeholder="e.g. Olive"]', 'Olive');
-  await page.fill('input[type="date"]', '2026-04-15');
+  await page.fill('input[type="date"]', birthdate);
   await page.click('text=Girl');
   await page.fill('input[placeholder="e.g. Maya"]', 'Maya');
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
