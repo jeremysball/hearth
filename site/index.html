@@ -98,7 +98,54 @@
     margin: 0 0 20px;
   }
 
-  /* ---------- 24-hour time rail (signature) ---------- */
+  /* ---------- Scroll-linked sun disc (signature) ---------- */
+
+  .sun-disc {
+    position: fixed;
+    left: calc(var(--rail-w) + 12vw);
+    top: calc(14vh + (var(--sun-progress, 0) * 70vh));
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid));
+    box-shadow: 0 0 40px 10px oklch(0.74 0.19 42 / calc(0.34 + (var(--sun-progress, 0) * 0.32)));
+    opacity: calc(0.78 - (var(--sun-progress, 0) * 0.18));
+    transform: translate3d(calc(var(--sun-progress, 0) * 54vw), 0, 0) scale(calc(0.82 + (var(--sun-progress, 0) * 0.34)));
+    pointer-events: none;
+    z-index: 1;
+    will-change: transform, top, opacity;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .sun-disc {
+      animation: sun-descent linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0% 88%;
+    }
+  }
+
+  @keyframes sun-descent {
+    0% {
+      top: 14vh;
+      opacity: 0.72;
+      transform: translate3d(0, 0, 0) scale(0.82);
+      box-shadow: 0 0 34px 8px oklch(0.86 0.20 56 / 0.34);
+    }
+    62% {
+      top: 55vh;
+      opacity: 0.86;
+      transform: translate3d(39vw, 0, 0) scale(1.08);
+      box-shadow: 0 0 44px 11px oklch(0.74 0.19 42 / 0.58);
+    }
+    100% {
+      top: 81vh;
+      opacity: 0.58;
+      transform: translate3d(54vw, 0, 0) scale(1.16);
+      box-shadow: 0 0 50px 14px oklch(0.74 0.19 42 / 0.66);
+    }
+  }
+
+  /* ---------- 24-hour time rail ---------- */
 
   .timerail {
     position: fixed;
@@ -145,14 +192,13 @@
     position: absolute;
     left: 46px;
     top: 0;
-    width: 13px;
-    height: 13px;
-    margin-left: -6px;
-    margin-top: -6px;
+    width: 10px;
+    height: 10px;
+    margin-left: -5px;
+    margin-top: -5px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid));
-    box-shadow: 0 0 14px 3px oklch(0.74 0.19 42 / 0.65);
-    animation: glow 4.3s ease-in-out infinite;
+    box-shadow: 0 0 10px 2px oklch(0.74 0.19 42 / 0.35);
     will-change: top;
   }
 
@@ -164,7 +210,7 @@
   /* ---------- Hero ---------- */
 
   .hero {
-    padding: 120px 0 84px;
+    padding: 120px 0 36px;
   }
 
   .ember-dot {
@@ -186,7 +232,7 @@
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
     font-weight: 700;
-    font-size: clamp(78px, 17vw, 208px);
+    font-size: clamp(64px, 13vw, 148px);
     line-height: 0.9;
     margin: 0 0 8px -0.055em;
     letter-spacing: -0.01em;
@@ -194,6 +240,22 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
+  .wordmark span {
+    display: inline-block;
+    background: inherit;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: letter-rise 600ms cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay: calc(var(--i) * 40ms);
+  }
+
+  @keyframes letter-rise {
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .hero-lede {
@@ -220,6 +282,14 @@
     display: flex;
     gap: 14px;
     flex-wrap: wrap;
+  }
+
+  .cta-proof {
+    max-width: 560px;
+    margin: 14px 0 0;
+    color: var(--day-muted);
+    font-size: 14px;
+    line-height: 1.55;
   }
 
   .btn {
@@ -253,7 +323,12 @@
   /* ---------- Screenshots as editorial plates ---------- */
 
   .showcase {
-    padding: 40px 0 104px;
+    padding: 0 0 104px;
+  }
+
+  .showcase .eyebrow-mono {
+    letter-spacing: 0.12em;
+    color: var(--ember-mid);
   }
 
   .plates {
@@ -269,6 +344,20 @@
     padding: 14px;
     box-shadow: 0 18px 44px oklch(0.3 0.04 42 / 0.18);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
+    opacity: 0;
+    transform: translateY(24px);
+    will-change: transform, opacity;
+  }
+
+  .showcase.is-visible .plate {
+    opacity: 1;
+    transition: opacity 420ms ease, transform 520ms cubic-bezier(.2,.8,.2,1), box-shadow 200ms ease-out;
+  }
+
+  .showcase.is-visible .plate-day { transform: translateY(calc(var(--phone-day-y, 0) * 1px)); }
+  .showcase.is-visible .plate-night {
+    transform: translateY(calc(var(--phone-night-y, 0) * 1px));
+    transition-delay: 120ms;
   }
 
   .plate img {
@@ -317,6 +406,9 @@
     box-shadow: 0 26px 60px oklch(0.3 0.04 42 / 0.26);
   }
 
+  .showcase.is-visible .plate-day:hover { transform: translateY(calc((var(--phone-day-y, 0) * 1px) - 6px)); }
+  .showcase.is-visible .plate-night:hover { transform: translateY(calc((var(--phone-night-y, 0) * 1px) - 6px)); }
+
   .showcase-caption {
     max-width: 460px;
     margin: 28px 0 0;
@@ -348,16 +440,39 @@
   }
 
   .ledger {
-    border-top: 1px solid var(--hair-day);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
   }
 
   .ledger-row {
     display: grid;
-    grid-template-columns: 62px 14px 118px 1fr;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 6px;
-    border-bottom: 1px solid var(--hair-day);
+    grid-template-columns: 18px 1fr;
+    align-items: start;
+    gap: 12px;
+    min-height: 132px;
+    padding: 18px;
+    border: 1px solid var(--hair-day);
+    border-radius: 24px;
+    background: oklch(0.965 0.028 55 / 0.66);
+    box-shadow: 0 12px 26px oklch(0.3 0.04 42 / 0.07);
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 360ms ease, transform 420ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  .ledger.is-visible .ledger-row {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: calc(var(--chip-i, 0) * 80ms);
+  }
+
+  .ledger-row:nth-last-child(2) {
+    grid-column: 2;
+  }
+
+  .ledger-row:nth-last-child(1) {
+    grid-column: 3;
   }
 
   .ledger-row time {
@@ -365,23 +480,36 @@
     font-size: 13px;
     color: var(--day-muted);
     letter-spacing: 0.02em;
+    grid-column: 2;
   }
 
   .ledger-row .mark {
-    width: 12px;
-    height: 12px;
-    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    grid-row: 1 / span 3;
+    background-size: 140% 140%;
+    background-position: 35% 30%;
+    transition: transform 180ms ease-out, background-position 180ms ease-out;
+  }
+
+  .ledger-row:hover .mark {
+    transform: scale(1.12);
+    background-position: 39% 34%;
   }
 
   .ledger-row .cat {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 650;
     color: var(--day-ink);
+    grid-column: 2;
   }
 
   .ledger-row .detail {
     font-size: 15px;
     color: var(--day-muted);
+    grid-column: 2;
+    line-height: 1.45;
   }
 
   .ledger-row.is-sweetspot .cat { color: var(--ember-cool); }
@@ -395,7 +523,7 @@
   .play-swatch    { background: radial-gradient(circle at 35% 30%, oklch(0.82 0.10 280), oklch(0.62 0.11 282)); }
   .bath-swatch    { background: radial-gradient(circle at 35% 30%, oklch(0.85 0.08 220), oklch(0.64 0.10 220)); }
   .pump-swatch    { background: radial-gradient(circle at 35% 30%, oklch(0.85 0.06 195), oklch(0.66 0.08 195)); }
-  .sweetspot-swatch{ background: radial-gradient(circle at 35% 30%, oklch(0.88 0.11 95), oklch(0.70 0.14 60)); }
+  .sweetspot-swatch{ background: radial-gradient(circle at 35% 30%, oklch(0.88 0.11 95), oklch(0.70 0.14 60)); animation: glow 4.3s ease-in-out infinite; }
   .sharing-swatch { background: radial-gradient(circle at 35% 30%, oklch(0.82 0.10 340), oklch(0.63 0.13 345)); }
 
   /* ---------- SweetSpot ---------- */
@@ -412,6 +540,28 @@
     margin: 0 0 28px;
     color: var(--day-ink);
   }
+
+  .wake-window {
+    width: min(420px, 100%);
+    height: 4px;
+    margin: 8px 0 30px;
+    border-radius: 999px;
+    background: oklch(0.93 0.016 65 / 0.22);
+    overflow: hidden;
+  }
+
+  .wake-window span {
+    display: block;
+    width: 38%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--ember-core), var(--ember-mid), var(--ember-cool));
+    box-shadow: 0 0 14px oklch(0.74 0.19 42 / 0.38);
+    transform: translateX(-105%);
+    transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  .sweetspot-detail.is-visible .wake-window span { transform: translateX(62%); }
 
   .sweetspot-detail p.body {
     font-size: 17px;
@@ -437,7 +587,7 @@
     width: 120%;
     height: 62%;
     transform: translateX(-50%);
-    background: radial-gradient(ellipse 60% 100% at 50% 100%, oklch(0.55 0.20 44 / 0.35), transparent 70%);
+    background: radial-gradient(ellipse 60% 100% at 50% 100%, oklch(0.55 0.20 44 / calc(0.35 + (var(--pitch-glow, 0) * 0.18))), transparent 70%);
     pointer-events: none;
   }
 
@@ -451,6 +601,20 @@
     color: var(--night-ink);
     margin: 0 0 22px;
     text-shadow: 0 0 40px oklch(0.55 0.20 44 / 0.4);
+  }
+
+  .pitch h2 span {
+    display: block;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 360ms ease, transform 420ms cubic-bezier(.2,.8,.2,1);
+    white-space: nowrap;
+  }
+
+  .pitch.is-visible h2 span {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: calc(var(--line-i, 0) * 150ms);
   }
 
   .pitch p {
@@ -515,6 +679,33 @@
     color: var(--night-ink);
     overflow-x: auto;
   }
+
+  .term-line {
+    display: block;
+    width: max-content;
+    max-width: 0;
+    overflow: hidden;
+    white-space: pre;
+  }
+
+  .terminal.is-visible .term-line {
+    max-width: 100%;
+    transition: max-width 350ms steps(52, end);
+    transition-delay: calc(var(--line-i, 0) * 350ms);
+  }
+
+  .terminal.is-visible .term-line.is-active::after {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 1.2em;
+    margin-left: 2px;
+    background: var(--ember-core);
+    vertical-align: -0.22em;
+    animation: cursor-blink 0.8s steps(1, end) infinite;
+  }
+
+  @keyframes cursor-blink { 50% { opacity: 0; } }
 
   .terminal .prompt { color: var(--ember-core); }
   .terminal .comment { color: var(--night-comment); }
@@ -599,16 +790,37 @@
       width: 78%;
       margin: 20px 0 0 auto;
     }
+    .ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ledger-row:nth-last-child(2), .ledger-row:nth-last-child(1) { grid-column: auto; }
     .ledger-row {
-      grid-template-columns: 56px 12px 1fr;
+      grid-template-columns: 18px 1fr;
       row-gap: 2px;
     }
-    .ledger-row .detail { grid-column: 3; }
+    .ledger-row .detail { grid-column: 2; }
+    .pitch h2 { font-size: clamp(34px, 12vw, 52px); }
+  }
+
+  @media (max-width: 460px) {
+    .sun-disc { display: none; }
+    .hero { padding-top: 92px; }
+    .wrap { padding: 0 22px; }
+    .ledger { grid-template-columns: 1fr; }
+    .pitch h2 { font-size: clamp(31px, 9.2vw, 36px); }
+    .term-line { width: auto; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ember-dot, .rail-marker, .ledger-row.is-sweetspot .mark { animation: none; }
+    .sun-disc { display: none; }
+    .ember-dot, .rail-marker, .ledger-row.is-sweetspot .mark, .sweetspot-swatch, .terminal.is-visible .term-line.is-active::after { animation: none; }
     html { scroll-behavior: auto; }
+    .wordmark span, .plate, .ledger-row, .pitch h2 span, .term-line, .wake-window span {
+      animation: none;
+      transition-duration: 200ms;
+      transition-delay: 0ms;
+      opacity: 1;
+      transform: none;
+      max-width: 100%;
+    }
     .btn, .btn:hover, .plate, .plate:hover { transition: none; transform: none; }
   }
 
@@ -635,12 +847,14 @@
     <div class="rail-marker"></div>
   </div>
 
+  <div class="sun-disc" aria-hidden="true"></div>
+
   <main>
 
   <section class="hero" data-time="06:12" aria-label="Introduction">
     <div class="wrap">
       <p class="eyebrow-mono"><span class="ember-dot"></span>&nbsp;&nbsp;Local-first · PWA · Self-hosted · MIT</p>
-      <h1 class="wordmark">Hearth</h1>
+      <h1 class="wordmark"><span style="--i:0">H</span><span style="--i:1">e</span><span style="--i:2">a</span><span style="--i:3">r</span><span style="--i:4">t</span><span style="--i:5">h</span></h1>
       <div class="hero-lede">
         <p class="hook">A free, private baby tracker. No ads, no lock-in, no forced account.</p>
         <p class="subhook">Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.</p>
@@ -648,6 +862,7 @@
           <a class="btn primary" href="https://github.com/jeremysball/hearth">View on GitHub</a>
           <a class="btn secondary" href="#install">Self-host it</a>
         </div>
+        <p class="cta-proof">Open it, tap Sleep / Nursing / Bottle / Diaper, close it. No account, no sync, no server required.</p>
       </div>
     </div>
   </section>
@@ -682,8 +897,8 @@
         <div class="ledger-row"><time>11:50</time><span class="mark pump-swatch"></span><span class="cat">Pumping</span><span class="detail">Right side, 140 ml</span></div>
         <div class="ledger-row"><time>13:20</time><span class="mark medicine-swatch"></span><span class="cat">Medicine</span><span class="detail">Vitamin D, next dose reminder set</span></div>
         <div class="ledger-row"><time>17:30</time><span class="mark bath-swatch"></span><span class="cat">Bath</span><span class="detail">One tap when it's done</span></div>
-        <div class="ledger-row"><time>19:45</time><span class="mark sharing-swatch"></span><span class="cat">Sharing</span><span class="detail">Caregiver added, same log stays live</span></div>
         <div class="ledger-row is-sweetspot"><time>20:10</time><span class="mark sweetspot-swatch"></span><span class="cat">SweetSpot</span><span class="detail">Next nap window, predicted from real sleep data</span></div>
+        <div class="ledger-row"><time>19:45</time><span class="mark sharing-swatch"></span><span class="cat">Sharing</span><span class="detail">Caregiver added, same log stays live</span></div>
       </div>
     </div>
   </section>
@@ -691,13 +906,14 @@
   <section class="sweetspot-detail" data-time="15:00" aria-label="How SweetSpot works">
     <div class="wrap">
       <p class="pull-quote">A window instead of a single number, because sleep isn't that precise.</p>
+      <div class="wake-window" aria-hidden="true"><span></span></div>
       <p class="body">Babies build sleep pressure while they're awake, the same mechanism that makes adults drag by 9pm. Miss the window and they won't settle. Push past it and you get overtired: cortisol spikes, and the next nap gets worse instead of better. Wake windows also stretch fast as they grow. A newborn taps out in under an hour; an 18-month-old can go five. SweetSpot blends the population average for your baby's age with your baby's own naps from the last few days, weighting recent naps more heavily, and gives you a window instead of a single number, because sleep isn't that precise.</p>
     </div>
   </section>
 
   <section class="pitch" data-time="18:09" aria-label="Privacy">
     <div class="wrap">
-      <h2>No ads.<br>No lock-in.<br>No forced account.</h2>
+      <h2><span style="--line-i:0">No ads.</span><span style="--line-i:1">No lock-in.</span><span style="--line-i:2">No forced account.</span></h2>
       <p>It runs on hardware you control. Signing in with Google or Apple is optional, for backup and cross-device sync. Skip it, and nothing leaves your network.</p>
     </div>
   </section>
@@ -709,12 +925,7 @@
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           <button class="copy-btn" type="button" aria-label="Copy install commands">copy</button>
         </div>
-        <pre id="install-cmd"><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span>
-<span class="prompt">$</span> git clone https://github.com/jeremysball/hearth.git
-<span class="prompt">$</span> cd hearth
-<span class="prompt">$</span> cp .env.example .env
-<span class="comment"># fill in TS_AUTHKEY, CERT_FILE, and KEY_FILE</span>
-<span class="prompt">$</span> sudo docker compose up -d</pre>
+        <pre id="install-cmd"><span class="term-line" style="--line-i:0"><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span></span><span class="term-line" style="--line-i:1"><span class="prompt">$</span> git clone https://github.com/jeremysball/hearth.git</span><span class="term-line" style="--line-i:2"><span class="prompt">$</span> cd hearth</span><span class="term-line" style="--line-i:3"><span class="prompt">$</span> cp .env.example .env</span><span class="term-line" style="--line-i:4"><span class="comment"># fill in TS_AUTHKEY, CERT_FILE, and KEY_FILE</span></span><span class="term-line" style="--line-i:5"><span class="prompt">$</span> sudo docker compose up -d</span></pre>
       </div>
       <p class="install-caption">Runs behind Tailscale: only devices on your tailnet can reach it. No exposed ports, no reverse proxy to configure.</p>
     </div>
@@ -738,25 +949,30 @@
 
   <script>
     (function () {
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       var rail = document.querySelector('.timerail');
       var marker = document.querySelector('.rail-marker');
-      if (!rail || !marker) return;
 
       var sections = Array.prototype.slice.call(document.querySelectorAll('[data-time]'));
-      var ticks = sections.map(function (s) {
+      var ticks = rail ? sections.map(function (s) {
         var el = document.createElement('div');
         el.className = 'rail-tick';
         el.textContent = s.getAttribute('data-time');
         rail.appendChild(el);
         return { el: el, section: s };
+      }) : [];
+
+      Array.prototype.slice.call(document.querySelectorAll('.ledger-row')).forEach(function (row, i) {
+        row.style.setProperty('--chip-i', i);
       });
 
       function docHeight() {
-        return document.documentElement.scrollHeight;
+        return Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       }
 
       function layout() {
-        var h = docHeight();
+        if (!rail) return;
+        var h = Math.max(1, document.documentElement.scrollHeight);
         ticks.forEach(function (t) {
           var mid = t.section.offsetTop + t.section.offsetHeight / 2;
           var pct = Math.max(2, Math.min(98, (mid / h) * 100));
@@ -770,17 +986,39 @@
       function update() {
         ticking = false;
         var h = docHeight();
+        var scrollProgress = Math.max(0, Math.min(1, window.scrollY / h));
+        document.documentElement.style.setProperty('--sun-progress', scrollProgress.toFixed(4));
+
         var viewMid = window.scrollY + window.innerHeight / 2;
-        var pct = Math.max(0, Math.min(100, (viewMid / h) * 100));
-        marker.style.top = pct + 'vh';
-        // highlight the nearest tick
-        var nearest = null, best = Infinity;
-        ticks.forEach(function (t) {
-          var tp = parseFloat(t.el.style.top);
-          var d = Math.abs(tp - pct);
-          if (d < best) { best = d; nearest = t; }
-        });
-        ticks.forEach(function (t) { t.el.classList.toggle('active', t === nearest); });
+        var pct = Math.max(0, Math.min(100, (viewMid / Math.max(1, document.documentElement.scrollHeight)) * 100));
+
+        if (marker) {
+          marker.style.top = pct + 'vh';
+          var nearest = null, best = Infinity;
+          ticks.forEach(function (t) {
+            var tp = parseFloat(t.el.style.top);
+            var d = Math.abs(tp - pct);
+            if (d < best) { best = d; nearest = t; }
+          });
+          ticks.forEach(function (t) { t.el.classList.toggle('active', t === nearest); });
+        }
+
+        if (!reduceMotion) {
+          var showcase = document.querySelector('.showcase');
+          if (showcase) {
+            var sr = showcase.getBoundingClientRect();
+            var sp = Math.max(0, Math.min(1, (window.innerHeight - sr.top) / (window.innerHeight + sr.height)));
+            showcase.style.setProperty('--phone-day-y', (-4 * sp).toFixed(2));
+            showcase.style.setProperty('--phone-night-y', (4 * sp).toFixed(2));
+          }
+
+          var pitch = document.querySelector('.pitch');
+          if (pitch) {
+            var pr = pitch.getBoundingClientRect();
+            var pp = Math.max(0, Math.min(1, (window.innerHeight - pr.top) / (window.innerHeight * 0.9)));
+            pitch.style.setProperty('--pitch-glow', pp.toFixed(3));
+          }
+        }
       }
 
       function onScroll() {
@@ -794,17 +1032,52 @@
       layout();
       update();
 
+      function reveal(el) {
+        el.classList.add('is-visible');
+        if (el.classList.contains('terminal')) startTerminal(el);
+      }
+
+      var revealEls = Array.prototype.slice.call(document.querySelectorAll('.showcase, .ledger, .sweetspot-detail, .pitch, .terminal'));
+      if (reduceMotion || !('IntersectionObserver' in window)) {
+        revealEls.forEach(reveal);
+      } else {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            reveal(entry.target);
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0.25 });
+        revealEls.forEach(function (el) { observer.observe(el); });
+        requestAnimationFrame(function () {
+          revealEls.forEach(function (el) {
+            if (el.getBoundingClientRect().top < window.innerHeight * 0.95) reveal(el);
+          });
+        });
+      }
+
+      function startTerminal(term) {
+        var lines = Array.prototype.slice.call(term.querySelectorAll('.term-line'));
+        if (!lines.length || term.dataset.typed) return;
+        term.dataset.typed = 'true';
+        if (reduceMotion) return;
+        lines.forEach(function (line, i) {
+          setTimeout(function () {
+            lines.forEach(function (l) { l.classList.remove('is-active'); });
+            line.classList.add('is-active');
+          }, i * 350);
+        });
+        setTimeout(function () {
+          lines.forEach(function (l) { l.classList.remove('is-active'); });
+        }, lines.length * 350 + 200);
+      }
+
       // Copy-to-clipboard for the install block
       var btn = document.querySelector('.copy-btn');
       var cmd = document.getElementById('install-cmd');
       if (btn && cmd && navigator.clipboard) {
         btn.addEventListener('click', function () {
-          var lines = cmd.innerText.split('\n').filter(function (l) {
-            return l.trim() && l.trim().charAt(0) !== '#';
-          }).map(function (l) {
-            return l.replace(/^\s*\$\s?/, '');
-          });
-          navigator.clipboard.writeText(lines.join('\n')).then(function () {
+          navigator.clipboard.writeText(cmd.innerText.trim()).then(function () {
             btn.textContent = 'copied';
             setTimeout(function () { btn.textContent = 'copy'; }, 1200);
           });
