@@ -59,6 +59,7 @@ globalThis.requestAnimationFrame = (fn) => fn();
 
 // ---------- Notification ----------
 globalThis.Notification = {
+  permission: 'granted',
   requestPermission: async () => 'granted',
 };
 
@@ -140,7 +141,7 @@ const initialState = {
 localStorage.setItem('hearth.state.v1', JSON.stringify(initialState));
 
 // ---------- Import modules ----------
-const { scheduleReminders, enableNotifs, notifsGranted, refreshSubState } = await import('./reminders.js');
+const { scheduleReminders, enableNotifs, notifsGranted, refreshSubState, initNotifState } = await import('./reminders.js');
 const { addEntry, state, setSyncTrigger } = await import('./store.js');
 setSyncTrigger(null);
 
@@ -193,6 +194,7 @@ test('Enable notifications subscribes browser push with server key', async () =>
   assert.equal(subscribeCall.opts.method, 'POST');
   assert.equal(subscribeCall.opts.credentials, 'include');
   assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
+  assert.ok(notifsGranted(), 'notifsGranted should be true after enableNotifs resolves');
 });
 
 test('Does not re-fire on second call', () => {
@@ -231,32 +233,48 @@ test('Medicine reminders schedule during quiet hours', async () => {
 });
 
 test('refreshSubState reads getSubscription and updates _hasLocalSub', async () => {
-  // Sanity: mock currently reports a sub, and prior tests left _granted=true.
-  const reg = await navigator.serviceWorker.ready;
-  assert.ok(await reg.pushManager.getSubscription(), 'precondition: mock returns a sub');
-  await refreshSubState();
+  // Self-contained: ensure both flags are true before the no-sub branch.
+  await enableNotifs();
   assert.ok(notifsGranted(), 'precondition: notifsGranted true with sub present');
 
-  // Override ready to report no sub.
   const prevReady = navigator.serviceWorker.ready;
-  Object.defineProperty(navigator.serviceWorker, 'ready', {
-    value: Promise.resolve({
-      showNotification: () => Promise.resolve(),
-      pushManager: { getSubscription: async () => null },
-    }),
-    configurable: true,
-  });
-
-  await refreshSubState();
-  assert.equal(notifsGranted(), false, 'notifsGranted should be false when getSubscription returns null');
-
-  // Restore.
-  Object.defineProperty(navigator.serviceWorker, 'ready', { value: prevReady, configurable: true });
-  await refreshSubState();
-  assert.ok(notifsGranted(), 'notifsGranted should be true again after restore');
+  try {
+    Object.defineProperty(navigator.serviceWorker, 'ready', {
+      value: Promise.resolve({
+        showNotification: () => Promise.resolve(),
+        pushManager: { getSubscription: async () => null },
+      }),
+      configurable: true,
+    });
+    await refreshSubState();
+    assert.equal(notifsGranted(), false, 'notifsGranted should be false when getSubscription returns null');
+  } finally {
+    Object.defineProperty(navigator.serviceWorker, 'ready', { value: prevReady, configurable: true });
+    await refreshSubState();
+  }
 });
 
-test('notifsGranted is true when both flags are true (regression)', async () => {
-  await refreshSubState();
-  assert.ok(notifsGranted(), 'should be granted when _granted and _hasLocalSub are both true');
+test('initNotifState re-POSTs existing local sub to the server', async () => {
+  // Pre-set up state so this test is self-contained.
+  await enableNotifs();
+  resetFetches();
+
+  await initNotifState();
+
+  const subscribeCall = fetchCalls.find((c) => c.url === '/api/push/subscribe');
+  assert.ok(subscribeCall, 'initNotifState should re-POST the local sub to /api/push/subscribe');
+  assert.equal(subscribeCall.opts.method, 'POST');
+  assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
+});
+
+test('initNotifState does nothing when permission is not granted', async () => {
+  const prevPerm = Notification.permission;
+  Object.defineProperty(globalThis.Notification, 'permission', { value: 'default', configurable: true });
+  resetFetches();
+  try {
+    await initNotifState();
+    assert.equal(fetchCalls.length, 0, 'should not fetch or POST when permission is not granted');
+  } finally {
+    Object.defineProperty(globalThis.Notification, 'permission', { value: prevPerm, configurable: true });
+  }
 });
