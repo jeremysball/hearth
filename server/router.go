@@ -66,6 +66,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/family", handleCreateFamily(db))
+	mux.HandleFunc("GET /api/status", handleStatus(db))
 	mux.HandleFunc("/api/events", requireAuth(db, handleEvents(hub)))
 	mux.HandleFunc("GET /api/sync", requireAuth(db, handleSync(db)))
 	mux.HandleFunc("GET /api/push/public-key", requireAuth(db, handlePushPublicKey()))

@@ -8,7 +8,7 @@ import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
 import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
-import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
+import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
@@ -761,7 +761,12 @@ async function init() {
     return;
   }
   if (!state().setup) {
-    $('#app').innerHTML = onboarding();
+    let provisioned = false;
+    try {
+      const statusRes = await fetch('/api/status');
+      if (statusRes.ok) provisioned = (await statusRes.json()).provisioned;
+    } catch (e) { /* offline at boot: fail open to onboarding, same as today */ }
+    $('#app').innerHTML = provisioned ? provisionedView() : onboarding();
     handleAuthRedirect(null, async () => {
       // signedup on a fresh device: pull the new family down and boot.
       try {

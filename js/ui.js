@@ -228,8 +228,13 @@ export function dismissToast() {
 }
 
 // ---------- bottom sheet ----------
+let sheetCloseTimer = null;
 export const sheet = {
   open(html, opts = {}) {
+    // A sheet opened while the previous one's close() cleanup timer is still
+    // pending would otherwise have its just-written content wiped out when
+    // that stale timer fires — cancel it before writing the new sheet.
+    clearTimeout(sheetCloseTimer);
     const host = $('.phone') || document.body;
     let scrim = $('#scrim');
     if (!scrim) { scrim = document.createElement('div'); scrim.id = 'scrim'; scrim.className = 'scrim'; }
@@ -252,7 +257,8 @@ export const sheet = {
     const scrim = $('#scrim');
     if (!scrim) return;
     scrim.classList.remove('show');
-    setTimeout(() => { if (scrim) scrim.innerHTML = ''; }, 280);
+    clearTimeout(sheetCloseTimer);
+    sheetCloseTimer = setTimeout(() => { if (scrim) scrim.innerHTML = ''; }, 280);
   }
 };
 

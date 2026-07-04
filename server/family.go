@@ -26,6 +26,22 @@ type createFamilyResponse struct {
 	CaregiverID string `json:"caregiverId"`
 }
 
+type statusResponse struct {
+	Provisioned bool `json:"provisioned"`
+}
+
+func handleStatus(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var exists bool
+		if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(statusResponse{Provisioned: exists})
+	}
+}
+
 func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req createFamilyRequest
@@ -55,6 +71,16 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer tx.Rollback()
+
+		var exists bool
+		if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if exists {
+			http.Error(w, "a family already exists on this instance", http.StatusConflict)
+			return
+		}
 
 		if _, err := tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, familyID, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
