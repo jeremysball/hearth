@@ -14,7 +14,7 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
-import { currentVersion } from './changelog.js';
+import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
 import { initSky } from './sky.js';
 
@@ -306,6 +306,7 @@ document.addEventListener('click', (ev) => {
       router.refresh();
     },
     'app:reset': () => resetConfirm(),
+    'changelog:toggle': () => { toggleChangelogExpanded(); router.refresh(); },
     'stepper:up': () => { if (!_stepperPointerActive) stepValue(d.target, 1); },
     'stepper:down': () => { if (!_stepperPointerActive) stepValue(d.target, -1); },
     'stepper:open': () => openSpinner(el.id),
