@@ -279,6 +279,11 @@ document.addEventListener('click', (ev) => {
     'baby:photo-edit': () => { sheet.close(); profilePhoto(); },
     'toggle': () => toggle(el, d.path),
     'form:toggle': () => { el.classList.toggle('on'); el.setAttribute('aria-checked', el.classList.contains('on')); },
+    'icongrid:pick': () => {
+      const g = el.closest('[data-icongrid]');
+      if (!g) return;
+      $$('.icongrid-opt', g).forEach((o) => o.classList.toggle('on', o === el));
+    },
     'cg:photo': () => caregiverPhoto(d.id),
     'cg:remove': () => removeCaregiver(d.id, d.name),
     'cg:invite': () => inviteCaregiver(),
