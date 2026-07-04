@@ -15,6 +15,7 @@ export const CHANGELOG = [
       'Fixed a race between caregivers logging at the same time that could permanently stop one device from seeing new entries until signing out and back in.',
       'Fixed the wake time anchor sometimes including a sleep that should have been closed, which could nudge the predicted wake window.',
       'Fixed push notifications silently failing to arrive on iPhone.',
+      'Fixed the notifications setting getting stuck with no way to re-enable push, and made push automatically re-attach on next visit if the browser still had a saved subscription.',
       'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.'
     ]
   },

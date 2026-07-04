@@ -59,6 +59,7 @@ globalThis.requestAnimationFrame = (fn) => fn();
 
 // ---------- Notification ----------
 globalThis.Notification = {
+  permission: 'granted',
   requestPermission: async () => 'granted',
 };
 
@@ -82,6 +83,12 @@ Object.defineProperty(globalThis, 'navigator', {
             endpoint: 'https://push.example/sub',
             keys: { p256dh: 'p256dh-key', auth: 'auth-key' },
             toJSON() { return { endpoint: this.endpoint, keys: this.keys }; },
+          }),
+          getSubscription: async () => ({
+            endpoint: 'https://push.example/sub',
+            keys: { p256dh: 'p256dh-key', auth: 'auth-key' },
+            toJSON() { return { endpoint: this.endpoint, keys: this.keys }; },
+            unsubscribe: async () => true,
           }),
         },
       }),
@@ -134,7 +141,7 @@ const initialState = {
 localStorage.setItem('hearth.state.v1', JSON.stringify(initialState));
 
 // ---------- Import modules ----------
-const { scheduleReminders, enableNotifs } = await import('./reminders.js');
+const { scheduleReminders, enableNotifs, notifsGranted, refreshSubState, initNotifState } = await import('./reminders.js');
 const { addEntry, state, setSyncTrigger } = await import('./store.js');
 setSyncTrigger(null);
 
@@ -187,6 +194,7 @@ test('Enable notifications subscribes browser push with server key', async () =>
   assert.equal(subscribeCall.opts.method, 'POST');
   assert.equal(subscribeCall.opts.credentials, 'include');
   assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
+  assert.ok(notifsGranted(), 'notifsGranted should be true after enableNotifs resolves');
 });
 
 test('Does not re-fire on second call', () => {
@@ -222,4 +230,73 @@ test('Medicine reminders schedule during quiet hours', async () => {
   await enableNotifs();
 
   assert.ok(timeoutCalls.find((c) => c.delay <= 0), 'medicine reminder should schedule despite quiet hours');
+});
+
+test('refreshSubState reads getSubscription and updates _hasLocalSub', async () => {
+  // Self-contained: ensure both flags are true before the no-sub branch.
+  await enableNotifs();
+  assert.ok(notifsGranted(), 'precondition: notifsGranted true with sub present');
+
+  const prevReady = navigator.serviceWorker.ready;
+  try {
+    Object.defineProperty(navigator.serviceWorker, 'ready', {
+      value: Promise.resolve({
+        showNotification: () => Promise.resolve(),
+        pushManager: { getSubscription: async () => null },
+      }),
+      configurable: true,
+    });
+    await refreshSubState();
+    assert.equal(notifsGranted(), false, 'notifsGranted should be false when getSubscription returns null');
+  } finally {
+    Object.defineProperty(navigator.serviceWorker, 'ready', { value: prevReady, configurable: true });
+    await refreshSubState();
+  }
+});
+
+test('initNotifState re-POSTs existing local sub to the server', async () => {
+  // Pre-set up state so this test is self-contained.
+  await enableNotifs();
+  resetFetches();
+
+  await initNotifState();
+
+  const subscribeCall = fetchCalls.find((c) => c.url === '/api/push/subscribe');
+  assert.ok(subscribeCall, 'initNotifState should re-POST the local sub to /api/push/subscribe');
+  assert.equal(subscribeCall.opts.method, 'POST');
+  assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
+});
+
+test('refreshSubState reports false when the server rejects the re-POST', async () => {
+  // Regression test: a browser-side subscription existing is not proof the
+  // server has a matching row. If the re-POST to /api/push/subscribe fails,
+  // notifsGranted() must flip to false rather than staying stuck "on" with
+  // no working push (the bug this whole flag exists to catch).
+  await enableNotifs();
+  assert.ok(notifsGranted(), 'precondition: notifsGranted true after a clean enable');
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    if (String(url) === '/api/push/subscribe') return { ok: false, status: 500, json: async () => ({}) };
+    return originalFetch(url, opts);
+  };
+  try {
+    await refreshSubState();
+    assert.equal(notifsGranted(), false, 'notifsGranted should be false when the server rejects the re-POST');
+  } finally {
+    globalThis.fetch = originalFetch;
+    await refreshSubState();
+  }
+});
+
+test('initNotifState does nothing when permission is not granted', async () => {
+  const prevPerm = Notification.permission;
+  Object.defineProperty(globalThis.Notification, 'permission', { value: 'default', configurable: true });
+  resetFetches();
+  try {
+    await initNotifState();
+    assert.equal(fetchCalls.length, 0, 'should not fetch or POST when permission is not granted');
+  } finally {
+    Object.defineProperty(globalThis.Notification, 'permission', { value: prevPerm, configurable: true });
+  }
 });
