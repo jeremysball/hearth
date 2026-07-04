@@ -435,6 +435,28 @@ test('derive.circadianAnchor caps confidence at low when wake time SD > 45 min',
   assert.equal(anchor.confidence, 'low', 'high SD should cap confidence at low');
 });
 
+test('morningWakes rejects sleeps longer than 16h (auto-closed sleep guard)', () => {
+  // Capture the anchor before adding the bogus entry so the test is independent
+  // of whatever the earlier circadianAnchor tests left in the shared state.
+  const before = derive.circadianAnchor();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  // Bogus: 20-day sleep ending at 6am local today (or yesterday if it's
+  // before 6am now). Duration ~20 days, far over the 16h cap. End sits in the
+  // 4-10am filter window, so without the cap it would inflate the anchor.
+  const wake = new Date(now);
+  wake.setHours(6, 0, 0, 0);
+  if (wake > now) wake.setDate(wake.getDate() - 1);
+  const start = new Date(wake.getTime() - 20 * DAY_MS);
+  addEntry({ type: 'sleep', start: start.toISOString(), end: wake.toISOString() });
+  const after = derive.circadianAnchor();
+  assert.deepEqual(
+    after ? { sampleSize: after.sampleSize } : null,
+    before ? { sampleSize: before.sampleSize } : null,
+    'a sleep longer than 16h ending in 4-10am must not be counted'
+  );
+});
+
 test('derive.bedtimeWindow returns null when anchor is low confidence', () => {
   const anchor = derive.circadianAnchor();
   // Anchor is null or low confidence given current test data.
