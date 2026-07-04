@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -10,7 +10,11 @@ import (
 	"time"
 )
 
-func main() {
+// Run starts the Hearth server and blocks until it shuts down. The cmd/hearth
+// binary is a thin wrapper around this so the actual server logic stays a
+// regular importable package (testable, and usable by other entrypoints)
+// instead of living in package main.
+func Run() {
 	cfg := loadConfig()
 	if err := validateVAPIDEnv(); err != nil {
 		log.Fatal(err)
