@@ -14,6 +14,21 @@ type logStyle struct {
 	enabled bool
 }
 
+// tokenPathPrefixes lists routes whose final path segment is a raw bearer
+// token. logRequest redacts everything after the prefix so operator logs,
+// which are out of the threat model's "leaked DB" scope but still a real
+// exposure surface, never carry a live invite/launch/session-conflict token.
+var tokenPathPrefixes = []string{"/api/launch/", "/api/join/", "/api/conflict/", "/join/"}
+
+func redactTokenPath(path string) string {
+	for _, prefix := range tokenPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return prefix + "[redacted]"
+		}
+	}
+	return path
+}
+
 var currentLogStyle = newLogStyle()
 
 func newLogStyle() logStyle {
@@ -83,7 +98,7 @@ func logRequest(info requestLogInfo) {
 		"method=" + sanitizeLogValue(info.Method),
 		currentLogStyle.status(info.Status),
 		"duration=" + info.Duration.Round(time.Millisecond).String(),
-		"path=" + sanitizeLogValue(info.Path),
+		"path=" + sanitizeLogValue(redactTokenPath(info.Path)),
 		"ip=" + sanitizeLogValue(info.IP),
 		"remote=" + sanitizeLogValue(info.Remote),
 		"host=" + sanitizeLogValue(info.Host),
