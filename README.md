@@ -63,12 +63,12 @@ sudo docker compose up -d
 ```
 
 The app runs at `https://hearth.<your-tailnet>.ts.net:8443`. Every merge to
-`main` builds a new image and rolls the host within about a minute — the app
+`main` builds a new image and rolls the host within about a minute. The app
 is briefly unreachable (~2–5s) while Watchtower recreates the container. To
 roll back, pin the `app` image to a specific `:sha-<hash>` tag in
 `docker-compose.yml` (find the hash in the
 [GHCR package versions](https://github.com/jeremysball/hearth/pkgs/container/hearth))
-and run `sudo docker compose up -d` — Watchtower ignores pinned non-`:latest`
+and run `sudo docker compose up -d`. Watchtower ignores pinned non-`:latest`
 tags.
 
 ### Without Docker
@@ -178,4 +178,4 @@ The runner builds the Go binary if needed, starts the server on `127.0.0.1:18787
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
