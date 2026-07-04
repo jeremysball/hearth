@@ -89,13 +89,32 @@ func handlePatchCaregiverRole(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "invalid role", http.StatusBadRequest)
 			return
 		}
-		res, err := db.Exec(`UPDATE caregivers SET role = ?, updated_at = ? WHERE id = ? AND family_id = ? AND removed_at = ''`, body.Role, nowISO(), targetID, session.FamilyID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE caregivers SET role = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ? AND removed_at = ''`, body.Role, nowISO(), rev, targetID, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		hub.Broadcast(session.FamilyID)
@@ -127,7 +146,16 @@ func handleRemoveCaregiver(db *sql.DB, hub *Hub) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 		now := nowISO()
-		res, err := tx.Exec(`UPDATE caregivers SET removed_at = ?, updated_at = ? WHERE id = ? AND family_id = ? AND removed_at = ''`, now, now, targetID, session.FamilyID)
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE caregivers SET removed_at = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ? AND removed_at = ''`, now, now, rev, targetID, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
@@ -159,13 +187,32 @@ func handlePatchCurrentCaregiver(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "invalid body", http.StatusBadRequest)
 			return
 		}
-		res, err := db.Exec(`UPDATE caregivers SET photo = ?, updated_at = ? WHERE id = ? AND family_id = ?`, body.Photo, nowISO(), session.CaregiverID, session.FamilyID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(`UPDATE caregivers SET photo = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ?`, body.Photo, nowISO(), rev, session.CaregiverID, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		hub.Broadcast(session.FamilyID)
