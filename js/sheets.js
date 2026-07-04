@@ -509,6 +509,13 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`;
   },
   bath: () => `${timeRow()} ${noteRow()}`,
+  hygiene: () => {
+    const items = state().settings.hygiene;
+    if (!items.length) return `<p class="empty-note">No hygiene items yet. Add one from the Hygiene card on Home.</p>`;
+    return `
+    ${field('Item', `<select id="f-hyg">${items.map((it) => `<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select>`)}
+    ${timeRow()} ${noteRow()}`;
+  },
 };
 
 function gather(type) {
@@ -548,6 +555,10 @@ function gather(type) {
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
     base.playType = segVal('playType') || null;
+  } else if (type === 'hygiene') {
+    const id = $('#f-hyg').value;
+    const it = state().settings.hygiene.find((x) => x.id === id);
+    base.itemId = id; base.name = it.name;
   }
   return base;
 }
@@ -633,6 +644,7 @@ function prefill(type, e) {
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
   else if (type === 'play') { setSeg('playType', e.playType); }
+  else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
 }
 
 export function saveLog(type, id) {
