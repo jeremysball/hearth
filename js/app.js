@@ -542,6 +542,11 @@ document.addEventListener('pointermove', (e) => {
 
 // change/input binders
 document.addEventListener('change', (ev) => {
+  if (ev.target.id === 'f-med' && ev.target.value === '__manage__') {
+    ev.target.value = ev.target.options[0] ? ev.target.options[0].value : '';
+    editCard('medicine');
+    return;
+  }
   const b = ev.target.closest('[data-bind]');
   if (b) { setPath(b.dataset.bind, ev.target.value); if (b.dataset.bind === 'baby.theme' || b.dataset.bind === 'settings.theme') applyTheme(); }
   const role = ev.target.closest('[data-cg-role]');

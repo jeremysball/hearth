@@ -14,6 +14,7 @@ const DEFAULT = () => ({
   settings: {
     theme: '',
     bottleIntervalH: 3,
+    bottleAmountDefault: 120,
     meds: [
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
     ],
@@ -727,6 +728,6 @@ export function enqueueSettingsSync() {
   const s = _state.settings;
   enqueue({
     url: '/api/settings', method: 'PATCH',
-    body: { bottleIntervalH: s.bottleIntervalH, meds: s.meds, hygiene: s.hygiene, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
+    body: { bottleIntervalH: s.bottleIntervalH, bottleAmountDefault: s.bottleAmountDefault, meds: s.meds, hygiene: s.hygiene, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
   });
 }
