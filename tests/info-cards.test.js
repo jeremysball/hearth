@@ -1,4 +1,4 @@
-const { startServer, launchBrowser, onboard, check, tally } = require('./helpers');
+const { startServer, launchBrowser, check, tally } = require('./helpers');
 
 (async () => {
   const srv = await startServer(18799);
@@ -6,21 +6,18 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   const page = await browser.newPage();
   try {
     await page.setViewportSize({ width: 360, height: 820 });
-    await page.goto(srv.base + '/');
-    await onboard(page);
-
-    await page.evaluate(() => {
-      const raw = localStorage.getItem('hearth.state.v1');
-      const st = JSON.parse(raw);
+    // Pre-seed localStorage before the app ever boots, instead of onboarding
+    // through the UI and overwriting afterward. Onboarding kicks off async
+    // family-creation/outbox work; overwriting state from outside afterward
+    // raced the page's own in-flight save() calls, which could clobber the
+    // overwrite depending on timing. Seeding pre-boot means the app's very
+    // first read of state already has what we want, and since setup is
+    // already true, onboarding never runs at all.
+    await page.addInitScript(() => {
       const now = new Date();
       const birth = new Date(now);
       birth.setDate(birth.getDate() - 154);
-      st.baby.name = 'Mina';
-      st.baby.birthdate = birth.toISOString().slice(0, 10);
-      st.settings.tipMorningLightDismissed = false;
-      st.settings.dismissedTips = [];
-      st.settings.dismissedRegressions = [];
-      st.log = [];
+      const log = [];
       for (let i = 0; i < 14; i += 1) {
         const day = new Date(now);
         day.setDate(day.getDate() - i);
@@ -28,12 +25,27 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
         start.setHours(0, 30, 0, 0);
         const end = new Date(day);
         end.setHours(7, 5, 0, 0);
-        st.log.push({ id: `night-${i}`, type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+        log.push({ id: `night-${i}`, type: 'sleep', start: start.toISOString(), end: end.toISOString() });
       }
-      localStorage.setItem('hearth.state.v1', JSON.stringify(st));
+      localStorage.setItem('hearth.state.v1', JSON.stringify({
+        setup: true,
+        synced: false,
+        baby: { name: 'Mina', birthdate: birth.toISOString().slice(0, 10), theme: 'girl', photo: null, caregiver: 'Maya' },
+        settings: {
+          theme: '', bottleIntervalH: 3,
+          meds: [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }],
+          playTypes: ['Tummy time', 'Reading', 'Outdoor'],
+          units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
+          reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
+          cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
+          sound: true, clock24: '12h', darkMode: 'auto', seenChangelog: '',
+          tipMorningLightDismissed: false, dismissedTips: [], dismissedRegressions: []
+        },
+        log,
+        growth: [], caregivers: [], currentCaregiverId: ''
+      }));
     });
-
-    await page.reload();
+    await page.goto(srv.base + '/');
     await page.waitForSelector('.tip-card');
 
     const sourceLines = await page.$$eval('.tip-source', (els) => els.map((el) => el.textContent.trim()));
