@@ -16,12 +16,12 @@ export function enqueue(op) {
 }
 
 // The sync cursor is the server's per-family revision counter, not a
-// timestamp — see docs/superpowers/specs/2026-07-04-sync-cursor-revision-counter.md
-// for why timestamps can silently and permanently lose entries under
-// concurrent writes. A missing or non-numeric value here (a fresh client, or
-// a pre-upgrade client with a leftover ISO-timestamp string) is sent as-is;
-// the server treats anything it can't parse as an integer as "since the
-// beginning" and returns a full resync.
+// timestamp. See docs/adr/0003-sync-cursor-revision-counter.md for why
+// timestamps silently and permanently lose entries under concurrent writes. A
+// missing or non-numeric value here (a fresh client, or a pre-upgrade client
+// with a leftover ISO-timestamp string) is sent as-is; the server treats
+// anything it can't parse as an integer as "since the beginning" and returns a
+// full resync.
 export function getLastSyncRev() { return localStorage.getItem(LAST_SYNC_REV_KEY) || ''; }
 export function setLastSyncRev(rev) { localStorage.setItem(LAST_SYNC_REV_KEY, String(rev)); }
 

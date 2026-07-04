@@ -172,12 +172,6 @@ export function initThumbs(container) {
 }
 
 // ---------- theme ----------
-export const THEMES = [
-  { id: 'girl',       label: 'Girl',           swatch: 'girl'       },
-  { id: 'boy',        label: 'Boy',            swatch: 'boy'        },
-  { id: 'dayjob-girl', label: 'Day Job · Girl', swatch: 'dayjob-girl' },
-  { id: 'dayjob-boy',  label: 'Day Job · Boy',  swatch: 'dayjob-boy'  }
-];
 export function resolveMode() {
   const m = state().settings.darkMode || 'auto';
   if (m === 'auto') return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
