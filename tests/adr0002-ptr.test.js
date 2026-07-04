@@ -251,29 +251,25 @@ async function runSuite(base) {
   // Regression check: the spin keyframe animation must not silently reuse a leftover
   // inline rotate() from the pull gesture as its implicit start on every loop, which
   // produces a repeating backward jump instead of a smooth continuous spin.
-  const readSpinnerAngle = async () => {
-    const t = await page.$eval('.ptr-spinner', (el) => getComputedStyle(el).transform);
-    const m = t.match(/matrix\(([-0-9.]+), ([-0-9.]+),/);
-    if (!m) return 0;
-    const deg = Math.atan2(parseFloat(m[2]), parseFloat(m[1])) * 180 / Math.PI;
-    return deg < 0 ? deg + 360 : deg;
-  };
-  let prevAngle = await readSpinnerAngle();
+  //
+  // A computed-transform angle sampled mod 360 can't tell a genuine 180-360deg forward
+  // rotation apart from an actual backward jump - both wrap to the same value once the
+  // round trip between samples runs long under CI load. Element.getAnimations()[0]
+  // .currentTime sidesteps that ambiguity entirely: it's the animation's own monotonic
+  // playback clock, so it only drops if the animation instance actually restarted.
+  const readSpinnerTime = () => page.$eval('.ptr-spinner', (el) => {
+    const anim = el.getAnimations()[0];
+    return anim ? anim.currentTime : null;
+  });
+  let prevTime = await readSpinnerTime();
   let sawBackwardJump = false;
-  // Sample for ~1.6s (two full 0.8s cycles) so a loop boundary is crossed with margin,
-  // rather than relying on exactly one boundary-straddling sample pair.
   for (let i = 0; i < 16; i++) {
     await page.waitForTimeout(100);
-    const angle = await readSpinnerAngle();
-    // Normalize to the shortest angular delta mod 360, not just a single wrap: under
-    // CI load each $eval round-trip can itself take well over the nominal 100ms, so
-    // more than one full 360deg cycle can elapse between adjacent samples.
-    const raw = ((angle - prevAngle) % 360 + 360) % 360; // in [0, 360)
-    const delta = raw > 180 ? raw - 360 : raw; // in (-180, 180]
-    if (delta < -10) sawBackwardJump = true; // real regression: animation restarted from a stale angle
-    prevAngle = angle;
+    const t = await readSpinnerTime();
+    if (prevTime != null && t != null && t < prevTime - 10) sawBackwardJump = true; // real regression: animation instance restarted
+    prevTime = t;
   }
-  console.log('  spinner angle after sampling loop:', prevAngle, 'saw backward jump:', sawBackwardJump);
+  console.log('  spinner currentTime after sampling loop:', prevTime, 'saw backward jump:', sawBackwardJump);
   check('spinner rotation has no backward jump between samples', !sawBackwardJump);
 
   // Wait past the 4s timeout
