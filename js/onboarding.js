@@ -1,5 +1,5 @@
 // onboarding.js: first-run setup (name, birthdate, theme, photo, caregiver).
-import { state, save, seed, markSynced, enqueueSettingsSync } from './store.js';
+import { state, save, seed, reset, markSynced, enqueueSettingsSync } from './store.js';
 import { $, applyTheme, toast, $$ } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
@@ -44,6 +44,16 @@ export function onboarding() {
     <div class="onb-or">or</div>
     ${signInButtons()}
     <div class="onb-foot">You can change any of this later in Profile.</div>
+  </div>`;
+}
+
+export function provisionedView() {
+  return `<div class="onboard">
+    <div class="onb-top">
+      <img src="icons/hearth-logo.svg" class="onb-logo" alt="Hearth" />
+      <p class="onb-sub onb-tagline">This Hearth already has a family.&nbsp;<br>Sign in if you're a caregiver, or ask for an invite link.</p>
+    </div>
+    ${signInButtons()}
   </div>`;
 }
 
@@ -114,7 +124,12 @@ export async function onboardFinish() {
     // gets stuck at the head of the outbox, blocking every future sync until
     // it's retried and finally succeeds.
     if (res.ok) markSynced();
-    else log.warn('onboard', 'family create failed', res.status);
+    else if (res.status === 409) {
+      reset();
+      $('#app').innerHTML = provisionedView();
+      toast('This Hearth was already set up on another device.');
+      return;
+    } else log.warn('onboard', 'family create failed', res.status);
   } catch (e) {
     log.warn('onboard', 'family create offline', e);
   }

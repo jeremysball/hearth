@@ -73,6 +73,10 @@ async function launchBrowser() {
 }
 
 async function onboard(page) {
+  // init() awaits a /api/status fetch before rendering onboarding or the app
+  // shell, so #app is briefly empty right after goto() resolves — wait for
+  // either to show up before deciding whether to fill the form.
+  await page.waitForSelector('#onb-name, .tabbar', { timeout: 10000 });
   // Skip onboarding if already done; fill otherwise.
   if (await page.$('#onb-name')) {
     await page.fill('#onb-name', 'Test');

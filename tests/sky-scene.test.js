@@ -81,13 +81,24 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
       isLight = (r + g + b) / 3 > 150;
     }
     check('night timer text is light for contrast', isLight, timerColor);
+    // Only one family may exist per server instance, so later pages/contexts
+    // must inherit this page's onboarded storage state instead of onboarding
+    // fresh — a second onboarding attempt against the same server now
+    // correctly gets the "already provisioned" screen, not a new family.
+    const storageState = await page.context().storageState();
     await page.close();
 
     // ---- circadian deep night (3am) ----
     const nightPage = await browser.newPage();
+    await nightPage.context().addCookies(storageState.cookies);
     await nightPage.setViewportSize({ width: 360, height: 820 });
     await nightPage.clock.install({ time: at(3) });
     await nightPage.goto(srv.base + '/');
+    await nightPage.evaluate((origins) => {
+      const o = origins.find((x) => x.origin === location.origin);
+      if (o) for (const { name, value } of o.localStorage) localStorage.setItem(name, value);
+    }, storageState.origins);
+    await nightPage.reload();
     await onboard(nightPage);
     await seed(nightPage, { minutesAwake: 30 });
     check('12-6am renders deep night', await skyMode(nightPage) === 'deep-night', await skyMode(nightPage));
@@ -95,7 +106,7 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     await nightPage.close();
 
     // ---- reduced motion: fully static scene ----
-    const rmCtx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 360, height: 820 } });
+    const rmCtx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 360, height: 820 }, storageState });
     const rmPage = await rmCtx.newPage();
     await rmPage.clock.install({ time: at(13) });
     await rmPage.goto(srv.base + '/');

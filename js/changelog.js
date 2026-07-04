@@ -12,7 +12,8 @@ export const CHANGELOG = [
       'Added a default bottle amount setting, set it once from the Bottle card, and every new bottle log starts prefilled with it.',
       'Added an "Add or edit medicines" shortcut right in the medicine log form, so you no longer have to leave it to manage your medicine list.',
       'Pulling down further on refresh now syncs right away instead of waiting for you to let go.',
-      'Renamed the smallest diaper size from "Small" to "Little" throughout the app.'
+      'Renamed the smallest diaper size from "Small" to "Little" throughout the app.',
+      'A Hearth instance now shows a sign-in screen instead of the setup form once it already has a family.'
     ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
