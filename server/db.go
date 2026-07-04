@@ -3,16 +3,11 @@ package server
 import (
 	"crypto/rand"
 	"database/sql"
-	"embed"
 	"encoding/hex"
-	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
-
-//go:embed schema.sql
-var schemaFS embed.FS
 
 func openDB(path string) (*sql.DB, error) {
 	dsn := path
@@ -38,52 +33,16 @@ func openDB(path string) (*sql.DB, error) {
 		db.Close()
 		return nil, err
 	}
-	schema, err := schemaFS.ReadFile("schema.sql")
-	if err != nil {
+	// Migrations live in server/migrations/*.sql, applied in order. The
+	// schema_migrations table records which versions have run; the
+	// schema.sql hash stamp on PRAGMA user_version is the "this binary
+	// already opened this DB" sentinel — see migrate.go.
+	if err := runMigrations(db); err != nil {
 		db.Close()
 		return nil, err
 	}
-	if _, err := db.Exec(string(schema)); err != nil {
+	if err := verifySchemaHash(db); err != nil {
 		db.Close()
-		return nil, err
-	}
-	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN photo TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return nil, err
-	}
-	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return nil, err
-	}
-	if _, err := db.Exec(`ALTER TABLE caregivers ADD COLUMN removed_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return nil, err
-	}
-	if _, err := db.Exec(`UPDATE caregivers SET updated_at = created_at WHERE updated_at = ''`); err != nil {
-		return nil, err
-	}
-	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN playtypes_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return nil, err
-	}
-	if _, err := db.Exec(`ALTER TABLE settings ADD COLUMN hygiene_json TEXT NOT NULL DEFAULT '[]'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return nil, err
-	}
-	for _, stmt := range []string{
-		`ALTER TABLE families ADD COLUMN rev_counter INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE babies ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE settings ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE caregivers ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE log_entries ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE growth_entries ADD COLUMN rev INTEGER NOT NULL DEFAULT 0`,
-	} {
-		if _, err := db.Exec(stmt); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-			return nil, err
-		}
-	}
-	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev)`); err != nil {
-		return nil, err
-	}
-	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev)`); err != nil {
-		return nil, err
-	}
-	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev)`); err != nil {
 		return nil, err
 	}
 	return db, nil
