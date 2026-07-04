@@ -16,7 +16,7 @@ A free, private baby tracker. No ads, no lock-in, no forced account.
 
 Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.
 
-**[hearth website →](https://jeremysball.github.io/hearth/)**
+**[hearth website →](https://hearth.jeremyball.me/)**
 
 ## Screenshots
 
