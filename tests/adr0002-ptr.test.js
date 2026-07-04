@@ -178,6 +178,29 @@ async function runSuite(base) {
   });
   check('#ptr collapses to 0 after sync completes', ptrYPost <= 0, ptrYPost);
 
+  // ---------- Overshoot past PTR_COMMIT auto-triggers sync without a pointerup ----------
+  console.log('\n--- PTR: overshoot past commit distance auto-commits mid-pull ---');
+  await page.evaluate(() => { window.__vibrations = []; window.__syncCalled = false; window.__syncMode = 'fulfill'; });
+
+  // Pull 140px raw -> dist = 40 + (140-40)*0.5 = 90, at PTR_COMMIT. Never send pointerup.
+  await touchPtrEvent(page, 'pointerdown', cx, cy, 4);
+  for (let dy = 0; dy <= 140; dy += 20) {
+    await touchPtrEvent(page, 'pointermove', cx, cy + dy, 4);
+    await page.waitForTimeout(15);
+  }
+  await waitForRaf(page);
+  const syncCalledOvershoot = await pollTrue(() => window.__syncCalled);
+  check('overshooting past PTR_COMMIT triggers sync without waiting for release', syncCalledOvershoot);
+
+  // A pointerup arriving after the auto-commit must be a no-op (no duplicate sync).
+  await page.evaluate(() => { window.__syncCallCount = (window.__syncCallCount || 0) + (window.__syncCalled ? 1 : 0); window.__syncCalled = false; });
+  await touchPtrEvent(page, 'pointerup', cx, cy + 140, 4);
+  await page.waitForTimeout(200);
+  const syncCalledAfterLateUp = await page.evaluate(() => window.__syncCalled);
+  check('a pointerup arriving after auto-commit does not trigger a second sync', !syncCalledAfterLateUp, syncCalledAfterLateUp);
+
+  await page.waitForTimeout(500);
+
   // ---------- PTR does not fire when screen is scrolled down ----------
   console.log('\n--- PTR: no trigger when screen is scrolled ---');
   await page.evaluate(() => { window.__vibrations = []; });
