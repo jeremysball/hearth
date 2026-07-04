@@ -48,6 +48,41 @@ test('addMeasure enqueues a PUT to /api/growth/:id', () => {
   assert.equal(last.url, '/api/growth/' + m.id);
 });
 
+// hearth.outbox.v1 and hearth.state.v1 are two independent localStorage
+// writes. If a process is killed between them (mobile OS reaping a
+// backgrounded PWA, tab crash), whichever write happened first survives.
+// The outbox op must win that race so a crash never leaves an entry visible
+// locally with no queued op to sync it to the other caregiver.
+function setItemOrder(fn) {
+  const calls = [];
+  const realSetItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = (k, v) => { calls.push(k); realSetItem(k, v); };
+  try { fn(); } finally { localStorage.setItem = realSetItem; }
+  return calls;
+}
+
+test('addEntry persists the outbox op before the state', () => {
+  const calls = setItemOrder(() => addEntry({ type: 'diaper', start: '2026-01-01T00:00:00Z' }));
+  assert.ok(calls.indexOf('hearth.outbox.v1') < calls.indexOf('hearth.state.v1'));
+});
+
+test('removeEntry persists the outbox op before the state', () => {
+  const e = addEntry({ type: 'diaper', start: '2026-01-01T00:00:00Z' });
+  const calls = setItemOrder(() => removeEntry(e.id));
+  assert.ok(calls.indexOf('hearth.outbox.v1') < calls.indexOf('hearth.state.v1'));
+});
+
+test('updateEntry persists the outbox op before the state', () => {
+  const e = addEntry({ type: 'diaper', start: '2026-01-01T00:00:00Z' });
+  const calls = setItemOrder(() => updateEntry(e.id, { note: 'x' }));
+  assert.ok(calls.indexOf('hearth.outbox.v1') < calls.indexOf('hearth.state.v1'));
+});
+
+test('addMeasure persists the outbox op before the state', () => {
+  const calls = setItemOrder(() => addMeasure({ date: '2026-06-20', weightKg: 7.3 }));
+  assert.ok(calls.indexOf('hearth.outbox.v1') < calls.indexOf('hearth.state.v1'));
+});
+
 test('applySyncResponse merges baby and settings fields', () => {
   applySyncResponse({ baby: { name: 'Olive', theme: 'boy' }, settings: { bottleIntervalH: 4 }, entries: [], growth: [] });
   assert.equal(state().baby.name, 'Olive');
