@@ -279,8 +279,8 @@ func (s *pushScheduler) ScheduleAll() {
 
 func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error) {
 	var bottleInterval float64
-	var medsJSON, hygieneJSON, remindersJSON string
-	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json, hygiene_json, reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON, &hygieneJSON, &remindersJSON); err != nil {
+	var medsJSON, hygieneJSON, remindersJSON, cardsJSON string
+	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json, hygiene_json, reminders_json, cards_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON, &hygieneJSON, &remindersJSON, &cardsJSON); err != nil {
 		return nil, err
 	}
 	settings := parseReminderSettings(remindersJSON)
@@ -336,6 +336,31 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 				}
 			}
 		}
+	}
+	var cards struct {
+		Intervals map[string]float64 `json:"intervals"`
+	}
+	json.Unmarshal([]byte(cardsJSON), &cards)
+	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true}
+	for cardType, intervalH := range cards.Intervals {
+		if excluded[cardType] {
+			continue
+		}
+		var lastStart string
+		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, cardType).Scan(&lastStart)
+		if err != nil {
+			continue
+		}
+		t, err := time.Parse(time.RFC3339Nano, lastStart)
+		if err != nil {
+			continue
+		}
+		at := t.Add(time.Duration(intervalH * float64(time.Hour)))
+		if isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
+			continue
+		}
+		title := strings.ToUpper(cardType[:1]) + cardType[1:]
+		reminders = append(reminders, pushReminder{Key: cardType, Title: title + " due", Body: "Time to log the next " + cardType + ".", At: at})
 	}
 	return reminders, nil
 }

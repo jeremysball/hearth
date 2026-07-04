@@ -254,6 +254,92 @@ func TestFamilyRemindersSkipsHygieneDuringQuietHours(t *testing.T) {
 	}
 }
 
+func TestFamilyRemindersIncludesGenericConfiguredType(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, ?, ?)`,
+		"fam1",
+		`{"bottle":false,"meds":false,"quietStart":"00:00","quietEnd":"00:00"}`,
+		`{"bottle":true,"medicine":true,"order":["bottle","medicine"],"intervals":{"play":2}}`,
+		now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('p1', 'fam1', 'play', ?, '{}', 'cg1', ?)`,
+		time.Now().UTC().Add(-3*time.Hour).Format(time.RFC3339Nano), now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var found bool
+	for _, r := range reminders {
+		if r.Key == "play" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a generic 'play' reminder, got %+v", reminders)
+	}
+}
+
+func TestFamilyRemindersSkipsGenericTypeDuringQuietHours(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, ?, ?)`,
+		"fam1",
+		`{"bottle":false,"meds":false,"quietStart":"00:00","quietEnd":"23:59"}`,
+		`{"bottle":true,"medicine":true,"order":["bottle","medicine"],"intervals":{"play":2}}`,
+		now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('p1', 'fam1', 'play', ?, '{}', 'cg1', ?)`,
+		time.Now().UTC().Add(-3*time.Hour).Format(time.RFC3339Nano), now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	for _, r := range reminders {
+		if r.Key == "play" {
+			t.Fatalf("generic 'play' reminder should be suppressed during quiet hours (00:00-23:59 is always quiet), got %+v", r)
+		}
+	}
+}
+
+func TestFamilyRemindersNeverDuplicatesBottleMedicineHygieneFromIntervals(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	// Defensive case: intervals somehow contains 'medicine' (shouldn't happen via the
+	// UI, but the server must not double-schedule if it ever does).
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, ?, '{}', ?, ?, ?)`,
+		"fam1",
+		`[{"id":"m1","name":"Vitamin D","dose":"1","unit":"drop","everyH":24}]`,
+		`{"bottle":false,"meds":true,"quietStart":"00:00","quietEnd":"00:00"}`,
+		`{"bottle":true,"medicine":true,"order":["bottle","medicine"],"intervals":{"medicine":6}}`,
+		now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('med1', 'fam1', 'medicine', ?, '{"medId":"m1"}', 'cg1', ?)`,
+		time.Now().UTC().Format(time.RFC3339Nano), now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var medCount int
+	for _, r := range reminders {
+		if r.Key == "med-m1" || r.Key == "medicine" {
+			medCount++
+		}
+	}
+	if medCount != 1 {
+		t.Fatalf("expected exactly one medicine-derived reminder (from meds_json, not duplicated via intervals), got %d: %+v", medCount, reminders)
+	}
+}
+
 func TestScheduleAllEnumeratesAllFamilies(t *testing.T) {
 	db := newParallelTestDB(t)
 	now := nowISO()
