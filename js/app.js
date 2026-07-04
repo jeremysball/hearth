@@ -10,7 +10,7 @@ import { growth } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
@@ -226,6 +226,11 @@ document.addEventListener('click', (ev) => {
     'med:card': () => openMedCard(),
     'med:dose': () => logMedDose(d.mid),
     'med:remove': () => { const r = $(`.med-edit[data-mid="${d.mid}"]`); if (r) r.remove(); },
+    'card:save-hygiene': () => saveHygiene(),
+    'hygiene:add': () => addHygieneItem(),
+    'hygiene:card': () => openHygieneCard(),
+    'hygiene:log': () => logHygieneItem(d.hid),
+    'hygiene:remove': () => { const r = $(`.med-edit[data-hid="${d.hid}"]`); if (r) r.remove(); },
     'playtypes:open': () => openPlayTypes(),
     'playtype:add': () => addPlayType(),
     'playtype:remove': () => { const r = el.closest('.playtype-row'); if (r) r.remove(); },
@@ -547,6 +552,12 @@ function addMed() {
   const empty = $('.empty-note', list); if (empty) empty.remove();
   const id = 'm' + Date.now().toString(36);
   list.insertAdjacentHTML('beforeend', medRow({ id, name: '', dose: '1', unit: '', everyH: 24 }));
+}
+function addHygieneItem() {
+  const list = $('#hygiene-list'); if (!list) return;
+  const empty = $('.empty-note', list); if (empty) empty.remove();
+  const id = 'h' + Date.now().toString(36);
+  list.insertAdjacentHTML('beforeend', hygieneRow({ id, name: '', everyH: 168 }));
 }
 function addPlayType() {
   const list = $('#playtype-list'); if (!list) return;

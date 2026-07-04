@@ -309,6 +309,32 @@ function medicineCard() {
   </div>`;
 }
 
+function hygieneCard() {
+  const items = derive.nextHygiene();
+  const next = items.find((h) => h.due) || items[0];
+  const action = cardEditMode ? '' : 'data-action="hygiene:card"';
+  if (!next) {
+    return `<div class="info-card" ${action} data-card="hygiene">
+      <div class="ic-ring hygiene"><svg class="icon"><use href="#plus"></use></svg></div>
+      <div class="ic-txt"><div class="ic-lbl">Hygiene</div><div class="ic-val">Add a hygiene item</div></div>
+      ${icEdit('hygiene')}
+    </div>`;
+  }
+  let val, lbl;
+  if (!next.due) { lbl = next.item.name + ' · every ' + next.item.everyH + 'h'; val = 'Not done yet'; }
+  else {
+    lbl = next.item.name;
+    val = `${fmt.clock(next.due)} <span class="ic-rel">${fmt.untilOrAgo(next.due)}</span>`;
+  }
+  const overdue = next.due && next.due <= new Date();
+  const top = overdue ? `Hygiene due · ${fmt.untilOrAgo(next.due)}` : 'Next hygiene';
+  return `<div class="info-card ${overdue ? 'due' : ''}" ${action} data-card="hygiene">
+    <div class="ic-ring hygiene"><svg class="icon"><use href="#icon-hygiene"></use></svg></div>
+    <div class="ic-txt"><div class="ic-lbl">${top}</div><div class="ic-val">${val}</div><div class="ic-lbl2">${esc(lbl)}</div></div>
+    ${icEdit('hygiene')}
+  </div>`;
+}
+
 // Generic timer card for any activity type configured with an interval.
 function genericCard(type) {
   const c = TYPES[type] || { label: type, tone: 'note', icon: 'note-pencil' };
@@ -342,6 +368,14 @@ export function refreshOverdueLabels() {
       const lbl = card.querySelector('.ic-lbl');
       const rel = card.querySelector('.ic-rel');
       if (lbl) lbl.textContent = `Medicine due · ${fmt.untilOrAgo(next.due)}`;
+      if (rel) rel.textContent = fmt.untilOrAgo(next.due);
+    } else if (type === 'hygiene') {
+      const items = derive.nextHygiene();
+      const next = items.find((h) => h.due) || items[0];
+      if (!next || !next.due) return;
+      const lbl = card.querySelector('.ic-lbl');
+      const rel = card.querySelector('.ic-rel');
+      if (lbl) lbl.textContent = `Hygiene due · ${fmt.untilOrAgo(next.due)}`;
       if (rel) rel.textContent = fmt.untilOrAgo(next.due);
     } else {
       const n = derive.nextForType(type);
@@ -378,9 +412,9 @@ function bathCard() {
 }
 
 const CARD_KEYS = ['bottle', 'medicine'];
-const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard };
+const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard, hygiene: hygieneCard };
 // Activity types eligible as timer cards (everything loggable except notes).
-export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump'];
+export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene'];
 
 // A generic (non-default) card only renders once it has an interval configured,
 // so legacy saved state never resurrects a card the user didn't add.
@@ -404,7 +438,7 @@ function addCardBtn() {
 
 const QUICK = [
   { t: 'sleep', primary: true }, { t: 'feed' }, { t: 'bottle' }, { t: 'diaper' },
-  { t: 'medicine' }, { t: 'play' }, { t: 'bath' }
+  { t: 'medicine' }, { t: 'play' }, { t: 'bath' }, { t: 'hygiene' }
 ];
 
 export function home() {
