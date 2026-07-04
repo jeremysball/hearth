@@ -5,24 +5,31 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   const browser = await launchBrowser();
   const page = await browser.newPage();
   try {
-    // Track /api/sync requests from the very start so we can compare
-    // against a baseline taken after the initial sync settles. Match on
-    // pathname so the counter is robust to query-string changes.
-    let syncHits = 0;
-    page.on('request', (req) => {
-      try {
-        if (new URL(req.url()).pathname === '/api/sync') syncHits++;
-      } catch {}
+    // Track /api/sync calls by wrapping window.fetch in-page rather than via
+    // Playwright's page.on('request'): under CI, that CDP-level listener can
+    // silently miss a fetch that the app itself confirms completed (verified
+    // via the app's own debug logging) — an unreliable-tracking quirk in this
+    // headless build, not an app bug. Counting inside the page sidesteps it.
+    await page.addInitScript(() => {
+      window.__syncHits = 0;
+      const origFetch = window.fetch;
+      window.fetch = (...args) => {
+        try {
+          const url = args[0] instanceof Request ? args[0].url : args[0];
+          if (new URL(url, location.href).pathname === '/api/sync') window.__syncHits++;
+        } catch {}
+        return origFetch(...args);
+      };
     });
-    page.on('console', (msg) => console.log('  [browser]', msg.text()));
-    await page.addInitScript(() => localStorage.setItem('hearth.debug', '1'));
+    const syncHits = () => page.evaluate(() => window.__syncHits);
+
     await page.goto(srv.base + '/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await onboard(page);
     // Let the initial sync + SSE connection settle. 2s is well under the
     // 15s passive poll, so no interval-driven sync fires in this window.
     await page.waitForTimeout(2000);
-    const baseline = syncHits;
+    const baseline = await syncHits();
 
     // Dispatch a synthetic visibilitychange. The app's listener guards on
     // `document.visibilityState === 'visible'` (js/app.js), but headless
@@ -41,11 +48,13 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     // fixed 2s window even though it always completes well within a few
     // seconds.
     const deadline = Date.now() + 5000;
-    while (syncHits <= baseline && Date.now() < deadline) {
+    let hits = await syncHits();
+    while (hits <= baseline && Date.now() < deadline) {
       await page.waitForTimeout(50);
+      hits = await syncHits();
     }
 
-    check('visibilitychange triggers syncOnce', syncHits > baseline, `${syncHits - baseline} sync requests after foreground (baseline ${baseline})`);
+    check('visibilitychange triggers syncOnce', hits > baseline, `${hits - baseline} sync requests after foreground (baseline ${baseline})`);
   } catch (e) {
     check('visibility-sync test ran without throwing', false, e.message);
   } finally {
