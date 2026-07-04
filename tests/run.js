@@ -33,7 +33,7 @@ function runSuite(suite, port) {
     const p = spawn('node', [path.join(__dirname, suite)], {
       stdio: 'pipe',
       cwd: ROOT,
-      env: { ...process.env, TEST_PORT: String(port) },
+      env: { ...process.env, TEST_PORT: String(port), HEARTH_SERVER_PREBUILT: '1' },
     });
     p.stdout.on('data', (d) => chunks.push(d.toString()));
     p.stderr.on('data', (d) => chunks.push(d.toString()));
