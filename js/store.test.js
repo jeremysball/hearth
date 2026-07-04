@@ -610,3 +610,16 @@ test('todayStats sums bottle and pump amounts into feedVol', () => {
   assert.equal(stats.bottleVol, 120);
   assert.equal(stats.feedVol, 210);
 });
+
+test('nextHygiene computes per-item due dates like nextMeds', () => {
+  reset();
+  state().settings.hygiene = [{ id: 'h1', name: 'Nail trim', everyH: 168 }];
+  const before = derive.nextHygiene();
+  assert.equal(before[0].last, null);
+  assert.equal(before[0].due, null);
+  addEntry({ type: 'hygiene', start: new Date().toISOString(), itemId: 'h1', name: 'Nail trim' });
+  const after = derive.nextHygiene();
+  assert.ok(after[0].last instanceof Date);
+  assert.ok(after[0].due instanceof Date);
+  assert.equal(after[0].due.getTime() - after[0].last.getTime(), 168 * 60 * 60 * 1000);
+});

@@ -98,3 +98,25 @@ func TestHandlePatchSettingsUpdatesPlayTypes(t *testing.T) {
 		t.Errorf("playtypes_json = %q, want [\"Tummy time\",\"Reading\"]", playTypesJSON)
 	}
 }
+
+func TestHandlePatchSettingsUpdatesHygiene(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+
+	body := `{"bottleIntervalH":3,"meds":[],"hygiene":[{"id":"h1","name":"Nail trim","everyH":168}],"units":{},"reminders":{},"cards":{},"playTypes":[]}`
+	req := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(body))
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handlePatchSettings(db, hub, nil)(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var hygieneJSON string
+	db.QueryRow(`SELECT hygiene_json FROM settings WHERE family_id = 'fam1'`).Scan(&hygieneJSON)
+	if hygieneJSON != `[{"id":"h1","name":"Nail trim","everyH":168}]` {
+		t.Errorf("hygiene_json = %q, want [{\"id\":\"h1\",\"name\":\"Nail trim\",\"everyH\":168}]", hygieneJSON)
+	}
+}

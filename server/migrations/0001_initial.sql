@@ -1,7 +1,13 @@
+-- 0001_initial.sql
+-- Initial schema. This is the pre-migration state: the columns added in
+-- 0002-0009 are deliberately absent. A fresh database applies 0001 first,
+-- then the rest in order. The end state after all migrations is described
+-- by ../schema.sql; the consistency test in migrate_test.go asserts the
+-- two agree.
+
 CREATE TABLE IF NOT EXISTS families (
   id TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL,
-  rev_counter INTEGER NOT NULL DEFAULT 0
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS babies (
@@ -11,8 +17,7 @@ CREATE TABLE IF NOT EXISTS babies (
   birthdate TEXT NOT NULL DEFAULT '',
   theme TEXT NOT NULL DEFAULT 'girl',
   photo TEXT,
-  updated_at TEXT NOT NULL,
-  rev INTEGER NOT NULL DEFAULT 0
+  updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_babies_family ON babies(family_id);
 
@@ -21,17 +26,12 @@ CREATE TABLE IF NOT EXISTS caregivers (
   family_id TEXT NOT NULL REFERENCES families(id),
   display_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'Parent',
-  photo TEXT NOT NULL DEFAULT '',
-  updated_at TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL,
-  removed_at TEXT NOT NULL DEFAULT '',
-  rev INTEGER NOT NULL DEFAULT 0
+  created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_caregivers_family ON caregivers(family_id);
-CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS sessions (
-  token_hash TEXT PRIMARY KEY,
+  token TEXT PRIMARY KEY,
   caregiver_id TEXT NOT NULL REFERENCES caregivers(id),
   family_id TEXT NOT NULL REFERENCES families(id),
   created_at TEXT NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS invites (
-  token_hash TEXT PRIMARY KEY,
+  token TEXT PRIMARY KEY,
   family_id TEXT NOT NULL REFERENCES families(id),
   created_by TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -50,13 +50,10 @@ CREATE TABLE IF NOT EXISTS settings (
   family_id TEXT PRIMARY KEY REFERENCES families(id),
   bottle_interval_h REAL NOT NULL DEFAULT 3,
   meds_json TEXT NOT NULL DEFAULT '[]',
-  hygiene_json TEXT NOT NULL DEFAULT '[]',
   units_json TEXT NOT NULL DEFAULT '{}',
   reminders_json TEXT NOT NULL DEFAULT '{}',
   cards_json TEXT NOT NULL DEFAULT '{}',
-  playtypes_json TEXT NOT NULL DEFAULT '[]',
-  updated_at TEXT NOT NULL,
-  rev INTEGER NOT NULL DEFAULT 0
+  updated_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS log_entries (
@@ -67,14 +64,12 @@ CREATE TABLE IF NOT EXISTS log_entries (
   payload_json TEXT NOT NULL,
   created_by TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  deleted_at TEXT,
-  rev INTEGER NOT NULL DEFAULT 0
+  deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_id, updated_at);
-CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS launch_tokens (
-  token_hash   TEXT PRIMARY KEY,
+  token        TEXT PRIMARY KEY,
   caregiver_id TEXT NOT NULL,
   family_id    TEXT NOT NULL,
   expires_at   TEXT NOT NULL,
@@ -90,11 +85,9 @@ CREATE TABLE IF NOT EXISTS growth_entries (
   head_cm REAL,
   note TEXT,
   updated_at TEXT NOT NULL,
-  deleted_at TEXT,
-  rev INTEGER NOT NULL DEFAULT 0
+  deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_growth_entries_family_updated ON growth_entries(family_id, updated_at);
-CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS identities (
   provider          TEXT NOT NULL,
@@ -107,7 +100,7 @@ CREATE TABLE IF NOT EXISTS identities (
 CREATE INDEX IF NOT EXISTS idx_identities_caregiver ON identities(caregiver_id);
 
 CREATE TABLE IF NOT EXISTS pending_auth (
-  token_hash           TEXT PRIMARY KEY,
+  token                TEXT PRIMARY KEY,
   provider             TEXT NOT NULL,
   provider_user_id     TEXT NOT NULL,
   email                TEXT,
