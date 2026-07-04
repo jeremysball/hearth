@@ -130,16 +130,19 @@ func parseMigrationVersion(name string) (int, error) {
 }
 
 // schemaHash returns the first 4 bytes of sha256(schema.sql) as a little-
-// endian uint32. PRAGMA user_version is a 32-bit integer; 4 bytes is
-// enough to act as a "did the schema change" sentinel (collision odds
-// ~1 in 2^32). Edit schema.sql, rebuild, next openDB produces a new hash.
-func schemaHash() (uint32, error) {
+// endian int32 (not uint32: PRAGMA user_version is SQLite's signed 32-bit
+// integer, and a uint32 value at or above 2^31 silently fails to round-trip
+// through it — SQLite stores whatever fits and reads back 0, permanently
+// defeating the "did the schema change" check). 4 bytes is enough to act
+// as that sentinel (collision odds ~1 in 2^32). Edit schema.sql, rebuild,
+// next openDB produces a new hash.
+func schemaHash() (int32, error) {
 	b, err := schemaFS.ReadFile("schema.sql")
 	if err != nil {
 		return 0, fmt.Errorf("read schema.sql: %w", err)
 	}
 	sum := sha256.Sum256(b)
-	return binary.LittleEndian.Uint32(sum[:4]), nil
+	return int32(binary.LittleEndian.Uint32(sum[:4])), nil
 }
 
 // verifySchemaHash refuses to start a database whose stamped schema
@@ -157,15 +160,15 @@ func verifySchemaHash(db *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		_, err = db.Exec("PRAGMA user_version = " + strconv.FormatUint(uint64(h), 10))
+		_, err = db.Exec("PRAGMA user_version = " + strconv.FormatInt(int64(h), 10))
 		return err
 	}
 	h, err := schemaHash()
 	if err != nil {
 		return err
 	}
-	if uint32(stamped) != h {
-		return fmt.Errorf("schema hash mismatch: db=0x%08x binary=0x%08x — refusing to start; update the binary or restore a compatible database", uint32(stamped), h)
+	if int32(stamped) != h {
+		return fmt.Errorf("schema hash mismatch: db=0x%08x binary=0x%08x — refusing to start; update the binary or restore a compatible database", uint32(stamped), uint32(h))
 	}
 	return nil
 }
