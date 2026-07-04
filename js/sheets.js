@@ -494,7 +494,7 @@ const FORMS = {
     const meds = state().settings.meds;
     if (!meds.length) return `<p class="empty-note">No medicines yet. Add one from the Medicine card on Home.</p>`;
     return `
-    ${field('Medicine', `<select id="f-med">${meds.map((m) => `<option value="${m.id}">${esc(m.name)} · ${esc(m.dose)}${esc(m.unit)}</option>`).join('')}</select>`)}
+    ${field('Medicine', `<select id="f-med">${meds.map((m) => `<option value="${m.id}">${esc(m.name)} · ${esc(m.dose)}${esc(m.unit)}</option>`).join('')}<option value="__manage__">+ Add or edit medicines</option></select>`)}
     ${timeRow()} ${noteRow()}`;
   },
   pump: () => `
