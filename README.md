@@ -7,12 +7,12 @@
   <img src="https://img.shields.io/badge/go-1.26-00ADD8.svg" alt="Go 1.26" />
   <img src="https://img.shields.io/badge/PWA-ready-5A0FC8.svg" alt="PWA" />
   <img src="https://img.shields.io/badge/self--hosted-yes-success.svg" alt="Self-hosted" />
-  <img src="https://img.shields.io/badge/no%20cloud-private-critical.svg" alt="No cloud" />
+  <img src="https://img.shields.io/badge/data-sovereign-critical.svg" alt="Data sovereignty" />
 </p>
 
 # Hearth
 
-A free, private baby tracker. No accounts, no ads, no cloud.
+A free, private baby tracker. No ads, no lock-in, no forced account.
 
 Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.
 
