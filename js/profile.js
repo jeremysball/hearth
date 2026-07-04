@@ -86,6 +86,7 @@ export function profile() {
       <div class="set-row"><span>Nap reminders</span>${sw('settings.reminders.naps', s.reminders.naps)}</div>
       <div class="set-row"><span>Bottle reminders</span>${sw('settings.reminders.bottle', s.reminders.bottle)}</div>
       <div class="set-row"><span>Medicine reminders</span>${sw('settings.reminders.meds', s.reminders.meds)}</div>
+      <div class="set-row"><span>Hygiene reminders</span>${sw('settings.reminders.hygiene', s.reminders.hygiene)}</div>
       <div class="set-row"><span>Quiet hours</span><span class="quiet"><input type="time" data-bind="settings.reminders.quietStart" value="${s.reminders.quietStart}" /> – <input type="time" data-bind="settings.reminders.quietEnd" value="${s.reminders.quietEnd}" /></span></div>
       ${isDevMode() ? `<div class="set-row"><span>Developer mode</span><button class="btn-sm" data-action="dev:test-push">Test push in 15s</button></div>` : ''}
     </div>

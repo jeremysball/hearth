@@ -9,7 +9,7 @@ import (
 
 const (
 	defaultUnitsJSON     = `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
-	defaultRemindersJSON = `{"naps":true,"bottle":true,"meds":true,"quietStart":"20:00","quietEnd":"07:00"}`
+	defaultRemindersJSON = `{"naps":true,"bottle":true,"meds":true,"hygiene":true,"quietStart":"20:00","quietEnd":"07:00"}`
 	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
 )
 
@@ -147,6 +147,7 @@ func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
 type patchSettingsRequest struct {
 	BottleIntervalH float64         `json:"bottleIntervalH"`
 	Meds            json.RawMessage `json:"meds"`
+	Hygiene         json.RawMessage `json:"hygiene"`
 	Units           json.RawMessage `json:"units"`
 	Reminders       json.RawMessage `json:"reminders"`
 	Cards           json.RawMessage `json:"cards"`
@@ -184,8 +185,8 @@ func handlePatchSettings(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handl
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		res, err := tx.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
-			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, rev, session.FamilyID)
+		res, err := tx.Exec(`UPDATE settings SET bottle_interval_h = ?, meds_json = ?, hygiene_json = ?, units_json = ?, reminders_json = ?, cards_json = ?, playtypes_json = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
+			req.BottleIntervalH, rawOrNull(req.Meds), rawOrNull(req.Hygiene), rawOrNull(req.Units), rawOrNull(req.Reminders), rawOrNull(req.Cards), rawOrNull(req.PlayTypes), now, rev, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return

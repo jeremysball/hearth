@@ -17,9 +17,10 @@ const DEFAULT = () => ({
     meds: [
       { id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 24 }
     ],
+    hygiene: [],
     playTypes: ['Tummy time', 'Reading', 'Outdoor'],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
-    reminders: { naps: true, bottle: true, meds: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
+    reminders: { naps: true, bottle: true, meds: true, hygiene: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
     clock24: '12h',
@@ -63,6 +64,8 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
+  if (!Array.isArray(s.hygiene)) s.hygiene = [];
+  if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
   return s;
 }
 
@@ -452,6 +455,14 @@ export const derive = {
       return { med: m, last, due };
     }).sort((a, b) => (a.due ? a.due : Infinity) - (b.due ? b.due : Infinity));
   },
+  nextHygiene() {
+    return _state.settings.hygiene.map((it) => {
+      const given = _state.log.filter((e) => e.type === 'hygiene' && e.itemId === it.id);
+      const last = given.length ? new Date(given[0].start) : null;
+      const due = last ? new Date(last.getTime() + it.everyH * HR) : null;
+      return { item: it, last, due };
+    }).sort((a, b) => (a.due ? a.due : Infinity) - (b.due ? b.due : Infinity));
+  },
   todayStats(dayOffset = 0) {
     const start = startOfDay(Date.now() - dayOffset * DAY).getTime();
     const end = start + DAY;
@@ -636,6 +647,7 @@ export const derive = {
     if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at: sp.from.getTime() }); }
     if (r.bottle) { const nb = derive.nextBottle(); out.push({ key: 'bottle', title: 'Bottle due', body: 'Time for the next feed.', at: nb.due.getTime() }); }
     if (r.meds) { derive.nextMeds().forEach((m) => { if (m.due) out.push({ key: 'med-' + m.med.id, title: m.med.name + ' due', body: m.med.dose + (m.med.unit || '') + ' scheduled now.', at: m.due.getTime() }); }); }
+    if (r.hygiene) { derive.nextHygiene().forEach((h) => { if (h.due) out.push({ key: 'hyg-' + h.item.id, title: h.item.name + ' due', body: h.item.name + ' is due now.', at: h.due.getTime() }); }); }
     return out.sort((a, b) => a.at - b.at);
   }
 };
@@ -715,6 +727,6 @@ export function enqueueSettingsSync() {
   const s = _state.settings;
   enqueue({
     url: '/api/settings', method: 'PATCH',
-    body: { bottleIntervalH: s.bottleIntervalH, meds: s.meds, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
+    body: { bottleIntervalH: s.bottleIntervalH, meds: s.meds, hygiene: s.hygiene, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
   });
 }
