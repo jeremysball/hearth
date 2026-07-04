@@ -37,7 +37,7 @@ test('iconGrid renders one button per option with the right icon and selected st
   assert.match(html, /data-icongrid="method"/);
   assert.match(html, /data-val="Nursing"/);
   assert.match(html, /href="#milk"/);
-  assert.match(html, /data-val="Car"[^>]*class="icongrid-opt on"|class="icongrid-opt on"[^>]*data-val="Car"/);
+  assert.match(html, /class="icongrid-opt on" data-val="Car"/);
 });
 
 test('iconGrid HTML-escapes option values', () => {

@@ -15,7 +15,7 @@ function seg(group, opts, sel) {
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
-      `<svg class="icon"><use href="#${o.icon}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
+      `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
     `</div>`;
 }
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
@@ -457,7 +457,7 @@ const FORMS = {
     ${field('Quality', seg('quality', ['Restless', 'Okay', 'Good', 'Great'], 'Good'))}
     ${noteRow()}
     <details class="sleep-details">
-      <summary>Details — Optional</summary>
+      <summary>Details - Optional <svg class="icon sleep-details-chevron"><use href="#chevron-down"></use></svg></summary>
       ${field('Mood at bedtime', seg('startMood', ['Upset', 'Content'], null))}
       ${field('Time to fall asleep', seg('fallAsleep', ['Under 10 min', '10-20 min', 'Long time to fall asleep'], null))}
       ${field('How it happened', iconGrid('method', [
@@ -600,7 +600,7 @@ function setSeg(group, val) {
   $$('.seg-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
 function setIconGrid(group, val) {
-  const g = $(`[data-icongrid="${group}"]`); if (!g) return;
+  const g = $(`[data-icongrid="${group}"]`); if (!g || val == null) return;
   $$('.icongrid-opt', g).forEach((b) => b.classList.toggle('on', b.dataset.val === val));
 }
 export function syncDiaperSizeVisibility(kind) {
@@ -617,6 +617,8 @@ function prefill(type, e) {
     setSeg('quality', e.quality); if (e.end) writeDT('f-end', e.end);
     setSeg('startMood', e.startMood); setSeg('fallAsleep', e.fallAsleep);
     setIconGrid('method', e.method); setSeg('endMood', e.endMood);
+    const details = $('.sleep-details');
+    if (details && (e.startMood || e.fallAsleep || e.method || e.endMood)) details.open = true;
   }
   else if (type === 'feed') { setSeg('side', e.side); const fdur = $('#f-dur'); if (fdur) { fdur.dataset.value = e.duration || 0; fdur.textContent = e.duration || 0; } }
   else if (type === 'bottle' || type === 'pump') {
