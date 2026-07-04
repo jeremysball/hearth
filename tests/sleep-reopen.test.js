@@ -39,9 +39,17 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
         growth: [], caregivers: [], currentCaregiverId: ''
       }));
     });
+    page.on('console', (msg) => console.log('  [page]', msg.text()));
+    page.on('pageerror', (err) => console.log('  [pageerror]', err.message));
     await page.goto(srv.base + '/');
 
-    await page.click('[data-id="sleep-test"]');
+    try {
+      await page.click('[data-id="sleep-test"]', { timeout: 10000 });
+    } catch (e) {
+      const html = await page.evaluate(() => document.getElementById('app')?.innerHTML.slice(0, 2000));
+      console.log('  [debug] #app innerHTML:', html);
+      throw e;
+    }
     await page.waitForSelector('[data-action="entry:edit"][data-id="sleep-test"]');
     await page.click('[data-action="entry:edit"][data-id="sleep-test"]');
     await page.waitForSelector('#f-end-date');
