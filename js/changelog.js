@@ -15,7 +15,9 @@ export const CHANGELOG = [
       'Fixed hard-to-read text on the home sky during morning, daytime, and newborn hours.',
       'Replaced a duplicated wake time on the home hero with the sweet spot window\'s start or end time.',
       'Fixed the sleep glow sliding sideways instead of gently warming in place as a nap continues.',
-      'Fixed clouds jumping position when battery saver mode turns on.'
+      'Fixed clouds jumping position when battery saver mode turns on.',
+      'Fixed sync sometimes getting stuck right after creating a new account, blocking future updates from syncing.',
+      'Fixed settings occasionally failing to save right after creating a new account.'
     ]
   },
   {

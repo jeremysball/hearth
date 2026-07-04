@@ -15,7 +15,10 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    image: ghcr.io/jeremysball/hearth:latest
+    pull_policy: always
+    labels:
+      - "com.centurylinklabs.watchtower.scope=hearth"
     # Share tailscale's network namespace so app's port 8443 is actually
     # reachable at https://hearth.<tailnet>.ts.net:8443 — a plain bridge
     # network alone doesn't expose a sibling container over the tailnet.
@@ -27,6 +30,17 @@ services:
     volumes:
       - hearth-data:/app/data
       - ./certs:/app/certs:ro
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCOPE=hearth
     restart: unless-stopped
 
 volumes:

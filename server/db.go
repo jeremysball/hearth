@@ -15,7 +15,16 @@ import (
 var schemaFS embed.FS
 
 func openDB(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", path)
+	dsn := path
+	// WAL lets readers and a writer proceed concurrently instead of locking
+	// the whole file; busy_timeout makes a second writer wait for the lock
+	// rather than failing immediately with SQLITE_BUSY. Without these, two
+	// handlers writing back-to-back (e.g. family creation immediately
+	// followed by a settings PATCH) can hit a bare "database is locked" 500.
+	if path != ":memory:" {
+		dsn = path + "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
+	}
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
