@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS settings (
   family_id TEXT PRIMARY KEY REFERENCES families(id),
   bottle_interval_h REAL NOT NULL DEFAULT 3,
   meds_json TEXT NOT NULL DEFAULT '[]',
+  hygiene_json TEXT NOT NULL DEFAULT '[]',
   units_json TEXT NOT NULL DEFAULT '{}',
   reminders_json TEXT NOT NULL DEFAULT '{}',
   cards_json TEXT NOT NULL DEFAULT '{}',

@@ -79,6 +79,7 @@ body {
 .note,.tone-note { --tc: var(--muted); --tcb: var(--hair); }
 .play,.tone-play { --tc: oklch(0.50 0.09 280); --tcb: oklch(0.90 0.04 285); }
 .bath,.tone-bath { --tc: oklch(0.48 0.085 220); --tcb: oklch(0.88 0.04 215); }
+.hygiene,.tone-hygiene { --tc: oklch(0.50 0.08 195); --tcb: oklch(0.90 0.04 198); }
 
 /* ---- phone shell ---- */
 .phone {
@@ -521,6 +522,7 @@ body[data-mode="dark"] {
 }
 [data-mode="dark"] .play,   [data-mode="dark"] .tone-play   { --tc: oklch(0.72 0.09 280); --tcb: oklch(0.30 0.05 285); }
 [data-mode="dark"] .bath,   [data-mode="dark"] .tone-bath   { --tc: oklch(0.70 0.085 220); --tcb: oklch(0.28 0.05 215); }
+[data-mode="dark"] .hygiene, [data-mode="dark"] .tone-hygiene { --tc: oklch(0.72 0.09 195); --tcb: oklch(0.26 0.05 195); }
 [data-mode="dark"] .sleep,  [data-mode="dark"] .tone-sleep  { --tc: oklch(0.80 0.12 145); --tcb: oklch(0.22 0.06 143); }
 [data-mode="dark"] .feed,   [data-mode="dark"] .tone-feed   { --tc: oklch(0.82 0.10 52);  --tcb: oklch(0.24 0.06 48);  }
 [data-mode="dark"] .diaper, [data-mode="dark"] .tone-diaper { --tc: oklch(0.80 0.12 70);  --tcb: oklch(0.22 0.06 68);  }
