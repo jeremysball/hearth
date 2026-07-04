@@ -37,8 +37,8 @@ func createSession(ex execer, caregiverID, familyID string) (string, error) {
 		return "", err
 	}
 	now := nowISO()
-	_, err = ex.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
-		token, caregiverID, familyID, now, now)
+	_, err = ex.Exec(`INSERT INTO sessions (token_hash, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
+		hashToken(token), caregiverID, familyID, now, now)
 	if err != nil {
 		return "", err
 	}
@@ -67,16 +67,15 @@ func requireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		var familyID, caregiverID string
-		err = db.QueryRow(`
-			SELECT s.family_id, s.caregiver_id
+		matchedHash, err := lookupByToken(db, `
+			SELECT s.token_hash, s.family_id, s.caregiver_id
 			FROM sessions s JOIN caregivers c ON c.id = s.caregiver_id
-			WHERE s.token = ? AND c.removed_at = ''`, cookie.Value).
-			Scan(&familyID, &caregiverID)
+			WHERE s.token_hash IN (%s) AND c.removed_at = ''`, cookie.Value, &familyID, &caregiverID)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		db.Exec(`UPDATE sessions SET last_seen_at = ? WHERE token = ?`, nowISO(), cookie.Value)
+		db.Exec(`UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?`, nowISO(), matchedHash)
 		session := SessionInfo{CaregiverID: caregiverID, FamilyID: familyID}
 		if sw, ok := w.(interface{ setSession(SessionInfo) }); ok {
 			sw.setSession(session)
