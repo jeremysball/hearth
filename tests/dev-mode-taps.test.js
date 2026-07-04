@@ -7,6 +7,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
   try {
     await page.goto(srv.base + '/');
     await onboard(page);
+    await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
     await page.click('[data-action="nav:profile"]');
     await page.waitForSelector('[data-action="dev:tap-version"]');
 
