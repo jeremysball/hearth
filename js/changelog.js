@@ -12,7 +12,8 @@ export const CHANGELOG = [
       'Fixed a rare case where an entry logged right before the app closed could be lost instead of syncing on next launch.',
       'Fixed a race between caregivers logging at the same time that could permanently stop one device from seeing new entries until signing out and back in.',
       'Fixed the wake time anchor sometimes including a sleep that should have been closed, which could nudge the predicted wake window.',
-      'Fixed push notifications silently failing to arrive on iPhone.'
+      'Fixed push notifications silently failing to arrive on iPhone.',
+      'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.'
     ]
   },
   {

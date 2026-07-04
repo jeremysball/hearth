@@ -1117,22 +1117,22 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   flex: 0 0 auto;
 }
 .tip-icon .icon { width: 0.95rem; height: 0.95rem; }
-.tip-card p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2); }
+.tip-card p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--soft); }
 .tip-source {
   margin-top: 0.08rem;
   font-size: 0.78rem;
   line-height: 1.35;
-  color: var(--ink-3);
+  color: var(--muted);
 }
 .tip-dismiss {
   align-self: flex-start;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: 999px;
   padding: 0.3rem 0.9rem;
   font-size: 0.85rem;
   cursor: pointer;
-  color: var(--ink-2);
+  color: var(--soft);
 }
 
 .bedtime-chip {
@@ -1143,21 +1143,21 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   background: var(--card-bg);
   border-radius: 999px;
   font-size: 0.85rem;
-  color: var(--ink-2);
+  color: var(--soft);
   margin: 0 0 0.75rem;
 }
 
 .sweet-clock {
   display: block;
   font-size: 0.8rem;
-  color: var(--ink-2);
+  color: var(--muted);
   margin-top: 0.2rem;
 }
 
 .nap-context {
   display: block;
   font-size: 0.8rem;
-  color: var(--ink-3);
+  color: var(--muted);
   margin-top: 0.1rem;
 }
 
