@@ -26,8 +26,8 @@ func TestMigrationsApplyAndStampHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if uint32(stamped) != expected {
-		t.Fatalf("stamped 0x%08x, want 0x%08x", uint32(stamped), expected)
+	if int32(stamped) != expected {
+		t.Fatalf("stamped 0x%08x, want 0x%08x", uint32(stamped), uint32(expected))
 	}
 }
 
@@ -56,7 +56,7 @@ func TestMigrationsAreReplayable(t *testing.T) {
 		}
 		versions = append(versions, v)
 	}
-	want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	if fmt.Sprint(versions) != fmt.Sprint(want) {
 		t.Fatalf("versions = %v, want %v", versions, want)
 	}
@@ -125,8 +125,8 @@ func TestLegacyDBAppliesForward(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 9 {
-		t.Fatalf("schema_migrations has %d rows, want 9", count)
+	if count != 10 {
+		t.Fatalf("schema_migrations has %d rows, want 10", count)
 	}
 }
 

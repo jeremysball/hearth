@@ -183,7 +183,66 @@ type pushReminder struct {
 	Key   string
 	Title string
 	Body  string
-	At    time.Time
+	At    time.Time // actual fire time — may be delayed past DueAt by backoff
+	DueAt time.Time // the reminder's true due time; the dedupe key for backoff state
+}
+
+// backoffFireAt returns when a reminder at stage should next fire, given its
+// due time. Stage 0 = never sent (fire at due), 1 = sent once (fire at
+// due+15m), 2 = sent twice (fire at due+75m, i.e. 1h after the +15m send).
+// Stage 3+ means it already fired 3 times; ok=false means don't reschedule.
+func backoffFireAt(due time.Time, stage int) (time.Time, bool) {
+	switch stage {
+	case 0:
+		return due, true
+	case 1:
+		return due.Add(15 * time.Minute), true
+	case 2:
+		return due.Add(75 * time.Minute), true
+	default:
+		return time.Time{}, false
+	}
+}
+
+// resolveScheduled takes familyReminders()'s raw per-key due times and
+// applies persisted backoff state: a reminder whose due time hasn't changed
+// since it was last seen gets its next backoff fire time (or is dropped
+// entirely once fully escalated); a reminder whose due time has moved
+// (the activity was logged, or its interval changed) resets to stage 0.
+func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []pushReminder {
+	out := make([]pushReminder, 0, len(raw))
+	for _, r := range raw {
+		dueISO := r.At.UTC().Format(time.RFC3339Nano)
+		var storedDue string
+		var stage int
+		err := s.db.QueryRow(`SELECT due_at, stage FROM push_reminder_state WHERE family_id = ? AND reminder_key = ?`, familyID, r.Key).Scan(&storedDue, &stage)
+		if err != nil || storedDue != dueISO {
+			stage = 0
+			if _, execErr := s.db.Exec(`INSERT INTO push_reminder_state (family_id, reminder_key, due_at, stage, last_sent_at) VALUES (?, ?, ?, 0, NULL)
+				ON CONFLICT(family_id, reminder_key) DO UPDATE SET due_at = excluded.due_at, stage = 0, last_sent_at = NULL`, familyID, r.Key, dueISO); execErr != nil {
+				log.Printf("push: resolveScheduled family=%s key=%s: persist state failed: %v", familyID, r.Key, execErr)
+				continue
+			}
+		}
+		fireAt, ok := backoffFireAt(r.At, stage)
+		if !ok {
+			continue
+		}
+		out = append(out, pushReminder{Key: r.Key, Title: r.Title, Body: r.Body, At: fireAt, DueAt: r.At})
+	}
+	return out
+}
+
+// advanceStage records that rem actually fired, incrementing its backoff
+// stage. The due_at equality guard makes this a no-op if the underlying
+// reminder's due time already moved on (e.g. a newer ScheduleFamily call
+// reset it) between when this fire was scheduled and when it ran.
+func (s *pushScheduler) advanceStage(familyID string, rem pushReminder) {
+	dueISO := rem.DueAt.UTC().Format(time.RFC3339Nano)
+	if _, err := s.db.Exec(`UPDATE push_reminder_state SET stage = stage + 1, last_sent_at = ? WHERE family_id = ? AND reminder_key = ? AND due_at = ?`,
+		nowISO(), familyID, rem.Key, dueISO); err != nil {
+		log.Printf("push: advanceStage family=%s key=%s: %v", familyID, rem.Key, err)
+	}
 }
 
 type scheduledPush struct {
@@ -202,11 +261,12 @@ func newPushScheduler(db *sql.DB) *pushScheduler {
 }
 
 func (s *pushScheduler) ScheduleFamily(familyID string) {
-	reminders, err := s.familyReminders(familyID)
+	raw, err := s.familyReminders(familyID)
 	if err != nil {
 		log.Printf("push: scheduling family=%s failed: %v", familyID, err)
 		return
 	}
+	reminders := s.resolveScheduled(familyID, raw)
 	s.mu.Lock()
 	for k := range s.byFamily[familyID] {
 		if sp, ok := s.pending[k]; ok {
@@ -237,6 +297,7 @@ func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, d
 	reminder := rem
 	s.pending[key] = scheduledPush{timer: time.AfterFunc(delay, func() {
 		s.sendFamily(familyID, reminder)
+		s.advanceStage(familyID, reminder)
 		s.mu.Lock()
 		delete(s.pending, key)
 		delete(s.byFamily[familyID], key)
