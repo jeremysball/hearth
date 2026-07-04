@@ -99,20 +99,29 @@ A dense orientation doc for new sessions. Read before exploring files.
 
 ## Testing
 
+`npm test` runs everything — lint, unit, Go, and Playwright E2E — via
+`tests/run.js`. CI runs the same four legs in parallel as a matrix
+(`.github/workflows/ci.yml`). Use the standalone commands below to run just
+one thing while iterating:
+
 ```bash
 # Unit tests (node:test), run a single file or all:
 node --test js/store.test.js
 node --test js/*.test.js
+npm run test:unit           # all unit suites, no lint/go/e2e
 
-# Playwright E2E (needs the server running on port 9878):
-npm test                    # runs tests/run.js → all Playwright suites
+# Playwright E2E only (builds the Go binary, runs all suites):
+npm run test:e2e
 node tests/spinner.test.js  # single suite
 
 # Go tests:
-cd server && go test ./...
+go test ./server
 
 # Type / lint check:
 npm run check   # node --check on all JS + eslint
+
+# Everything (what CI runs, minus the parallel matrix):
+npm test
 ```
 
 ---

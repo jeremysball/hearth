@@ -224,19 +224,28 @@ async function runSuite(base) {
   console.log('  #ptr transition right after armed release:', ptrTransitionAfterRelease);
   check('#ptr uses an eased transition on armed release', ptrTransitionAfterRelease.includes('ease-out'), ptrTransitionAfterRelease);
 
-  // Behavioral check that the transition actually animates (not just declared): sample
-  // #ptr's rendered Y twice, ~150ms apart, partway through the .3s transition. An instant
-  // snap would already read 0 on the first sample.
+  // Behavioral check that the transition actually animates (not just declared): read
+  // #ptr's rendered Y immediately after release (should still be away from 0 — an instant
+  // snap would already read 0), then poll until it converges to 0. Polling rather than
+  // sampling at a fixed wall-clock offset avoids assuming a specific compositor frame
+  // rate — headless Chromium can throttle/coalesce transition frames under CI load, so a
+  // fixed 150ms mid-sample isn't guaranteed to land mid-transition even though the
+  // transition genuinely runs and completes.
   const readPtrComputedY = () => page.$eval('#ptr', el => {
     const m = getComputedStyle(el).transform.match(/matrix\([-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, ([-0-9.]+)\)/);
     return m ? parseFloat(m[1]) : 0;
   });
   const ptrYEarly = await readPtrComputedY();
-  await page.waitForTimeout(150);
+  const convergedToZero = await pollTrue(() => {
+    const m = getComputedStyle(document.getElementById('ptr')).transform
+      .match(/matrix\([-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, [-0-9.]+, ([-0-9.]+)\)/);
+    const y = m ? parseFloat(m[1]) : 0;
+    return y > -0.5;
+  }, 2000);
   const ptrYLater = await readPtrComputedY();
-  console.log('  #ptr computed Y during release transition: early', ptrYEarly, 'later (150ms)', ptrYLater);
+  console.log('  #ptr computed Y during release transition: early', ptrYEarly, 'converged', ptrYLater);
   check('#ptr transition actually animates toward 0 (not an instant snap)',
-    ptrYEarly < -1 && ptrYLater > ptrYEarly && ptrYLater < 0, `${ptrYEarly} -> ${ptrYLater}`);
+    ptrYEarly < -1 && convergedToZero, `${ptrYEarly} -> ${ptrYLater}`);
 
   // ---------- Spinner completes a continuous rotation, no restart jump-back ----------
   // Regression check: the spin keyframe animation must not silently reuse a leftover
@@ -256,9 +265,11 @@ async function runSuite(base) {
   for (let i = 0; i < 16; i++) {
     await page.waitForTimeout(100);
     const angle = await readSpinnerAngle();
-    let delta = angle - prevAngle;
-    if (delta < -180) delta += 360; // expected forward wrap past 360 -> 0
-    if (delta > 180) delta -= 360;  // symmetric case: sample landed exactly on a cycle boundary
+    // Normalize to the shortest angular delta mod 360, not just a single wrap: under
+    // CI load each $eval round-trip can itself take well over the nominal 100ms, so
+    // more than one full 360deg cycle can elapse between adjacent samples.
+    const raw = ((angle - prevAngle) % 360 + 360) % 360; // in [0, 360)
+    const delta = raw > 180 ? raw - 360 : raw; // in (-180, 180]
     if (delta < -10) sawBackwardJump = true; // real regression: animation restarted from a stale angle
     prevAngle = angle;
   }

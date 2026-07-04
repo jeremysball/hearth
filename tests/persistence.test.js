@@ -85,7 +85,13 @@ async function runSuite(base) {
 
   // ---------- Reopen from the server: reload triggers the app's own sync,
   // then ask the server directly for its copy of the entry. ----------
-  await page.reload({ waitUntil: 'networkidle' });
+  // 'networkidle' waits for a 500ms gap with zero in-flight requests; the
+  // service worker's own background activity around a reload can keep
+  // resetting that window indefinitely under CI load, so this hit Playwright's
+  // 30s hard timeout intermittently. 'load' is deterministic regardless of SW
+  // activity, and the explicit waitForTimeout below already covers the app's
+  // own post-load sync.
+  await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(1200);
 
   const serverEntry = await page.evaluate(async (id) => {
