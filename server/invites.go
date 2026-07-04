@@ -20,8 +20,8 @@ func handleCreateInvite(db *sql.DB) http.HandlerFunc {
 		token := newID()
 		expiresAt := time.Now().UTC().Add(inviteTTL).Format(time.RFC3339Nano)
 
-		_, err := db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at) VALUES (?, ?, ?, ?)`,
-			token, session.FamilyID, session.CaregiverID, expiresAt)
+		_, err := db.Exec(`INSERT INTO invites (token_hash, family_id, created_by, expires_at) VALUES (?, ?, ?, ?)`,
+			hashToken(token), session.FamilyID, session.CaregiverID, expiresAt)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
@@ -48,8 +48,8 @@ func handleJoinInvite(db *sql.DB) http.HandlerFunc {
 		var familyID string
 		var expiresAt string
 		var usedAt sql.NullString
-		err := db.QueryRow(`SELECT family_id, expires_at, used_at FROM invites WHERE token = ?`, token).
-			Scan(&familyID, &expiresAt, &usedAt)
+		matchedHash, err := lookupByToken(db, `SELECT token_hash, family_id, expires_at, used_at FROM invites WHERE token_hash IN (%s)`,
+			token, &familyID, &expiresAt, &usedAt)
 		if err == sql.ErrNoRows {
 			http.Error(w, "invite not found", http.StatusNotFound)
 			return
@@ -82,7 +82,7 @@ func handleJoinInvite(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		if _, err := db.Exec(`UPDATE invites SET used_at = ? WHERE token = ?`, now, token); err != nil {
+		if _, err := db.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
