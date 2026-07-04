@@ -16,8 +16,7 @@ test-results/
 .claude/
 _screenshot.js
 books/
-docs/superpowers/plans/*
-!docs/superpowers/plans/*.md
+docs/superpowers/
 docs/research-books-extracted*.md
 docs/research-plan-books.md
 /hearth

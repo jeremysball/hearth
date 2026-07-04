@@ -187,12 +187,12 @@ func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 
 // TestHandleSyncCursorSkipCannotLoseEntry replays the write/read interleave
 // that used to lose entries permanently under the timestamp cursor (see
-// docs/superpowers/specs/2026-07-04-sync-cursor-revision-counter.md): a
-// writer's row commits with a rev the reader's snapshot didn't include yet,
-// while a concurrent reader's cursor advances past it. Because a row's rev
-// and the family's rev_counter high-water mark commit atomically in the same
-// transaction, this can no longer happen — a reader can never observe an
-// advanced counter without also seeing the row backing it.
+// docs/adr/0003-sync-cursor-revision-counter.md): a writer's row commits with
+// a rev the reader's snapshot didn't include yet, while a concurrent reader's
+// cursor advances past it. Because a row's rev and the family's rev_counter
+// high-water mark commit atomically in the same transaction, this can no
+// longer happen: a reader can never observe an advanced counter without also
+// seeing the row backing it.
 func TestHandleSyncCursorSkipCannotLoseEntry(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
