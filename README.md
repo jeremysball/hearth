@@ -14,7 +14,7 @@
 
 A free, private baby tracker. No accounts, no ads, no cloud.
 
-Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your device: install it as a PWA and it works offline.
+Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.
 
 **[hearth website →](https://jeremysball.github.io/hearth/)**
 
@@ -33,8 +33,10 @@ Track sleep, feeds, diapers, medicine, and pumping. Everything stays on your dev
 - **Bottles**: contents and volume
 - **Diapers**: wet, dirty, or mixed
 - **Medicine**: custom medicines, doses, and interval reminders
+- **Play**: tummy time and floor play, logged as awake time
+- **Bath**: one tap when it's done
 - **Pumping**: side, volume, and time
-- **SweetSpot**: predicts the next ideal nap window
+- **SweetSpot**: predicts the next nap window from your baby's age and their own recent naps, not a fixed schedule
 - **Sharing**: invite caregivers to log together in real time
 
 ## Install & Run
