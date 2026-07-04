@@ -15,4 +15,3 @@ export const log = {
   error: (s,m,...d) => emit('error', s, m, ...d),
   event: (s,m,...d) => { if (ON) emit('event', s, m, ...d); }
 };
-export function enableDebug(on) { try { localStorage.setItem('hearth.debug', on ? '1' : '0'); } catch (e) {} }

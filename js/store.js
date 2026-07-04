@@ -259,10 +259,6 @@ export function wakeWindowRange(position = 'middle') {
   return { low, high, midpoint: Math.round((low + high) / 2), source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
 }
 
-// Compatibility shim: returns the population midpoint for the middle position.
-// Internal code should prefer wakeWindowRange() or derive.wakeWindowPrediction().
-export function awakeWindowMin() { return wakeWindowRange('middle').midpoint; }
-
 // Recency decay: observation from `date` gets weight 0.93^(ageDays).
 function recencyWeight(date, now = Date.now(), lambda = 0.93) {
   const ageDays = (now - (date instanceof Date ? date.getTime() : date)) / DAY;
