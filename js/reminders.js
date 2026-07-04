@@ -37,6 +37,26 @@ async function subscribePush(reg) {
   return true;
 }
 
+// POST an existing local PushSubscription back to the server. The server
+// upserts by endpoint (push.go: ON CONFLICT(endpoint) DO UPDATE), so calling
+// this when the row already exists just refreshes caregiver_id/p256dh/auth.
+// This is what re-attaches a sub to the current caregiver after their server
+// row was deleted but their browser still holds the local subscription.
+async function reRegisterLocalSub(sub) {
+  if (!sub) return false;
+  try {
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(sub),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function sendTestPush() {
   const res = await fetch('/api/push/test', { method: 'POST', credentials: 'include' });
   if (!res.ok) {
@@ -76,6 +96,7 @@ export async function enableNotifs() {
       await refreshSubState();
     } catch (err) {
       toast('Reminders enabled, but push failed: ' + (err?.message || err));
+      await refreshSubState();
       scheduleReminders();
       router.refresh();
       return;
@@ -99,13 +120,25 @@ export async function refreshSubState() {
 }
 
 export async function initNotifState() {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    await refreshSubState();
-    if (_hasLocalSub) {
-      _granted = true;
-      scheduleReminders();
-    }
+  // _granted reflects browser-side permission only — it's what the local
+  // setTimeout reminder path needs. _hasLocalSub is the separate UI signal
+  // for the profile's Enable/Test button (see notifsGranted()).
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  _granted = true;
+  await refreshSubState();
+  if (_hasLocalSub) {
+    // Re-POST the existing local sub so the server has a row for this
+    // caregiver. Handles the case where the server-side push_subscriptions
+    // row was deleted but the browser still holds the local subscription —
+    // the user would otherwise see "Notifications on" with broken reminders.
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = reg?.pushManager && await reg.pushManager.getSubscription();
+      if (sub) await reRegisterLocalSub(sub);
+    } catch {}
   }
+  scheduleReminders();
+  router.refresh();
 }
 
 export function notifsGranted() { return _granted && _hasLocalSub; }
