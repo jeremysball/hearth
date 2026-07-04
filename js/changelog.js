@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-04',
+    version: '2026-07-04',
+    features: [],
+    fixes: [
+      'Fixed the wake time anchor sometimes including a sleep that should have been closed, which could nudge the predicted wake window.'
+    ]
+  },
+  {
     date: '2026-07-03',
     version: '2026-07-03',
     features: [
