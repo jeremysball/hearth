@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS caregivers (
   rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_caregivers_family ON caregivers(family_id);
-CREATE INDEX IF NOT EXISTS idx_caregivers_family_rev ON caregivers(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
@@ -71,7 +70,6 @@ CREATE TABLE IF NOT EXISTS log_entries (
   rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_family_updated ON log_entries(family_id, updated_at);
-CREATE INDEX IF NOT EXISTS idx_log_entries_family_rev ON log_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS launch_tokens (
   token        TEXT PRIMARY KEY,
@@ -94,7 +92,6 @@ CREATE TABLE IF NOT EXISTS growth_entries (
   rev INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_growth_entries_family_updated ON growth_entries(family_id, updated_at);
-CREATE INDEX IF NOT EXISTS idx_growth_entries_family_rev ON growth_entries(family_id, rev);
 
 CREATE TABLE IF NOT EXISTS identities (
   provider          TEXT NOT NULL,
