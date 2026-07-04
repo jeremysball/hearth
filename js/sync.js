@@ -20,8 +20,19 @@ export function setLastSync(ts) { localStorage.setItem(LAST_SYNC_KEY, ts); }
 
 // Drains the outbox to the server in order, stopping at the first failure so
 // nothing is lost or reordered. Safe to call repeatedly (e.g. on a timer):
-// it's a no-op once the queue is empty.
-export async function drainOutbox(fetchImpl) {
+// it's a no-op once the queue is empty. Concurrent calls (e.g. a timer tick
+// firing while a log action's own trigger is still mid-request) share a
+// single in-flight run rather than each keeping their own stale copy of the
+// queue — otherwise whichever call finishes last overwrites storage with its
+// own outdated snapshot, silently dropping any op enqueued in the meantime.
+let inFlight = null;
+export function drainOutbox(fetchImpl) {
+  if (inFlight) return inFlight;
+  inFlight = drain(fetchImpl).finally(() => { inFlight = null; });
+  return inFlight;
+}
+
+async function drain(fetchImpl) {
   let ops = loadOutbox();
   if (!ops.length) return true;
   log.info('outbox', `draining ${ops.length} op${ops.length !== 1 ? 's' : ''}`);
@@ -40,7 +51,7 @@ export async function drainOutbox(fetchImpl) {
       log.warn('outbox', `failed (${ops.length} remaining)`, e.message);
       return false;
     }
-    ops = ops.slice(1);
+    ops = loadOutbox().slice(1);
     saveOutbox(ops);
   }
   log.info('outbox', 'drained');
