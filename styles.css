@@ -854,6 +854,15 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 [data-mode="dark"] .icongrid-opt { background: oklch(0.26 0.022 48 / 0.45); }
 [data-mode="dark"] .icongrid-opt.on { color: var(--accent); background: oklch(0.30 0.030 48); }
 
+.sleep-details { display: flex; flex-direction: column; gap: 13px; }
+.sleep-details summary {
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--soft);
+  list-style: none; padding: 4px 0;
+}
+.sleep-details summary::-webkit-details-marker { display: none; }
+.sleep-details summary::before { content: '▸ '; }
+.sleep-details[open] summary::before { content: '▾ '; }
+
 /* ---- sheet ---- */
 .scrim { position: absolute; inset: 0; background: oklch(0.3 0.03 25 / 0); display: flex; align-items: flex-end; justify-content: center; z-index: 60; pointer-events: none; transition: background .18s; }
 .scrim.show { background: oklch(0.3 0.03 25 / .42); pointer-events: auto; }
