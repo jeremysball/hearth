@@ -6,8 +6,9 @@ export const CHANGELOG = [
     version: '2026-07-04',
     features: [
       'Added optional sleep details: bedtime mood, time to fall asleep, how it happened, and how sleep ended. Tap "Details - Optional" on the sleep log sheet.',
-      'Added a Hygiene card — track custom items like nail trims or brushing teeth, each with its own reminder interval. Add it from "Add card" on Home.',
-      'Added a close button to every toast message, so you can dismiss it right away instead of waiting for it to fade.'
+      'Added a Hygiene card, for tracking custom items like nail trims or brushing teeth, each with its own reminder interval. Add it from "Add card" on Home.',
+      'Added a close button to every toast message, so you can dismiss it right away instead of waiting for it to fade.',
+      'Collapsed older changelog entries behind a "Show older updates" button so the Changelog card stays short.'
     ],
     fixes: [
       'Fixed entries occasionally not reaching the other caregiver when two things were logged close together.',
@@ -16,14 +17,16 @@ export const CHANGELOG = [
       'Fixed the wake time anchor sometimes including a sleep that should have been closed, which could nudge the predicted wake window.',
       'Fixed push notifications silently failing to arrive on iPhone.',
       'Fixed the notifications setting getting stuck with no way to re-enable push, and made push automatically re-attach on next visit if the browser still had a saved subscription.',
-      'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.'
+      'Fixed sleep tips, the bedtime chip, and other small labels using the wrong text color.',
+      'Fixed missed reminders resending every 5 minutes instead of backing off.',
+      'Fixed reminders still firing for cards you\'d hidden from Home.'
     ]
   },
   {
     date: '2026-07-03',
     version: '2026-07-03',
     features: [
-      'Repainted the home sky as a real lit scene — a glowing sun, drifting sun-lit clouds, and a richer starfield replace the old flat shapes.',
+      'Repainted the home sky as a real lit scene: a glowing sun, drifting sun-lit clouds, and a richer starfield replace the old flat shapes.',
       'Replaced the sleep countdown\'s coal tiles with a single glowing ember that grows warmer as nap time approaches.',
       'Clouds and sunlight in the hero sky now have real painted texture and shading.'
     ],
@@ -102,8 +105,15 @@ export const CHANGELOG = [
   }
 ];
 
+const VISIBLE_ENTRIES = 2;
+let expanded = false;
+
 export function currentVersion() {
   return document.querySelector('meta[name="version"]')?.content || '';
+}
+
+export function toggleChangelogExpanded() {
+  expanded = !expanded;
 }
 
 function group(label, items) {
@@ -115,12 +125,15 @@ function group(label, items) {
 }
 
 export function renderChangelog() {
+  const entries = expanded ? CHANGELOG : CHANGELOG.slice(0, VISIBLE_ENTRIES);
+  const hasMore = CHANGELOG.length > VISIBLE_ENTRIES;
   return `<div class="card row-card changelog-card" id="changelog-card">
     <h2>Changelog</h2>
-    ${CHANGELOG.map((entry) => `<section class="change-entry">
+    ${entries.map((entry) => `<section class="change-entry">
       <div class="change-date">${esc(entry.date)}</div>
       ${group('New', entry.features)}
       ${group('Fixed', entry.fixes)}
     </section>`).join('')}
+    ${hasMore ? `<button type="button" class="btn-ghost changelog-toggle" data-action="changelog:toggle">${expanded ? 'Show fewer updates' : 'Show older updates'}</button>` : ''}
   </div>`;
 }
