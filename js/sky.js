@@ -292,6 +292,10 @@ export function moonSVG(phase) {
 // renders in a given card at once.
 const CLOUD_SHAPE = { c1: 'cloud-tower', c2: 'cloud-classic', c3: 'cloud-hazybank' };
 const CLOUD_VIEW_H = 33.49; // 60 * 1536/2752, the source PNGs' true aspect ratio
+// Must match `.sky-low-power .sky-cloud { animation-duration: 700s !important }`
+// in styles.css — the delay below is computed as a fraction of *this* duration,
+// so it has to agree with whichever duration the CSS actually applies.
+const LOW_POWER_CLOUD_DUR = 700;
 
 function cloudsHTML(mode, sunFrac) {
   if (mode === 'deep-night') return '';
@@ -301,7 +305,11 @@ function cloudsHTML(mode, sunFrac) {
     const gid = `cloud-${cls}`;
     const href = `assets/sky/${CLOUD_SHAPE[cls]}.webp`;
     const h = CLOUD_VIEW_H;
-    return `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % dur).toFixed(1)}s">` +
+    // Low power overrides every cloud's animation-duration in CSS; compute the
+    // delay against that same effective duration so a cloud's phase (delay /
+    // duration) doesn't jump when low-power toggles between renders.
+    const effDur = lowPower ? LOW_POWER_CLOUD_DUR : dur;
+    return `<div class="sky-cloud ${cls}" style="animation-delay:-${(t % effDur).toFixed(1)}s">` +
       `<svg viewBox="0 0 60 ${h}" aria-hidden="true"><defs>` +
       `<linearGradient id="${gid}" x1="6" y1="${(h * 0.2).toFixed(1)}" x2="44" y2="${(h * 0.85).toFixed(1)}" gradientUnits="userSpaceOnUse">` +
       `<stop offset="0%" stop-color="var(--cloud-hi)"/><stop offset="60%" stop-color="var(--cloud-mid)"/><stop offset="100%" stop-color="var(--cloud-sh)"/>` +
@@ -440,7 +448,7 @@ function ensureLoop() {
     last = now;
     const { width: w, height: h } = ctx.canvas;
     ctx.clearRect(0, 0, w, h);
-    particles = particles.filter((p) => { p.t += dt; p.draw(ctx, w, h); return p.t < p.life; });
+    particles = particles.filter((p) => { p.t += dt; p.draw(ctx, w, h); return p.t < p.life && !p.dead; });
     rafId = particles.length ? requestAnimationFrame(step) : 0; // idle until the next event
   };
   rafId = requestAnimationFrame(step);
@@ -478,7 +486,7 @@ function spawnShootingStar() {
     draw(c, w, h) {
       const k = this.t / this.life;
       const x = (x0 + vx * this.t) * w, y = (y0 + vy * this.t) * h;
-      if (y > h * 0.5) return; // gone well above the horizon
+      if (y > h * 0.5) { this.dead = true; return; } // past the horizon: prune now, don't idle out the rest of life
       const g = c.createLinearGradient(x - 30 * dpr, y - 14 * dpr, x, y);
       g.addColorStop(0, 'oklch(0.95 0.02 90 / 0)');
       g.addColorStop(1, `oklch(0.95 0.02 90 / ${(0.8 * (1 - k)).toFixed(3)})`);

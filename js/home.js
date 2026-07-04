@@ -178,10 +178,13 @@ function heroCard() {
 
   if (asleep) {
     // Banked ember: a low, steady glow that eases in as the nap settles —
-    // restful, not building tension like the awake state below.
-    const pct = Math.min(100, (elapsed / 70) * 100);
-    const glow = emberGlow(0.22);
-    return open('data-state="asleep"', emberGlowHTML(pct, glow)) + `
+    // restful, not building tension like the awake state below. The glow
+    // sits centered and only its heat (intensity) ramps over the first 20
+    // minutes; it doesn't slide left-to-right like the awake ember's
+    // progress fill, which would read as tension building, not rest.
+    const settleFrac = Math.min(1, elapsed / 20);
+    const glow = emberGlow(0.08 + settleFrac * 0.14);
+    return open('data-state="asleep"', emberGlowHTML(50, glow)) + `
       <div class="state"><span class="livedot sleeping"></span><span class="state-lbl">Asleep since ${fmt.clock(st.since)}</span></div>
       ${timer}
       <div class="hero-sub">Resting peacefully.</div>

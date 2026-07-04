@@ -1170,12 +1170,15 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
    of uniform box-shadow noise, a soft atmospheric wash for depth, and the
    birth constellation turned up from an 8%-opacity secret into something
    quietly present. */
+.sky-stars-rich { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* Fade stars out before the bottom band where .ember-glow sits (ember-ground
    starts at 58% down) — a screen-blended glow brightening a star field looks
    like the ember is lighting the sky itself, so stars are masked out of that
-   band instead of shining through it. */
-.sky-stars-rich {
-  position: absolute; inset: 0; width: 100%; height: 100%;
+   band instead of shining through it. Scoped to :has(.ember-glow) because
+   deep-night and the circadian night-wake scene never render an ember-glow
+   (heroCard()'s sp.night branch returns before building one) — masking
+   there would just dim the star field's lower band for no reason. */
+.card.hero.hero-sky:has(.ember-glow) .sky-stars-rich {
   mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 68%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 68%);
 }
@@ -1210,8 +1213,10 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 /* sun-rays: a soft rotating ray field behind the disc, screen-blended so it
    only ever brightens — a hint of dancing light rather than a static bloom.
    Glacial rotation + a shallow corona breathe: alive in peripheral vision,
-   never twitchy. Hidden at night (no sun body renders then, but --sun-x/-y
-   are stale from the last day render, so hide explicitly). */
+   never twitchy. skyScene() never emits .sun-rays at night (no sun in the
+   DOM at all then), so this display:none is belt-and-suspenders, not a fix
+   for stale state — kept in case a future scene ever leaves the element in
+   place across mode changes. */
 .sun-rays {
   position: absolute; left: var(--sun-x, 50%); top: var(--sun-y, 30%); width: 96px; height: 96px;
   transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: screen; filter: blur(0.4px);
