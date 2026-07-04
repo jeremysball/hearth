@@ -212,3 +212,35 @@ func TestLogStyleColorsOnlyWhenEnabled(t *testing.T) {
 		t.Fatalf("colored auth = %q", got)
 	}
 }
+
+func TestRedactTokenPathRedactsKnownRoutes(t *testing.T) {
+	cases := map[string]string{
+		"/api/launch/abc123":       "/api/launch/[redacted]",
+		"/api/join/inv-token-here": "/api/join/[redacted]",
+		"/api/conflict/pending-id": "/api/conflict/[redacted]",
+		"/join/inv-token-here":     "/join/[redacted]",
+		"/api/me":                 "/api/me",
+		"/api/sync":                "/api/sync",
+	}
+	for path, want := range cases {
+		if got := redactTokenPath(path); got != want {
+			t.Errorf("redactTokenPath(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
+
+func TestRequestLogRedactsLaunchTokenPath(t *testing.T) {
+	logs := captureLogs(t)
+	logRequest(requestLogInfo{
+		Method: "GET",
+		Path:   "/api/launch/super-secret-token",
+		Status: http.StatusOK,
+	})
+	line := logs.String()
+	if strings.Contains(line, "super-secret-token") {
+		t.Fatalf("log leaked launch token path: %q", line)
+	}
+	if !strings.Contains(line, "/api/launch/[redacted]") {
+		t.Fatalf("log missing redacted path marker: %q", line)
+	}
+}

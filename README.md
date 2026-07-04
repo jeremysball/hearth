@@ -82,6 +82,20 @@ go build -o hearth-server ./cmd/hearth
 
 `DB_PATH` defaults to a `hearth.db` relative to where you run the binary. Pick a stable working directory, or set `DB_PATH` to an absolute path.
 
+### Token pepper (required)
+
+Every deploy must set `PEPPER`, a comma-separated list of secrets (current pepper first, older ones after) used to HMAC-hash session cookies, invite links, launch tokens, and pending-auth tokens before they touch the database. Each entry must be at least 32 bytes. The server refuses to start without it.
+
+```bash
+openssl rand -hex 32   # generates a 64-char hex string, well over the 32-byte minimum
+```
+
+**This is a breaking change for existing deployments**: upgrading to a version with `PEPPER` required, without setting it first, means the server fails to start. Set `PEPPER` in your secrets manager or `.env` before pulling the new image.
+
+To rotate a pepper without logging everyone out immediately: prepend the new pepper, keep the old one as a fallback, deploy, wait until no pre-rotation session is expected to remain (the session cookie's 10-year TTL means this is an operator judgment call — weeks is reasonable for a small family), then drop the old pepper.
+
+**Rollback:** the migration is forward-only — a previous binary's `SELECT ... WHERE token = ?` breaks against the renamed `token_hash` column. Take a SQLite backup before every deploy (`sqlite3 hearth.db ".backup hearth.pre-migration.db"`); to roll back, stop the new binary, restore that backup over `hearth.db`, and start the previous binary. There's no in-place rollback path.
+
 ### systemd
 
 ```bash
@@ -127,7 +141,7 @@ hearth/
 
 The Go server owns the API, family-scoped data isolation, and real-time sync over SSE. One family means one baby, any number of caregivers, and shared entries and settings, all keyed by `family_id`. The frontend is a vanilla JS PWA: data lives in localStorage and syncs to the server when connected. SQLite holds the shared state.
 
-Tailscale is the auth layer. It has no login page, no passwords, and no token hashing: anyone on your tailnet is trusted.
+Tailscale is the auth layer for the default Docker Compose setup: no login page, no passwords, anyone on your tailnet is trusted. If you expose Hearth to the public internet instead (for example, to reach Google OAuth), every session cookie, invite link, and launch token is a bearer credential that a leaked database backup would otherwise expose in the clear. All four token tables store an HMAC-SHA256 hash of the token, keyed by a server-side pepper, instead of the raw value — see `PEPPER` below.
 
 ## Development
 

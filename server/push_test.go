@@ -463,6 +463,7 @@ func TestBackoffFireAtSchedule(t *testing.T) {
 func TestResolveScheduledFirstSeenFiresAtDue(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO settings (family_id, reminders_json, updated_at) VALUES ('fam1', '{"quietStart":"00:00","quietEnd":"00:00"}', ?)`, nowISO())
 	s := newPushScheduler(db)
 	due := time.Now().UTC().Add(-time.Hour)
 	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
@@ -483,6 +484,7 @@ func TestResolveScheduledFirstSeenFiresAtDue(t *testing.T) {
 func TestResolveScheduledAfterSendMovesToPlus15(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO settings (family_id, reminders_json, updated_at) VALUES ('fam1', '{"quietStart":"00:00","quietEnd":"00:00"}', ?)`, nowISO())
 	s := newPushScheduler(db)
 	due := time.Now().UTC().Add(-time.Hour)
 	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
@@ -500,6 +502,7 @@ func TestResolveScheduledAfterSendMovesToPlus15(t *testing.T) {
 func TestResolveScheduledStopsAfterThirdSend(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO settings (family_id, reminders_json, updated_at) VALUES ('fam1', '{"quietStart":"00:00","quietEnd":"00:00"}', ?)`, nowISO())
 	s := newPushScheduler(db)
 	due := time.Now().UTC().Add(-time.Hour)
 	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
@@ -520,6 +523,7 @@ func TestResolveScheduledStopsAfterThirdSend(t *testing.T) {
 func TestResolveScheduledResetsWhenDueTimeChanges(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO settings (family_id, reminders_json, updated_at) VALUES ('fam1', '{"quietStart":"00:00","quietEnd":"00:00"}', ?)`, nowISO())
 	s := newPushScheduler(db)
 	due := time.Now().UTC().Add(-time.Hour)
 	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
@@ -540,6 +544,29 @@ func TestResolveScheduledResetsWhenDueTimeChanges(t *testing.T) {
 	db.QueryRow(`SELECT stage FROM push_reminder_state WHERE family_id = 'fam1' AND reminder_key = 'bottle'`).Scan(&stage)
 	if stage != 0 {
 		t.Fatalf("stage after due-time change = %d, want 0 (reset)", stage)
+	}
+}
+
+func TestResolveScheduledDropsBackoffRetryDuringQuietHours(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	// Quiet 20:00-07:00. due is 19:50, so stage 0 fires fine, but the
+	// +15m backoff retry at 20:05 lands inside quiet hours and must be
+	// dropped rather than buzzing the parent's phone overnight.
+	due := time.Date(2026, 7, 4, 19, 50, 0, 0, time.UTC)
+	db.Exec(`INSERT INTO settings (family_id, reminders_json, updated_at) VALUES ('fam1', '{"quietStart":"20:00","quietEnd":"07:00"}', ?)`, nowISO())
+	s := newPushScheduler(db)
+	raw := []pushReminder{{Key: "bottle", Title: "Bottle due", Body: "b", At: due}}
+
+	first := s.resolveScheduled("fam1", raw)
+	if len(first) != 1 {
+		t.Fatalf("stage-0 fire at 19:50 should not be quiet-filtered, got %+v", first)
+	}
+	s.advanceStage("fam1", first[0])
+
+	retry := s.resolveScheduled("fam1", raw)
+	if len(retry) != 0 {
+		t.Fatalf("expected the 20:05 backoff retry to be dropped for quiet hours, got %+v", retry)
 	}
 }
 

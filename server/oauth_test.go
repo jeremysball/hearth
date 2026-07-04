@@ -40,3 +40,29 @@ func TestAuthBeginConfiguredRedirects(t *testing.T) {
 		t.Fatal("expected the oauth state cookie to be set")
 	}
 }
+
+func TestLookupExistingSessionMatchesRawToken(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?, ?)`, now, now)
+	token, err := createSession(db, "cg1", "fam1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := lookupExistingSession(db, token)
+	if got == nil {
+		t.Fatal("expected a matching session, got nil")
+	}
+	if got.CaregiverID != "cg1" || got.FamilyID != "fam1" {
+		t.Fatalf("got %+v, want CaregiverID=cg1 FamilyID=fam1", *got)
+	}
+}
+
+func TestLookupExistingSessionReturnsNilForUnknownToken(t *testing.T) {
+	db := newParallelTestDB(t)
+	if got := lookupExistingSession(db, "not-a-real-token"); got != nil {
+		t.Fatalf("expected nil for unknown token, got %+v", *got)
+	}
+}

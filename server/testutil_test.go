@@ -4,9 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("PEPPER", strings.Repeat("t", 40))
+	peppers = loadPeppers()
+	os.Exit(m.Run())
+}
+
+// hashForTest computes the same hash the production hashToken function
+// would, so test fixtures can seed token_hash columns with values that
+// match what a real handler looks up.
+func hashForTest(t *testing.T, plaintext string) string {
+	t.Helper()
+	return hashToken(plaintext)
+}
 
 var testDBState struct {
 	sync.Mutex

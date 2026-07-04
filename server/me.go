@@ -31,7 +31,9 @@ func handleSignout(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
 		if c, err := r.Cookie(sessionCookieName); err == nil {
-			db.Exec(`DELETE FROM sessions WHERE token = ?`, c.Value)
+			if matchedHash, err := lookupByToken(db, `SELECT token_hash FROM sessions WHERE token_hash IN (%s)`, c.Value); err == nil {
+				db.Exec(`DELETE FROM sessions WHERE token_hash = ?`, matchedHash)
+			}
 		}
 		logAuthEvent(r, "signout", session)
 		http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Path: "/", MaxAge: -1})

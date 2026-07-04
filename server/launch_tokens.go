@@ -22,8 +22,8 @@ func handleCreateLaunchToken(db *sql.DB) http.HandlerFunc {
 		expiresAt := time.Now().UTC().Add(launchTokenTTL).Format(time.RFC3339Nano)
 
 		_, err := db.Exec(
-			`INSERT INTO launch_tokens (token, caregiver_id, family_id, expires_at) VALUES (?, ?, ?, ?)`,
-			token, session.CaregiverID, session.FamilyID, expiresAt)
+			`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at) VALUES (?, ?, ?, ?)`,
+			hashToken(token), session.CaregiverID, session.FamilyID, expiresAt)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
@@ -40,9 +40,9 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 		token := r.PathValue("token")
 
 		var caregiverID, familyID, expiresAt string
-		err := db.QueryRow(
-			`SELECT caregiver_id, family_id, expires_at FROM launch_tokens WHERE token = ?`, token).
-			Scan(&caregiverID, &familyID, &expiresAt)
+		matchedHash, err := lookupByToken(db,
+			`SELECT token_hash, caregiver_id, family_id, expires_at FROM launch_tokens WHERE token_hash IN (%s)`,
+			token, &caregiverID, &familyID, &expiresAt)
 		if err == sql.ErrNoRows {
 			http.Error(w, "token not found", http.StatusNotFound)
 			return
@@ -65,7 +65,7 @@ func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 		defer tx.Rollback()
 
 		// Atomically claim the token and create the session in one transaction.
-		res, err := tx.Exec(`UPDATE launch_tokens SET used_at = ? WHERE token = ? AND used_at IS NULL`, nowISO(), token)
+		res, err := tx.Exec(`UPDATE launch_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL`, nowISO(), matchedHash)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return

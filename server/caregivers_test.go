@@ -187,7 +187,7 @@ func TestHandleRemoveCaregiverSoftRemovesAndRevokesSessions(t *testing.T) {
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES ('admin', 'fam1', 'Maya', 'Parent', ?, '2026-01-01T00:00:00Z')`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES ('cg2', 'fam1', 'Dad', 'Partner', ?, '2026-01-02T00:00:00Z')`, now)
-	db.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES ('tok2', 'cg2', 'fam1', ?, ?)`, now, now)
+	db.Exec(`INSERT INTO sessions (token_hash, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, 'cg2', 'fam1', ?, ?)`, hashForTest(t, "tok2"), now, now)
 
 	req := httptest.NewRequest("DELETE", "/api/caregivers/cg2", nil)
 	req.SetPathValue("id", "cg2")
@@ -245,7 +245,7 @@ func TestRequireAuthRejectsRemovedCaregiverSession(t *testing.T) {
 	now := nowISO()
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at, removed_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?, ?, ?)`, now, now, now)
-	db.Exec(`INSERT INTO sessions (token, caregiver_id, family_id, created_at, last_seen_at) VALUES ('tok1', 'cg1', 'fam1', ?, ?)`, now, now)
+	db.Exec(`INSERT INTO sessions (token_hash, caregiver_id, family_id, created_at, last_seen_at) VALUES (?, 'cg1', 'fam1', ?, ?)`, hashForTest(t, "tok1"), now, now)
 
 	req := httptest.NewRequest("GET", "/api/me", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "tok1"})

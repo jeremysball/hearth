@@ -47,7 +47,7 @@ func TestHandleCreateInviteReturnsToken(t *testing.T) {
 		t.Fatal("expected non-empty invite token")
 	}
 	var familyID string
-	if err := db.QueryRow(`SELECT family_id FROM invites WHERE token = ?`, resp.Token).Scan(&familyID); err != nil {
+	if err := db.QueryRow(`SELECT family_id FROM invites WHERE token_hash = ?`, hashForTest(t, resp.Token)).Scan(&familyID); err != nil {
 		t.Fatalf("querying invite: %v", err)
 	}
 	if familyID != "fam1" {
@@ -58,8 +58,8 @@ func TestHandleCreateInviteReturnsToken(t *testing.T) {
 func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
-	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at) VALUES ('inv1', 'fam1', 'cg1', ?)`,
-		"2099-01-01T00:00:00Z")
+	db.Exec(`INSERT INTO invites (token_hash, family_id, created_by, expires_at) VALUES (?, 'fam1', 'cg1', ?)`,
+		hashForTest(t, "inv1"), "2099-01-01T00:00:00Z")
 
 	body := bytes.NewBufferString(`{"caregiverName":"Maya"}`)
 	req := httptest.NewRequest("POST", "/api/join/inv1", body)
@@ -76,7 +76,7 @@ func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 		t.Fatalf("expected a %s cookie, got %v", sessionCookieName, cookies)
 	}
 	var usedAt sql.NullString
-	if err := db.QueryRow(`SELECT used_at FROM invites WHERE token = 'inv1'`).Scan(&usedAt); err != nil {
+	if err := db.QueryRow(`SELECT used_at FROM invites WHERE token_hash = ?`, hashForTest(t, "inv1")).Scan(&usedAt); err != nil {
 		t.Fatal(err)
 	}
 	if !usedAt.Valid || usedAt.String == "" {
@@ -87,8 +87,8 @@ func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
-	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at, used_at) VALUES ('inv1', 'fam1', 'cg1', ?, ?)`,
-		"2099-01-01T00:00:00Z", nowISO())
+	db.Exec(`INSERT INTO invites (token_hash, family_id, created_by, expires_at, used_at) VALUES (?, 'fam1', 'cg1', ?, ?)`,
+		hashForTest(t, "inv1"), "2099-01-01T00:00:00Z", nowISO())
 
 	req := httptest.NewRequest("POST", "/api/join/inv1", bytes.NewBufferString(`{"caregiverName":"Maya"}`))
 	req.SetPathValue("token", "inv1")
@@ -104,8 +104,8 @@ func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
 func TestHandleJoinInviteRejectsExpiredToken(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
-	db.Exec(`INSERT INTO invites (token, family_id, created_by, expires_at) VALUES ('inv1', 'fam1', 'cg1', ?)`,
-		"2000-01-01T00:00:00Z")
+	db.Exec(`INSERT INTO invites (token_hash, family_id, created_by, expires_at) VALUES (?, 'fam1', 'cg1', ?)`,
+		hashForTest(t, "inv1"), "2000-01-01T00:00:00Z")
 
 	req := httptest.NewRequest("POST", "/api/join/inv1", bytes.NewBufferString(`{"caregiverName":"Maya"}`))
 	req.SetPathValue("token", "inv1")
