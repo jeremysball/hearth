@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -34,6 +35,20 @@ func validateVAPIDEnv() error {
 		return nil
 	}
 	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with: cd server && go run ./cmd/vapidgen. Then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
+}
+
+// vapidSubscriber strips a "mailto:" prefix, if present, from the configured
+// VAPID_SUBJECT before handing it to webpush-go: that library always adds
+// its own "mailto:" prefix unless the subscriber string starts with
+// "https:", so a pre-prefixed value produces a malformed "mailto:mailto:..."
+// sub claim. Apple's push service validates that claim strictly and 403s
+// every send; Google's FCM doesn't validate it, so the bug is invisible
+// there and only breaks iOS/Safari push.
+func vapidSubscriber(subject string) string {
+	if strings.HasPrefix(subject, "https:") {
+		return subject
+	}
+	return strings.TrimPrefix(subject, "mailto:")
 }
 
 type reminderSettings struct {
@@ -118,9 +133,11 @@ func handlePushSubscribe(db *sql.DB) http.HandlerFunc {
 			ON CONFLICT(endpoint) DO UPDATE SET caregiver_id = excluded.caregiver_id, p256dh = excluded.p256dh, auth = excluded.auth`,
 			pushSubscriptionID(body.Endpoint), session.CaregiverID, body.Endpoint, body.Keys.P256DH, body.Keys.Auth, nowISO())
 		if err != nil {
+			log.Printf("push: subscribe failed caregiver=%s endpoint=%s: %v", session.CaregiverID, pushEndpointHost(body.Endpoint), err)
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("push: subscribed caregiver=%s endpoint=%s", session.CaregiverID, pushEndpointHost(body.Endpoint))
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
@@ -128,6 +145,7 @@ func handlePushSubscribe(db *sql.DB) http.HandlerFunc {
 func handlePushTest(pushes *pushScheduler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionFrom(r)
+		log.Printf("push: test push requested family=%s", session.FamilyID)
 		pushes.SendTestPush(session.FamilyID, 15*time.Second)
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -138,8 +156,25 @@ func pushSubscriptionID(endpoint string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// pushEndpointHost returns just the scheme+host of a push endpoint for
+// logging, so provider (Apple/FCM) and issues are visible without leaking
+// the full subscription token into logs.
+func pushEndpointHost(endpoint string) string {
+	if i := strings.Index(endpoint, "://"); i != -1 {
+		if j := strings.Index(endpoint[i+3:], "/"); j != -1 {
+			return endpoint[:i+3+j]
+		}
+	}
+	return endpoint
+}
+
 func deletePushSubscription(db *sql.DB, endpoint string) error {
 	_, err := db.Exec(`DELETE FROM push_subscriptions WHERE endpoint = ?`, endpoint)
+	if err != nil {
+		log.Printf("push: failed to delete expired subscription endpoint=%s: %v", pushEndpointHost(endpoint), err)
+	} else {
+		log.Printf("push: deleted expired subscription endpoint=%s", pushEndpointHost(endpoint))
+	}
 	return err
 }
 
@@ -168,6 +203,7 @@ func newPushScheduler(db *sql.DB) *pushScheduler {
 func (s *pushScheduler) ScheduleFamily(familyID string) {
 	reminders, err := s.familyReminders(familyID)
 	if err != nil {
+		log.Printf("push: scheduling family=%s failed: %v", familyID, err)
 		return
 	}
 	s.mu.Lock()
@@ -193,6 +229,7 @@ func (s *pushScheduler) ScheduleFamily(familyID string) {
 		delete(s.byFamily, familyID)
 	}
 	s.mu.Unlock()
+	log.Printf("push: scheduled family=%s reminders=%d", familyID, len(reminders))
 }
 
 func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, delay time.Duration) {
@@ -222,6 +259,7 @@ func (s *pushScheduler) SendTestPush(familyID string, delay time.Duration) {
 func (s *pushScheduler) ScheduleAll() {
 	rows, err := s.db.Query(`SELECT id FROM families`)
 	if err != nil {
+		log.Printf("push: ScheduleAll query families failed: %v", err)
 		return
 	}
 	var familyIDs []string
@@ -283,12 +321,14 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 func (s *pushScheduler) sendFamily(familyID string, rem pushReminder) {
 	privateKey := os.Getenv("VAPID_PRIVATE_KEY")
 	publicKey := os.Getenv("VAPID_PUBLIC_KEY")
-	subject := os.Getenv("VAPID_SUBJECT")
+	subject := vapidSubscriber(os.Getenv("VAPID_SUBJECT"))
 	if privateKey == "" || publicKey == "" || subject == "" {
+		log.Printf("push: send family=%s key=%s skipped: VAPID env not configured", familyID, rem.Key)
 		return
 	}
 	rows, err := s.db.Query(`SELECT ps.endpoint, ps.p256dh, ps.auth FROM push_subscriptions ps JOIN caregivers c ON c.id = ps.caregiver_id WHERE c.family_id = ?`, familyID)
 	if err != nil {
+		log.Printf("push: send family=%s key=%s: query subscriptions failed: %v", familyID, rem.Key, err)
 		return
 	}
 	type sub struct{ endpoint, p256dh, auth string }
@@ -301,17 +341,30 @@ func (s *pushScheduler) sendFamily(familyID string, rem pushReminder) {
 		subs = append(subs, sub{endpoint, p256dh, auth})
 	}
 	rows.Close()
+	if len(subs) == 0 {
+		log.Printf("push: send family=%s key=%s: no subscriptions on file", familyID, rem.Key)
+		return
+	}
 	payload, _ := json.Marshal(map[string]string{"title": rem.Title, "body": rem.Body, "key": rem.Key})
 	for _, su := range subs {
 		resp, err := webpush.SendNotification(payload, &webpush.Subscription{Endpoint: su.endpoint, Keys: webpush.Keys{P256dh: su.p256dh, Auth: su.auth}}, &webpush.Options{Subscriber: subject, VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 86400})
+		if err != nil {
+			log.Printf("push: send family=%s key=%s endpoint=%s failed: %v", familyID, rem.Key, pushEndpointHost(su.endpoint), err)
+			if resp != nil {
+				resp.Body.Close()
+			}
+			continue
+		}
 		if resp != nil {
+			if resp.StatusCode >= 300 {
+				log.Printf("push: send family=%s key=%s endpoint=%s got status %d", familyID, rem.Key, pushEndpointHost(su.endpoint), resp.StatusCode)
+			} else {
+				log.Printf("push: send family=%s key=%s endpoint=%s ok (status %d)", familyID, rem.Key, pushEndpointHost(su.endpoint), resp.StatusCode)
+			}
 			if resp.StatusCode == http.StatusGone {
 				deletePushSubscription(s.db, su.endpoint)
 			}
 			resp.Body.Close()
-		}
-		if err != nil {
-			continue
 		}
 	}
 }
