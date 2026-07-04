@@ -1314,7 +1314,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   --hero-ink: oklch(0.97 0.015 90);
   --hero-ink-soft: oklch(0.90 0.03 85 / 0.94);
 }
-.hero-sky[data-sky-mode="morning"] .hero-fg, .hero-sky[data-sky-mode="day"] .hero-fg {
+.hero-sky[data-sky-mode="morning"] .hero-fg, .hero-sky[data-sky-mode="day"] .hero-fg,
+.hero-sky[data-sky-mode="newborn"] .hero-fg {
   --hero-ink: oklch(0.30 0.035 50);
   --hero-ink-soft: oklch(0.40 0.035 50 / 0.92);
 }
@@ -1323,7 +1324,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .hero-sky[data-sky-mode="night"] .hero-fg .timer, .hero-sky[data-sky-mode="deep-night"] .hero-fg .timer {
   text-shadow: 0 1px 10px oklch(0.22 0.04 300 / 0.55);
 }
-.hero-sky[data-sky-mode="morning"] .hero-fg .timer, .hero-sky[data-sky-mode="day"] .hero-fg .timer {
+.hero-sky[data-sky-mode="morning"] .hero-fg .timer, .hero-sky[data-sky-mode="day"] .hero-fg .timer,
+.hero-sky[data-sky-mode="newborn"] .hero-fg .timer {
   text-shadow: 0 1px 10px oklch(0.97 0.02 90 / 0.55);
 }
 .hero-sky .hero-fg .state-lbl, .hero-sky .hero-fg .hero-sub { color: var(--hero-ink-soft, var(--soft)); }
