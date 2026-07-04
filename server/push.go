@@ -54,12 +54,13 @@ func vapidSubscriber(subject string) string {
 type reminderSettings struct {
 	Bottle     bool   `json:"bottle"`
 	Meds       bool   `json:"meds"`
+	Hygiene    bool   `json:"hygiene"`
 	QuietStart string `json:"quietStart"`
 	QuietEnd   string `json:"quietEnd"`
 }
 
 func defaultReminderSettings() reminderSettings {
-	return reminderSettings{Bottle: true, Meds: true, QuietStart: "20:00", QuietEnd: "07:00"}
+	return reminderSettings{Bottle: true, Meds: true, Hygiene: true, QuietStart: "20:00", QuietEnd: "07:00"}
 }
 
 func parseReminderSettings(raw string) reminderSettings {
@@ -278,8 +279,8 @@ func (s *pushScheduler) ScheduleAll() {
 
 func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error) {
 	var bottleInterval float64
-	var medsJSON, remindersJSON string
-	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json, reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON, &remindersJSON); err != nil {
+	var medsJSON, hygieneJSON, remindersJSON string
+	if err := s.db.QueryRow(`SELECT bottle_interval_h, meds_json, hygiene_json, reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&bottleInterval, &medsJSON, &hygieneJSON, &remindersJSON); err != nil {
 		return nil, err
 	}
 	settings := parseReminderSettings(remindersJSON)
@@ -312,6 +313,27 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 			}
 			if t, err := time.Parse(time.RFC3339Nano, lastMed); err == nil {
 				reminders = append(reminders, pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: t.Add(time.Duration(med.EveryH * float64(time.Hour)))})
+			}
+		}
+	}
+	if settings.Hygiene {
+		var items []struct {
+			ID     string  `json:"id"`
+			Name   string  `json:"name"`
+			EveryH float64 `json:"everyH"`
+		}
+		json.Unmarshal([]byte(hygieneJSON), &items)
+		for _, it := range items {
+			var last string
+			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'hygiene' AND json_extract(payload_json, '$.itemId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, it.ID).Scan(&last)
+			if err != nil {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339Nano, last); err == nil {
+				at := t.Add(time.Duration(it.EveryH * float64(time.Hour)))
+				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
+					reminders = append(reminders, pushReminder{Key: "hyg-" + it.ID, Title: it.Name + " due", Body: it.Name + " is due now.", At: at})
+				}
 			}
 		}
 	}

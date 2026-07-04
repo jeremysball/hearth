@@ -509,6 +509,13 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`;
   },
   bath: () => `${timeRow()} ${noteRow()}`,
+  hygiene: () => {
+    const items = state().settings.hygiene;
+    if (!items.length) return `<p class="empty-note">No hygiene items yet. Add one from the Hygiene card on Home.</p>`;
+    return `
+    ${field('Item', `<select id="f-hyg">${items.map((it) => `<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select>`)}
+    ${timeRow()} ${noteRow()}`;
+  },
 };
 
 function gather(type) {
@@ -545,9 +552,15 @@ function gather(type) {
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
+    if (!m) return base;
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
     base.playType = segVal('playType') || null;
+  } else if (type === 'hygiene') {
+    const id = $('#f-hyg').value;
+    const it = state().settings.hygiene.find((x) => x.id === id);
+    if (!it) return base;
+    base.itemId = id; base.name = it.name;
   }
   return base;
 }
@@ -633,6 +646,7 @@ function prefill(type, e) {
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
   else if (type === 'play') { setSeg('playType', e.playType); }
+  else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
 }
 
 export function saveLog(type, id) {
@@ -656,7 +670,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];
@@ -695,6 +709,33 @@ export function openMedCard() {
   );
 }
 
+// ---------- hygiene card logging ----------
+export function logHygieneItem(itemId) {
+  const it = state().settings.hygiene.find((x) => x.id === itemId);
+  if (!it) return;
+  const e = { type: 'hygiene', start: new Date().toISOString(), itemId: it.id, name: it.name };
+  const added = addEntry(e);
+  sheet.close();
+  if (state().settings.sound !== false) { chime(); buzz(15); }
+  confetti();
+  toast(it.name + ' logged', () => { removeEntry(added.id); router.refresh(); });
+  router.refresh();
+}
+
+export function openHygieneCard() {
+  const items = state().settings.hygiene;
+  if (!items.length) { editCard('hygiene'); return; }
+  if (items.length === 1) { logHygieneItem(items[0].id); return; }
+  sheet.open(
+    `<div class="chooser">` + items.map((it) => `
+      <button class="chooser-item" data-action="hygiene:log" data-hid="${esc(it.id)}">
+        <span class="chooser-ic tone-hygiene"><svg class="icon"><use href="#icon-hygiene"></use></svg></span>
+        <span>${esc(it.name)}</span>
+      </button>`).join('') + `</div>`,
+    { title: 'Log hygiene' }
+  );
+}
+
 // ---------- card config ----------
 export function editCard(which) {
   const s = state().settings;
@@ -712,6 +753,8 @@ export function editCard(which) {
       <p class="empty-note">The bath card shows how long since the last bath. There's no reminder interval to set.</p>
       <button class="btn-ghost danger" data-action="card:remove" data-card="bath"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
       { title: 'Bath card' });
+  } else if (which === 'hygiene') {
+    sheet.open(hygieneForm(), { title: 'Hygiene items', size: 'sheet-form' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
@@ -740,14 +783,14 @@ export function openCardPicker() {
 }
 
 export function pickCard(type) {
-  // Re-adding a hidden default just unhides it; bath is a no-interval days-since card; generic types need an interval.
-  if (type === 'bottle' || type === 'medicine' || type === 'bath') {
-    if (type === 'bath') {
+  // Re-adding a hidden default just unhides it; bath/hygiene are no-interval cards; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene') {
+    if (type === 'bath' || type === 'hygiene') {
       const cards = state().settings.cards;
       cards.order = cards.order || ['bottle', 'medicine'];
-      if (!cards.order.includes('bath')) cards.order.push('bath');
-      cards.bath = true;
-      save(); enqueueSettingsSync(); sheet.close(); toast('Bath card added'); router.refresh();
+      if (!cards.order.includes(type)) cards.order.push(type);
+      cards[type] = true;
+      save(); enqueueSettingsSync(); sheet.close(); toast((TYPES[type] || {}).label + ' card added'); router.refresh();
       return;
     }
     showCard(type); return;
@@ -807,6 +850,26 @@ export function medRow(m) {
   </div>`;
 }
 
+function hygieneForm() {
+  const items = state().settings.hygiene;
+  return `<div id="hygiene-list" class="med-list">` +
+    (items.length ? items.map(hygieneRow).join('') : `<p class="empty-note">No hygiene items yet.</p>`) +
+    `</div>
+    <button class="btn-ghost" data-action="hygiene:add"><svg class="icon"><use href="#plus"></use></svg> Add item</button>
+    <button class="btn-primary" data-action="card:save-hygiene"><svg class="icon"><use href="#check"></use></svg> Save</button>
+    <button class="btn-ghost" data-action="card:hide" data-card="hygiene">Hide this card</button>`;
+}
+export function hygieneRow(it) {
+  return `<div class="med-edit" data-hid="${esc(it.id)}">
+    <input class="hyg-name" placeholder="Name" value="${esc(it.name)}" />
+    <div class="med-sub">
+      <span class="med-every">every</span>
+      <input class="hyg-eh" type="number" min="1" max="720" value="${it.everyH}" /><span class="med-every">h</span>
+      <button class="med-del" data-action="hygiene:remove" data-hid="${esc(it.id)}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
+    </div>
+  </div>`;
+}
+
 function playTypesForm() {
   const types = state().settings.playTypes;
   return `<div id="playtype-list" class="playtype-list">` +
@@ -846,6 +909,15 @@ export function saveMeds() {
     everyH: Number($('.med-eh', r).value) || 24
   }));
   save(); enqueueSettingsSync(); sheet.close(); toast('Medicines updated'); router.refresh();
+}
+export function saveHygiene() {
+  const rows = $$('#hygiene-list .med-edit');
+  state().settings.hygiene = rows.map((r) => ({
+    id: r.dataset.hid,
+    name: $('.hyg-name', r).value.trim() || 'Hygiene',
+    everyH: Number($('.hyg-eh', r).value) || 168
+  }));
+  save(); enqueueSettingsSync(); sheet.close(); toast('Hygiene items updated'); router.refresh();
 }
 export function hideCard(card) {
   state().settings.cards[card] = false;
