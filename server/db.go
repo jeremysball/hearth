@@ -86,12 +86,11 @@ func openDB(path string) (*sql.DB, error) {
 	return db, nil
 }
 
-// bumpRev atomically advances a family's revision counter within tx and
-// returns the new value. Every write that touches a sync-visible row must
-// call this and stamp the row's own `rev` column with the result, in the
-// same transaction as the row write, so a concurrent reader's snapshot never
-// sees the counter advance without also seeing the row it covers (or vice
-// versa) — see docs/superpowers/specs/2026-07-04-sync-cursor-revision-counter.md.
+// bumpRev advances a family's revision counter within tx and returns the new
+// value. Every write that touches a sync-visible row must call this and stamp
+// the row's own `rev` column with the result, in the same transaction as the
+// row write, so a concurrent reader's snapshot never sees the counter advance
+// without the row it covers, or the reverse. See docs/adr/0003-sync-cursor-revision-counter.md.
 func bumpRev(tx *sql.Tx, familyID string) (int64, error) {
 	var rev int64
 	err := tx.QueryRow(`UPDATE families SET rev_counter = rev_counter + 1 WHERE id = ? RETURNING rev_counter`, familyID).Scan(&rev)
