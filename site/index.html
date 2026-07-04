@@ -43,6 +43,7 @@
     --night-comment: oklch(0.80 0.03 55);
     --hair-day: oklch(0.30 0.045 42 / 0.14);
     --hair-night: oklch(0.93 0.016 65 / 0.14);
+    --rail-w: 92px;
     --page-gradient: linear-gradient(
       180deg,
       var(--day-bg) 0%,
@@ -71,39 +72,102 @@
 
   a { color: inherit; }
 
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .eyebrow-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ember-cool);
+    margin: 0 0 20px;
+  }
+
+  /* ---------- 24-hour time rail (signature) ---------- */
+
+  .timerail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--rail-w);
+    height: 100vh;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .rail-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 46px;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      var(--hair-day) 0%,
+      oklch(0.5 0.12 44 / 0.35) 55%,
+      var(--hair-night) 100%
+    );
+  }
+
+  .rail-tick {
+    position: absolute;
+    left: 0;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--day-muted);
+    padding-left: 8px;
+    transition: color 0.4s ease, opacity 0.4s ease;
+    opacity: 0.5;
+    white-space: nowrap;
+  }
+
+  .rail-tick.night { color: var(--night-muted); }
+  .rail-tick.active { opacity: 1; }
+
+  .rail-marker {
+    position: absolute;
+    left: 46px;
+    top: 0;
+    width: 13px;
+    height: 13px;
+    margin-left: -6px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid));
+    box-shadow: 0 0 14px 3px oklch(0.74 0.19 42 / 0.65);
+    animation: glow 4.3s ease-in-out infinite;
+    will-change: top;
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 10px 2px oklch(0.74 0.19 42 / 0.5); }
+    50% { box-shadow: 0 0 18px 5px oklch(0.74 0.19 42 / 0.75); }
+  }
+
   /* ---------- Hero ---------- */
 
   .hero {
-    padding: 96px 24px 72px;
-    text-align: center;
-  }
-
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ember-cool);
-    background: var(--paper);
-    border: 1px solid var(--hair-day);
-    padding: 7px 16px;
-    border-radius: 999px;
-    box-shadow: 0 1px 2px oklch(0.3 0.04 42 / 0.08);
+    padding: 120px 0 84px;
   }
 
   .ember-dot {
+    display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, var(--ember-core), var(--ember-mid));
     box-shadow: 0 0 6px 1px oklch(0.74 0.19 42 / 0.6);
-    animation: glow 4.3s ease-in-out infinite;
+    animation: dotpulse 4.3s ease-in-out infinite;
   }
 
-  @keyframes glow {
+  @keyframes dotpulse {
     0%, 100% { opacity: 0.55; transform: scale(0.9); }
     50% { opacity: 1; transform: scale(1.15); }
   }
@@ -112,34 +176,38 @@
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
     font-weight: 700;
-    font-size: clamp(56px, 11vw, 108px);
-    line-height: 1;
-    margin: 28px 0 20px;
-    background: linear-gradient(180deg, var(--day-ink) 0%, var(--ember-cool) 120%);
+    font-size: clamp(78px, 17vw, 208px);
+    line-height: 0.9;
+    margin: 0 0 8px -0.055em;
+    letter-spacing: -0.01em;
+    background: linear-gradient(178deg, var(--day-ink) 0%, var(--ember-cool) 128%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
+  .hero-lede {
+    max-width: 540px;
+    margin-top: 28px;
+  }
+
   .hook {
-    font-size: clamp(19px, 2.6vw, 24px);
-    max-width: 560px;
-    margin: 0 auto 12px;
+    font-size: clamp(20px, 2.7vw, 27px);
+    margin: 0 0 12px;
     color: var(--day-ink);
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1.25;
   }
 
   .subhook {
     font-size: 16px;
-    max-width: 480px;
-    margin: 0 auto 40px;
+    margin: 0 0 36px;
     color: var(--day-muted);
-    line-height: 1.55;
+    line-height: 1.6;
   }
 
   .cta-row {
     display: flex;
-    justify-content: center;
     gap: 14px;
     flex-wrap: wrap;
   }
@@ -153,10 +221,10 @@
     font-weight: 700;
     font-size: 15px;
     text-decoration: none;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
   }
 
-  .btn:hover { transform: translateY(-1px); }
+  .btn:hover { transform: translateY(-2px); }
 
   .btn.primary {
     background: linear-gradient(180deg, var(--ember-mid) 0%, var(--ember-cool) 100%);
@@ -164,112 +232,150 @@
     box-shadow: 0 6px 18px oklch(0.55 0.16 40 / 0.35);
   }
 
+  .btn.primary:hover { box-shadow: 0 10px 26px oklch(0.55 0.16 40 / 0.45); }
+
   .btn.secondary {
     background: var(--paper);
     color: var(--day-ink);
     border: 1px solid var(--hair-day);
   }
 
-  /* ---------- Screenshots ---------- */
+  /* ---------- Screenshots as editorial plates ---------- */
 
   .showcase {
-    padding: 40px 24px 96px;
+    padding: 40px 0 104px;
   }
 
-  .phones {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px;
-    max-width: 720px;
-    margin: 0 auto;
+  .plates {
+    position: relative;
+    max-width: 760px;
+    padding-bottom: 90px;
   }
 
-  .phone-card {
+  .plate {
+    margin: 0;
     background: var(--paper);
-    border-radius: 28px;
-    padding: 16px;
-    text-align: center;
-    box-shadow: 0 12px 32px oklch(0.3 0.04 42 / 0.14);
+    border-radius: 26px;
+    padding: 14px;
+    box-shadow: 0 18px 44px oklch(0.3 0.04 42 / 0.18);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
   }
 
-  .phone-card img {
+  .plate img {
     width: 100%;
-    border-radius: 18px;
+    border-radius: 16px;
     display: block;
-    margin-bottom: 14px;
-    box-shadow: 0 4px 14px oklch(0.2 0.03 40 / 0.25);
+    box-shadow: 0 4px 14px oklch(0.2 0.03 40 / 0.22);
   }
 
-  .phone-card .label {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+  .plate figcaption {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 0 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    color: var(--day-muted);
+  }
+
+  .plate figcaption b {
     color: var(--ember-cool);
+    font-weight: 500;
+  }
+
+  .plate-day {
+    width: 62%;
+    position: relative;
+    z-index: 2;
+  }
+
+  .plate-night {
+    width: 46%;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+  }
+
+  .plate-night figcaption b { color: var(--ember-mid); }
+
+  .plate:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 26px 60px oklch(0.3 0.04 42 / 0.26);
   }
 
   .showcase-caption {
-    text-align: center;
-    max-width: 480px;
-    margin: 32px auto 0;
+    max-width: 460px;
+    margin: 28px 0 0;
     color: var(--day-muted);
     font-size: 15px;
+    line-height: 1.6;
   }
 
-  /* ---------- Features ---------- */
+  /* ---------- Care ledger ---------- */
 
-  .features {
-    padding: 64px 24px 96px;
-  }
+  .ledger-section { padding: 24px 0 104px; }
 
   .section-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
     font-weight: 700;
-    font-size: clamp(30px, 4vw, 42px);
-    text-align: center;
-    margin: 0 0 48px;
+    font-size: clamp(32px, 4.4vw, 48px);
+    margin: 0 0 8px;
     color: var(--day-ink);
-    text-shadow: 0 2px 30px oklch(0.97 0.02 60 / 0.6);
+    line-height: 1.05;
   }
 
-  .chip-grid {
+  .section-lede {
+    max-width: 52ch;
+    margin: 0 0 36px;
+    color: var(--day-muted);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .ledger {
+    border-top: 1px solid var(--hair-day);
+  }
+
+  .ledger-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 62px 14px 118px 1fr;
+    align-items: center;
     gap: 16px;
-    max-width: 880px;
-    margin: 0 auto;
+    padding: 14px 6px;
+    border-bottom: 1px solid var(--hair-day);
   }
 
-  .chip {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: var(--paper);
-    border-radius: 20px;
-    padding: 16px 18px;
-    box-shadow: 0 3px 10px oklch(0.3 0.04 42 / 0.08);
+  .ledger-row time {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--day-muted);
+    letter-spacing: 0.02em;
   }
 
-  .chip .swatch {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .ledger-row .mark {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
   }
 
-  .chip .swatch svg {
-    width: 20px;
-    height: 20px;
-    color: white;
-    filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.25));
+  .ledger-row .cat {
+    font-size: 16px;
+    font-weight: 650;
+    color: var(--day-ink);
   }
 
-  .chip .text strong { display: block; font-size: 15px; }
-  .chip .text span { display: block; font-size: 13px; color: var(--day-muted); }
+  .ledger-row .detail {
+    font-size: 15px;
+    color: var(--day-muted);
+  }
+
+  .ledger-row.is-sweetspot .cat { color: var(--ember-cool); }
+  .ledger-row.is-sweetspot .mark { animation: glow 4.3s ease-in-out infinite; }
 
   .sleep-swatch   { background: radial-gradient(circle at 35% 30%, oklch(0.80 0.12 145), oklch(0.56 0.08 135)); }
   .nursing-swatch { background: radial-gradient(circle at 35% 30%, oklch(0.86 0.10 42), oklch(0.66 0.12 40)); }
@@ -282,39 +388,44 @@
   .sweetspot-swatch{ background: radial-gradient(circle at 35% 30%, oklch(0.88 0.11 95), oklch(0.70 0.14 60)); }
   .sharing-swatch { background: radial-gradient(circle at 35% 30%, oklch(0.82 0.10 340), oklch(0.63 0.13 345)); }
 
-  .sweetspot-detail {
-    padding: 0 24px 96px;
-    max-width: 640px;
-    margin: 0 auto;
-    text-align: center;
+  /* ---------- SweetSpot ---------- */
+
+  .sweetspot-detail { padding: 24px 0 108px; }
+
+  .pull-quote {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(26px, 3.6vw, 40px);
+    line-height: 1.18;
+    max-width: 18ch;
+    margin: 0 0 28px;
+    color: var(--day-ink);
   }
 
-  .sweetspot-detail p {
-    font-size: 16px;
+  .sweetspot-detail p.body {
+    font-size: 17px;
     line-height: 1.7;
     color: var(--day-ink);
-    background: var(--paper);
-    border-radius: 24px;
-    padding: 28px 32px;
-    box-shadow: 0 3px 10px oklch(0.3 0.04 42 / 0.08);
+    max-width: 58ch;
+    margin: 0;
   }
 
   /* ---------- Night pitch ---------- */
 
   .pitch {
     position: relative;
-    padding: 120px 24px 140px;
-    text-align: center;
+    padding: 128px 0 148px;
     overflow: hidden;
   }
 
   .pitch::before {
     content: '';
     position: absolute;
-    left: 50%;
+    left: 20%;
     bottom: -10%;
-    width: 140%;
-    height: 60%;
+    width: 120%;
+    height: 62%;
     transform: translateX(-50%);
     background: radial-gradient(ellipse 60% 100% at 50% 100%, oklch(0.55 0.20 44 / 0.35), transparent 70%);
     pointer-events: none;
@@ -325,33 +436,31 @@
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
     font-weight: 700;
-    font-size: clamp(34px, 6vw, 58px);
-    line-height: 1.15;
+    font-size: clamp(38px, 6.4vw, 68px);
+    line-height: 1.08;
     color: var(--night-ink);
-    margin: 0 0 20px;
+    margin: 0 0 22px;
     text-shadow: 0 0 40px oklch(0.55 0.20 44 / 0.4);
   }
 
   .pitch p {
     position: relative;
     color: var(--night-muted);
-    max-width: 480px;
-    margin: 0 auto;
+    max-width: 500px;
+    margin: 0;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
   /* ---------- Install ---------- */
 
-  .install {
-    padding: 0 24px 120px;
-  }
+  .install { padding: 0 0 120px; }
 
   .terminal {
-    max-width: 640px;
-    margin: 0 auto;
+    max-width: 660px;
     background: oklch(0.13 0.012 50);
     border: 1px solid oklch(0.32 0.022 50 / 0.6);
+    border-top: 1px solid oklch(0.74 0.19 42 / 0.2);
     border-radius: 18px;
     overflow: hidden;
     box-shadow: 0 20px 50px oklch(0 0 0 / 0.4);
@@ -359,15 +468,33 @@
 
   .terminal-bar {
     display: flex;
+    align-items: center;
     gap: 7px;
     padding: 12px 16px;
     border-bottom: 1px solid oklch(0.32 0.022 50 / 0.6);
   }
 
-  .terminal-bar span {
+  .terminal-bar span.dot {
     width: 10px; height: 10px; border-radius: 50%;
     background: oklch(0.4 0.02 50);
   }
+
+  .copy-btn {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--night-muted);
+    background: oklch(0.2 0.014 50);
+    border: 1px solid oklch(0.32 0.022 50 / 0.8);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .copy-btn:hover { color: var(--ember-core); border-color: oklch(0.74 0.19 42 / 0.5); }
 
   .terminal pre {
     margin: 0;
@@ -383,28 +510,32 @@
   .terminal .comment { color: var(--night-comment); }
 
   .install-caption {
-    text-align: center;
     color: var(--night-muted);
-    max-width: 480px;
-    margin: 24px auto 0;
+    max-width: 500px;
+    margin: 24px 0 0;
     font-size: 14px;
+    line-height: 1.6;
   }
 
   /* ---------- Footer ---------- */
 
   footer {
-    padding: 40px 24px 64px;
-    text-align: center;
+    padding: 40px 0 72px;
     color: var(--night-muted);
     font-size: 13px;
   }
 
+  footer .made {
+    font-size: 14px;
+    color: var(--night-muted);
+    margin: 0 0 22px;
+  }
+
   footer .badges {
     display: flex;
-    justify-content: center;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
 
   footer .badges span {
@@ -427,6 +558,12 @@
     background: var(--ember-mid);
   }
 
+  footer .repo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   footer a.repo-link {
     color: var(--night-ink);
     font-weight: 700;
@@ -434,10 +571,35 @@
     border-bottom: 1px solid oklch(0.68 0.03 55 / 0.4);
   }
 
+  /* ---------- Layout: clear the rail on wide screens ---------- */
+
+  @media (min-width: 900px) {
+    main, footer { padding-left: var(--rail-w); }
+  }
+
+  @media (max-width: 899px) {
+    .timerail { display: none; }
+  }
+
+  @media (max-width: 620px) {
+    .plates { padding-bottom: 0; }
+    .plate-day { width: 100%; }
+    .plate-night {
+      position: static;
+      width: 78%;
+      margin: 20px 0 0 auto;
+    }
+    .ledger-row {
+      grid-template-columns: 56px 12px 1fr;
+      row-gap: 2px;
+    }
+    .ledger-row .detail { grid-column: 3; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .ember-dot { animation: none; }
+    .ember-dot, .rail-marker, .ledger-row.is-sweetspot .mark { animation: none; }
     html { scroll-behavior: auto; }
-    .btn, .btn:hover { transition: none; transform: none; }
+    .btn, .btn:hover, .plate, .plate:hover { transition: none; transform: none; }
   }
 
   .skip-link {
@@ -451,139 +613,195 @@
     z-index: 10;
   }
 
-  .skip-link:focus {
-    left: 0;
-  }
-
-  @media (max-width: 620px) {
-    .phones { grid-template-columns: 1fr; }
-  }
+  .skip-link:focus { left: 0; }
 </style>
 </head>
 <body>
 
-<svg style="display:none" aria-hidden="true">
-<symbol id="icon-sleep" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-</symbol>
-<symbol id="icon-feed" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M12 2c-.5 2.5-2 4.9-4 6.5C6 10.1 5 12 5 14a7 7 0 0 0 14 0c0-2-1-3.9-3-5.5C14 6.9 12.5 4.5 12 2z"/>
-</symbol>
-<symbol id="icon-bottle" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M10.6 2.4a1.4 1.4 0 0 1 2.8 0V4h-2.8z"/>
-  <rect fill="currentColor" x="9.4" y="4.2" width="5.2" height="2.2" rx="0.7"/>
-  <path fill="currentColor" d="M9.6 6.6h4.8a3.2 3.2 0 0 1 .9 1.9l.2 1.5A2.6 2.6 0 0 1 17 12.4V19a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6.6a2.6 2.6 0 0 1 .6-2.4l.2-1.5a3.2 3.2 0 0 1 .8-1.9z"/>
-</symbol>
-<symbol id="icon-diaper" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M3 6.5h18v3.5c0 4-2 6-5 6-2.6 0-3.6-1.6-4-4-.4 2.4-1.4 4-4 4-3 0-5-2-5-6z"/>
-</symbol>
-<symbol id="icon-medicine" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7z"/>
-</symbol>
-<symbol id="icon-play" viewBox="0 0 24 24">
-  <circle fill="currentColor" cx="12" cy="12" r="4.5"/>
-  <path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none" d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M5.05 5.05l1.77 1.77M17.18 17.18l1.77 1.77M5.05 18.95l1.77-1.77M17.18 6.82l1.77-1.77"/>
-</symbol>
-<symbol id="icon-bath" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M5 13h14v3a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5v-3z"/>
-  <rect fill="currentColor" x="2" y="11" width="20" height="3" rx="1.5"/>
-  <path stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" d="M8 20.5v2M16 20.5v2"/>
-  <path fill="currentColor" d="M4 11V8.5a2.5 2.5 0 0 1 5 0V11H4z"/>
-</symbol>
-<symbol id="icon-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" />
-</symbol>
-<symbol id="icon-sunrise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 2v8" /><path d="m4.93 10.93 1.41 1.41" /><path d="M2 18h2" /><path d="M20 18h2" />
-  <path d="m19.07 10.93-1.41 1.41" /><path d="M22 22H2" />
-  <path d="m8 6 4-4 4 4" /><path d="M16 18a4 4 0 0 0-8 0" />
-</symbol>
-<symbol id="icon-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-  <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-</symbol>
-</svg>
-
   <a class="skip-link" href="#install">Skip to install instructions</a>
+
+  <div class="timerail" aria-hidden="true">
+    <div class="rail-line"></div>
+    <div class="rail-marker"></div>
+  </div>
 
   <main>
 
-  <section class="hero" aria-label="Introduction">
-    <span class="eyebrow"><span class="ember-dot"></span>Self-hosted · MIT licensed</span>
-    <h1 class="wordmark">Hearth</h1>
-    <p class="hook">A free, private baby tracker. No ads, no lock-in, no forced account.</p>
-    <p class="subhook">Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.</p>
-    <div class="cta-row">
-      <a class="btn primary" href="https://github.com/jeremysball/hearth">View on GitHub</a>
-      <a class="btn secondary" href="#install">Self-host it</a>
-    </div>
-  </section>
-
-  <section class="showcase" aria-label="Screenshots">
-    <div class="phones">
-      <div class="phone-card">
-        <img src="screenshots/readme-hero-light.png" alt="Hearth's hero card in daylight, showing an awake timer and nap window prediction">
-        <div class="label">Day</div>
-      </div>
-      <div class="phone-card">
-        <img src="screenshots/readme-hero-dark.png" alt="Hearth's hero card at night, showing an awake timer and nap window prediction">
-        <div class="label">Night</div>
+  <section class="hero" data-time="06:12" aria-label="Introduction">
+    <div class="wrap">
+      <p class="eyebrow-mono"><span class="ember-dot"></span>&nbsp;&nbsp;Local-first · PWA · Self-hosted · MIT</p>
+      <h1 class="wordmark">Hearth</h1>
+      <div class="hero-lede">
+        <p class="hook">A free, private baby tracker. No ads, no lock-in, no forced account.</p>
+        <p class="subhook">Track sleep, feeds, diapers, medicine, play, and bath time. Everything stays on your device: install it as a PWA and it works offline.</p>
+        <div class="cta-row">
+          <a class="btn primary" href="https://github.com/jeremysball/hearth">View on GitHub</a>
+          <a class="btn secondary" href="#install">Self-host it</a>
+        </div>
       </div>
     </div>
-    <p class="showcase-caption">The hero card tracks awake time and predicts the next nap window. Logging a bottle takes two taps.</p>
   </section>
 
-  <section class="features" aria-labelledby="features-title">
-    <h2 class="section-title" id="features-title">What it tracks</h2>
-    <div class="chip-grid">
-      <div class="chip"><span class="swatch sleep-swatch"><svg><use href="#icon-sleep"/></svg></span><span class="text"><strong>Sleep</strong><span>When they went down, when they woke up, how it went</span></span></div>
-      <div class="chip"><span class="swatch nursing-swatch"><svg><use href="#icon-feed"/></svg></span><span class="text"><strong>Nursing</strong><span>Side, duration, and time</span></span></div>
-      <div class="chip"><span class="swatch bottle-swatch"><svg><use href="#icon-bottle"/></svg></span><span class="text"><strong>Bottles</strong><span>What's in it and how much</span></span></div>
-      <div class="chip"><span class="swatch diaper-swatch"><svg><use href="#icon-diaper"/></svg></span><span class="text"><strong>Diapers</strong><span>Wet, dirty, or both: two taps</span></span></div>
-      <div class="chip"><span class="swatch medicine-swatch"><svg><use href="#icon-medicine"/></svg></span><span class="text"><strong>Medicine</strong><span>Doses logged, reminders for the next one</span></span></div>
-      <div class="chip"><span class="swatch play-swatch"><svg><use href="#icon-play"/></svg></span><span class="text"><strong>Play</strong><span>Tummy time and floor play count as awake time too</span></span></div>
-      <div class="chip"><span class="swatch bath-swatch"><svg><use href="#icon-bath"/></svg></span><span class="text"><strong>Bath</strong><span>One tap when it's done</span></span></div>
-      <div class="chip"><span class="swatch pump-swatch"><svg><use href="#icon-droplet"/></svg></span><span class="text"><strong>Pumping</strong><span>Side, volume, and time</span></span></div>
-      <div class="chip"><span class="swatch sweetspot-swatch"><svg><use href="#icon-sunrise"/></svg></span><span class="text"><strong>SweetSpot</strong><span>The next nap window, predicted from real sleep data</span></span></div>
-      <div class="chip"><span class="swatch sharing-swatch"><svg><use href="#icon-share"/></svg></span><span class="text"><strong>Sharing</strong><span>Add a caregiver. Everyone sees the same log, live</span></span></div>
+  <section class="showcase" data-time="07:40" aria-label="Screenshots">
+    <div class="wrap">
+      <p class="eyebrow-mono">Day / night · same log</p>
+      <div class="plates">
+        <figure class="plate plate-day">
+          <img src="screenshots/readme-hero-light.png" alt="Hearth's hero card in daylight, showing an awake timer and nap window prediction">
+          <figcaption><b>Day</b> awake timer · nap window</figcaption>
+        </figure>
+        <figure class="plate plate-night">
+          <img src="screenshots/readme-hero-dark.png" alt="Hearth's hero card at night, showing an awake timer and nap window prediction">
+          <figcaption><b>Night</b> offline log</figcaption>
+        </figure>
+      </div>
+      <p class="showcase-caption">The hero card tracks awake time and predicts the next nap window. Logging a bottle takes two taps.</p>
     </div>
   </section>
 
-  <section class="sweetspot-detail" aria-label="How SweetSpot works">
-    <h2 class="section-title">What SweetSpot actually does</h2>
-    <p>Babies build sleep pressure while they're awake, the same mechanism that makes adults drag by 9pm. Miss the window and they won't settle. Push past it and you get overtired: cortisol spikes, and the next nap gets worse instead of better. Wake windows also stretch fast as they grow. A newborn taps out in under an hour; an 18-month-old can go five. SweetSpot blends the population average for your baby's age with your baby's own naps from the last few days, weighting recent naps more heavily, and gives you a window instead of a single number, because sleep isn't that precise.</p>
+  <section class="ledger-section" data-time="12:30" aria-label="What it tracks">
+    <div class="wrap">
+      <h2 class="section-title">A day, logged</h2>
+      <p class="section-lede">Ten things Hearth records, the way they actually land across a day. Two taps each, one shared log.</p>
+      <div class="ledger">
+        <div class="ledger-row"><time>06:20</time><span class="mark sleep-swatch"></span><span class="cat">Sleep</span><span class="detail">Woke after 11h 04m down, when and how it went</span></div>
+        <div class="ledger-row"><time>07:05</time><span class="mark nursing-swatch"></span><span class="cat">Nursing</span><span class="detail">Left side, 18 min</span></div>
+        <div class="ledger-row"><time>08:40</time><span class="mark bottle-swatch"></span><span class="cat">Bottle</span><span class="detail">Formula, 120 ml</span></div>
+        <div class="ledger-row"><time>09:30</time><span class="mark diaper-swatch"></span><span class="cat">Diaper</span><span class="detail">Wet and dirty, two taps</span></div>
+        <div class="ledger-row"><time>10:15</time><span class="mark play-swatch"></span><span class="cat">Play</span><span class="detail">Tummy time counts as awake time too</span></div>
+        <div class="ledger-row"><time>11:50</time><span class="mark pump-swatch"></span><span class="cat">Pumping</span><span class="detail">Right side, 140 ml</span></div>
+        <div class="ledger-row"><time>13:20</time><span class="mark medicine-swatch"></span><span class="cat">Medicine</span><span class="detail">Vitamin D, next dose reminder set</span></div>
+        <div class="ledger-row"><time>17:30</time><span class="mark bath-swatch"></span><span class="cat">Bath</span><span class="detail">One tap when it's done</span></div>
+        <div class="ledger-row"><time>19:45</time><span class="mark sharing-swatch"></span><span class="cat">Sharing</span><span class="detail">Caregiver added, same log stays live</span></div>
+        <div class="ledger-row is-sweetspot"><time>20:10</time><span class="mark sweetspot-swatch"></span><span class="cat">SweetSpot</span><span class="detail">Next nap window, predicted from real sleep data</span></div>
+      </div>
+    </div>
   </section>
 
-  <section class="pitch" aria-label="Privacy">
-    <h2>No ads.<br>No lock-in.<br>No forced account.</h2>
-    <p>It runs on hardware you control. Signing in with Google or Apple is optional, for backup and cross-device sync. Skip it, and nothing leaves your network.</p>
+  <section class="sweetspot-detail" data-time="15:00" aria-label="How SweetSpot works">
+    <div class="wrap">
+      <p class="pull-quote">A window instead of a single number, because sleep isn't that precise.</p>
+      <p class="body">Babies build sleep pressure while they're awake, the same mechanism that makes adults drag by 9pm. Miss the window and they won't settle. Push past it and you get overtired: cortisol spikes, and the next nap gets worse instead of better. Wake windows also stretch fast as they grow. A newborn taps out in under an hour; an 18-month-old can go five. SweetSpot blends the population average for your baby's age with your baby's own naps from the last few days, weighting recent naps more heavily, and gives you a window instead of a single number, because sleep isn't that precise.</p>
+    </div>
   </section>
 
-  <section class="install" id="install" aria-label="Install instructions">
-    <div class="terminal">
-      <div class="terminal-bar"><span></span><span></span><span></span></div>
-      <pre><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span>
+  <section class="pitch" data-time="18:09" aria-label="Privacy">
+    <div class="wrap">
+      <h2>No ads.<br>No lock-in.<br>No forced account.</h2>
+      <p>It runs on hardware you control. Signing in with Google or Apple is optional, for backup and cross-device sync. Skip it, and nothing leaves your network.</p>
+    </div>
+  </section>
+
+  <section class="install" id="install" data-time="21:30" aria-label="Install instructions">
+    <div class="wrap">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <button class="copy-btn" type="button" aria-label="Copy install commands">copy</button>
+        </div>
+        <pre id="install-cmd"><span class="comment"># Tailscale auth key: https://login.tailscale.com/admin/settings/keys</span>
 <span class="prompt">$</span> git clone https://github.com/jeremysball/hearth.git
 <span class="prompt">$</span> cd hearth
 <span class="prompt">$</span> cp .env.example .env
 <span class="comment"># fill in TS_AUTHKEY, CERT_FILE, and KEY_FILE</span>
 <span class="prompt">$</span> sudo docker compose up -d</pre>
+      </div>
+      <p class="install-caption">Runs behind Tailscale: only devices on your tailnet can reach it. No exposed ports, no reverse proxy to configure.</p>
     </div>
-    <p class="install-caption">Runs behind Tailscale: only devices on your tailnet can reach it. No exposed ports, no reverse proxy to configure.</p>
   </section>
 
   </main>
 
-  <footer>
-    <div class="badges">
-      <span>MIT licensed</span>
-      <span>Go 1.26</span>
-      <span>PWA ready</span>
-      <span>Self-hosted</span>
-      <span>Data sovereignty</span>
+  <footer data-time="02:40">
+    <div class="wrap">
+      <p class="made">Built by a parent, at night, one-handed.</p>
+      <div class="badges">
+        <span>MIT licensed</span>
+        <span>Go 1.26</span>
+        <span>PWA ready</span>
+        <span>Self-hosted</span>
+        <span>Data sovereignty</span>
+      </div>
+      <p class="repo"><span class="ember-dot"></span><a class="repo-link" href="https://github.com/jeremysball/hearth">github.com/jeremysball/hearth</a></p>
     </div>
-    <p><a class="repo-link" href="https://github.com/jeremysball/hearth">github.com/jeremysball/hearth</a></p>
   </footer>
+
+  <script>
+    (function () {
+      var rail = document.querySelector('.timerail');
+      var marker = document.querySelector('.rail-marker');
+      if (!rail || !marker) return;
+
+      var sections = Array.prototype.slice.call(document.querySelectorAll('[data-time]'));
+      var ticks = sections.map(function (s) {
+        var el = document.createElement('div');
+        el.className = 'rail-tick';
+        el.textContent = s.getAttribute('data-time');
+        rail.appendChild(el);
+        return { el: el, section: s };
+      });
+
+      function docHeight() {
+        return document.documentElement.scrollHeight;
+      }
+
+      function layout() {
+        var h = docHeight();
+        ticks.forEach(function (t) {
+          var mid = t.section.offsetTop + t.section.offsetHeight / 2;
+          var pct = Math.max(2, Math.min(98, (mid / h) * 100));
+          t.el.style.top = pct + '%';
+          // colour ticks that sit in the night half of the page
+          t.el.classList.toggle('night', pct > 66);
+        });
+      }
+
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var h = docHeight();
+        var viewMid = window.scrollY + window.innerHeight / 2;
+        var pct = Math.max(0, Math.min(100, (viewMid / h) * 100));
+        marker.style.top = pct + 'vh';
+        // highlight the nearest tick
+        var nearest = null, best = Infinity;
+        ticks.forEach(function (t) {
+          var tp = parseFloat(t.el.style.top);
+          var d = Math.abs(tp - pct);
+          if (d < best) { best = d; nearest = t; }
+        });
+        ticks.forEach(function (t) { t.el.classList.toggle('active', t === nearest); });
+      }
+
+      function onScroll() {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', function () { layout(); update(); });
+      // fonts/images can shift heights; relayout after load
+      window.addEventListener('load', function () { layout(); update(); });
+      layout();
+      update();
+
+      // Copy-to-clipboard for the install block
+      var btn = document.querySelector('.copy-btn');
+      var cmd = document.getElementById('install-cmd');
+      if (btn && cmd && navigator.clipboard) {
+        btn.addEventListener('click', function () {
+          var lines = cmd.innerText.split('\n').filter(function (l) {
+            return l.trim() && l.trim().charAt(0) !== '#';
+          }).map(function (l) {
+            return l.replace(/^\s*\$\s?/, '');
+          });
+          navigator.clipboard.writeText(lines.join('\n')).then(function () {
+            btn.textContent = 'copied';
+            setTimeout(function () { btn.textContent = 'copy'; }, 1200);
+          });
+        });
+      }
+    })();
+  </script>
 
 </body>
 </html>
