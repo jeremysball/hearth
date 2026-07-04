@@ -11,7 +11,9 @@ export const CHANGELOG = [
     ],
     fixes: [
       'Fixed the birth constellation overlapping the moon at night.',
-      'Fixed sleep timer text becoming hard to read against a hot ember glow, and cleaned up starfield glare.'
+      'Fixed sleep timer text becoming hard to read against a hot ember glow, and cleaned up starfield glare.',
+      'Fixed hard-to-read text on the home sky during morning and daytime hours.',
+      'Replaced a duplicated wake time on the home hero with the sweet spot window\'s start or end time.'
     ]
   },
   {
