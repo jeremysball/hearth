@@ -99,6 +99,42 @@ test('drainOutbox does not lose an op enqueued while a slow send is in flight', 
   assert.equal(loadOutbox().length, 0);
 });
 
+test('drainOutbox drops a permanently-rejected op (4xx) instead of jamming the queue forever', async () => {
+  saveOutbox([
+    { url: '/api/entries/bad', method: 'PUT', body: { id: 'bad' } },
+    { url: '/api/entries/y', method: 'PUT', body: { id: 'y' } },
+  ]);
+  const calledUrls = [];
+  const fakeFetch = async (url) => {
+    calledUrls.push(url);
+    if (url === '/api/entries/bad') return { ok: false, status: 400 };
+    return { ok: true, status: 204 };
+  };
+  const ok = await drainOutbox(fakeFetch);
+  assert.equal(ok, true);
+  assert.equal(loadOutbox().length, 0);
+  assert.deepEqual(calledUrls, ['/api/entries/bad', '/api/entries/y']);
+});
+
+for (const status of [401, 403, 408, 429]) {
+  test(`drainOutbox keeps retrying on ${status} rather than dropping the op`, async () => {
+    saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+    const fakeFetch = async () => ({ ok: false, status });
+    const ok = await drainOutbox(fakeFetch);
+    assert.equal(ok, false);
+    assert.equal(loadOutbox().length, 1);
+    assert.equal(loadOutbox()[0].url, '/api/entries/x');
+  });
+}
+
+test('drainOutbox keeps retrying on a 5xx server error rather than dropping the op', async () => {
+  saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+  const fakeFetch = async () => ({ ok: false, status: 503 });
+  const ok = await drainOutbox(fakeFetch);
+  assert.equal(ok, false);
+  assert.equal(loadOutbox().length, 1);
+});
+
 test('getLastSyncRev defaults to empty string, setLastSyncRev round-trips', () => {
   localStorage.removeItem('hearth.lastsyncrev.v1');
   assert.equal(getLastSyncRev(), '');

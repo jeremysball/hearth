@@ -2,6 +2,13 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-05',
+    version: '2026-07-05',
+    fixes: [
+      'Fixed a bug where one bad log entry could silently block every entry logged after it from ever reaching the other caregiver.'
+    ]
+  },
+  {
     date: '2026-07-04',
     version: '2026-07-04',
     features: [
