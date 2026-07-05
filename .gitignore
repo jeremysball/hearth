@@ -8,6 +8,8 @@ site/sitemap.xml
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 .thumbnail
 node_modules/
 hearth-server
