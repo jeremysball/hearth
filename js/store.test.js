@@ -15,7 +15,7 @@ globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
-  maybeInterruptSleep, undoInterruptSleep, normalizeLog,
+  maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
   wakePosition, wakeWindowRange, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
@@ -46,6 +46,24 @@ test('addMeasure enqueues a PUT to /api/growth/:id', () => {
   const last = outboxOps().at(-1);
   assert.equal(last.method, 'PUT');
   assert.equal(last.url, '/api/growth/' + m.id);
+});
+
+test('enqueueFullResync re-enqueues a PUT for every local log entry and growth measure', () => {
+  reset();
+  localStorage.setItem('hearth.outbox.v1', '[]');
+  state().log = [
+    { id: 'e1', type: 'diaper', start: '2026-01-01T00:00:00Z' },
+    { id: 'e2', type: 'feed', start: '2026-01-02T00:00:00Z' },
+  ];
+  state().growth = [{ id: 'g1', date: '2026-01-01', weightKg: 5 }];
+
+  enqueueFullResync();
+
+  const ops = outboxOps();
+  assert.equal(ops.length, 3);
+  assert.deepEqual(ops.map((o) => o.method), ['PUT', 'PUT', 'PUT']);
+  assert.deepEqual(ops.map((o) => o.url).sort(), ['/api/entries/e1', '/api/entries/e2', '/api/growth/g1'].sort());
+  assert.equal(ops.find((o) => o.url === '/api/entries/e1').body.type, 'diaper');
 });
 
 // hearth.outbox.v1 and hearth.state.v1 are two independent localStorage

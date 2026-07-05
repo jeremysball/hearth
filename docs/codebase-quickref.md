@@ -87,7 +87,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 
 | File | Purpose |
 |------|---------|
-| `main.go` | Entry: load config, open DB, build mux, serve |
+| `../cmd/hearth/main.go` | Entry point (`server` itself is a library package): load config, open DB, build mux, serve. Run with `go run ./cmd/hearth` from repo root. |
 | `router.go` | `newRouter()`: wires all HTTP routes |
 | `db.go` | `openDB()`: opens SQLite, runs migrations, stamps schema hash, returns `*sql.DB` |
 | `migrate.go` | `runMigrations()` applies numbered `.sql` files in order; `schema_migrations` table records applied versions; `PRAGMA user_version` carries the `schema.sql` hash as a "this binary already opened this DB" sentinel; `postMigrationHooks` runs Go-side data rewrites (e.g. token hashing) that plain SQL can't express, exactly once, in the same transaction as the migration that needs them |
