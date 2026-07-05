@@ -146,6 +146,9 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			setSessionCookie(w, token)
 			logAuthEvent(r, "oauth_"+res.Kind, SessionInfo{CaregiverID: res.CaregiverID, FamilyID: res.FamilyID})
 			http.Redirect(w, r, "/?auth=ok", http.StatusFound)
+		case "removed":
+			logAuthEvent(r, "oauth_removed", SessionInfo{})
+			http.Redirect(w, r, "/?auth=removed", http.StatusFound)
 		case "conflict":
 			pending := newID()
 			if _, e := db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,

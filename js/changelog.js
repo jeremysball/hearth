@@ -6,7 +6,8 @@ export const CHANGELOG = [
     version: '2026-07-05',
     fixes: [
       'Fixed a bug where one bad log entry could silently block every entry logged after it from ever reaching the other caregiver.',
-      'Toast messages can now be dismissed with a tap anywhere on them, instead of needing to hit a small close button.'
+      'Toast messages can now be dismissed with a tap anywhere on them, instead of needing to hit a small close button.',
+      'Signing back in after being removed from a family now shows a clear message instead of silently starting a brand-new, empty family.'
     ]
   },
   {
