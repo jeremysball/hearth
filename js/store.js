@@ -724,6 +724,18 @@ export function enqueueBabySync() {
   enqueue({ url: '/api/baby', method: 'PATCH', body: _state.baby });
 }
 
+// Re-pushes every locally-known log entry and growth measure to the server.
+// The server upsert is idempotent by id, so this is safe to run repeatedly;
+// it exists for manual recovery when an entry made it into local state but
+// never reached the server (e.g. a caregiver's device outran a since-fixed
+// outbox bug), leaving the other caregiver's copy permanently missing it.
+export function enqueueFullResync() {
+  for (const e of _state.log) enqueue({ url: '/api/entries/' + e.id, method: 'PUT', body: e });
+  for (const m of _state.growth) enqueue({ url: '/api/growth/' + m.id, method: 'PUT', body: m });
+  save();
+  if (_syncTrigger) _syncTrigger();
+}
+
 export function enqueueSettingsSync() {
   const s = _state.settings;
   enqueue({
