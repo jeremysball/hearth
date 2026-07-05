@@ -116,9 +116,20 @@ test('drainOutbox drops a permanently-rejected op (4xx) instead of jamming the q
   assert.deepEqual(calledUrls, ['/api/entries/bad', '/api/entries/y']);
 });
 
-test('drainOutbox keeps retrying on 429 (rate limit) rather than dropping the op', async () => {
+for (const status of [401, 403, 408, 429]) {
+  test(`drainOutbox keeps retrying on ${status} rather than dropping the op`, async () => {
+    saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+    const fakeFetch = async () => ({ ok: false, status });
+    const ok = await drainOutbox(fakeFetch);
+    assert.equal(ok, false);
+    assert.equal(loadOutbox().length, 1);
+    assert.equal(loadOutbox()[0].url, '/api/entries/x');
+  });
+}
+
+test('drainOutbox keeps retrying on a 5xx server error rather than dropping the op', async () => {
   saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
-  const fakeFetch = async () => ({ ok: false, status: 429 });
+  const fakeFetch = async () => ({ ok: false, status: 503 });
   const ok = await drainOutbox(fakeFetch);
   assert.equal(ok, false);
   assert.equal(loadOutbox().length, 1);

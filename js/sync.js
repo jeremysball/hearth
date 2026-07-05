@@ -39,14 +39,21 @@ export function drainOutbox(fetchImpl) {
   return inFlight;
 }
 
-// A 4xx means the server rejected this exact request and will keep
+// A 4xx usually means the server rejected this exact request and will keep
 // rejecting it forever (bad payload, stale/removed resource, etc.) — retrying
-// unchanged never helps. 408 (timeout) and 429 (rate limit) are the
-// exceptions: both are the server asking the client to try again later, not
-// a verdict on the request itself. Anything else (network failure, 5xx) is
-// transient, so the op stays queued and drain stops to preserve order.
+// unchanged never helps, so the op is dropped rather than blocking the queue.
+// Three codes are exceptions, kept queued for retry instead:
+// - 408 (timeout) and 429 (rate limit): the server is asking for a retry,
+//   not passing verdict on the request.
+// - 401/403 (auth): a verdict on the *session*, not the payload — dropping
+//   here would silently lose an entry the user typed just because their
+//   cookie expired or was revoked while offline. Keeping it queued means it
+//   sends successfully once they're signed back in.
+// Anything else (network failure, 5xx) is transient, so the op stays queued
+// and drain stops to preserve order.
 function isPermanentFailure(status) {
-  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+  if (status < 400 || status >= 500) return false;
+  return status !== 401 && status !== 403 && status !== 408 && status !== 429;
 }
 
 async function drain(fetchImpl) {
