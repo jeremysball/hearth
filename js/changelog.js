@@ -8,7 +8,9 @@ export const CHANGELOG = [
       'Added a "Couldn\'t save" section on Profile that shows any entry that failed to sync for good, so you can see it and re-enter it instead of it silently disappearing.'
     ],
     fixes: [
-      'Fixed a bug where one bad log entry could silently block every entry logged after it from ever reaching the other caregiver.'
+      'Fixed a bug where one bad log entry could silently block every entry logged after it from ever reaching the other caregiver.',
+      'Toast messages can now be dismissed with a tap anywhere on them, instead of needing to hit a small close button.',
+      'Signing back in after being removed from a family now shows a clear message instead of silently starting a brand-new, empty family.'
     ]
   },
   {
