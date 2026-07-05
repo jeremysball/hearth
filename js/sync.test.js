@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount } = await import('./sync.js');
+const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, loadDeadLetters, dismissDeadLetter } = await import('./sync.js');
 
 test('enqueue appends an op and loadOutbox reads it back', () => {
   saveOutbox([]);
@@ -133,6 +133,43 @@ test('drainOutbox keeps retrying on a 5xx server error rather than dropping the 
   const ok = await drainOutbox(fakeFetch);
   assert.equal(ok, false);
   assert.equal(loadOutbox().length, 1);
+});
+
+test('drainOutbox records a dropped op as a dead letter instead of losing it silently', async () => {
+  localStorage.removeItem('hearth.deadletter.v1');
+  saveOutbox([{ url: '/api/entries/bad', method: 'PUT', body: { id: 'bad', type: 'feed' } }]);
+  const fakeFetch = async () => ({ ok: false, status: 400 });
+  await drainOutbox(fakeFetch);
+  const letters = loadDeadLetters();
+  assert.equal(letters.length, 1);
+  assert.equal(letters[0].status, 400);
+  assert.deepEqual(letters[0].op, { url: '/api/entries/bad', method: 'PUT', body: { id: 'bad', type: 'feed' } });
+  assert.equal(typeof letters[0].id, 'string');
+  assert.equal(typeof letters[0].droppedAt, 'string');
+});
+
+test('drainOutbox does not record a dead letter for a transient failure', async () => {
+  localStorage.removeItem('hearth.deadletter.v1');
+  saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+  const fakeFetch = async () => ({ ok: false, status: 503 });
+  await drainOutbox(fakeFetch);
+  assert.equal(loadDeadLetters().length, 0);
+});
+
+test('dismissDeadLetter removes only the matching entry', async () => {
+  localStorage.removeItem('hearth.deadletter.v1');
+  saveOutbox([
+    { url: '/api/entries/a', method: 'PUT', body: { id: 'a' } },
+    { url: '/api/entries/b', method: 'PUT', body: { id: 'b' } },
+  ]);
+  const fakeFetch = async () => ({ ok: false, status: 400 });
+  await drainOutbox(fakeFetch);
+  const [first, second] = loadDeadLetters();
+  assert.equal(loadDeadLetters().length, 2);
+  dismissDeadLetter(first.id);
+  const remaining = loadDeadLetters();
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].id, second.id);
 });
 
 test('getLastSyncRev defaults to empty string, setLastSyncRev round-trips', () => {
