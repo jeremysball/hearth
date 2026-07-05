@@ -122,6 +122,17 @@ Settings come from environment variables or a `.env` file in the working directo
 
 Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HTTP.
 
+### Recovering a locked-out caregiver
+
+Normally you invite a caregiver from inside the app (Profile → Invite). If someone is locked out (e.g. removed from a family and never linked an OAuth provider before that), they have no session to invite anyone from. With shell access to the server, mint an invite directly against the database instead:
+
+```bash
+hearth invite list             # family_id, baby name, active caregiver count, entry count
+hearth invite create <family_id>
+```
+
+`hearth invite create` prints a one-time `/join/<token>` link (48h expiry) that anyone can open to rejoin that family as a new caregiver. Uses the same `DB_PATH`/`PUBLIC_BASE_URL` env vars as the server; run it on the same host/config, without starting the HTTP listener.
+
 ## Architecture
 
 ```
