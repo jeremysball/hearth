@@ -17,13 +17,35 @@ func familyHasData(db *sql.DB, familyID string) (bool, error) {
 	return n > 0, err
 }
 
+func caregiverRemoved(db *sql.DB, caregiverID string) (bool, error) {
+	var removedAt string
+	if err := db.QueryRow(`SELECT removed_at FROM caregivers WHERE id = ?`, caregiverID).Scan(&removedAt); err != nil {
+		return false, err
+	}
+	return removedAt != "", nil
+}
+
 func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionInfo) (ReconcileResult, error) {
-	var caregiverID, familyID string
+	// A stale session cookie for a caregiver an admin has since removed must
+	// not be treated as a live device to link or restore onto — that would
+	// hand the signed-in-again OAuth account a session that 401s on the very
+	// next request. Surface the removal explicitly instead.
+	if cur != nil {
+		removed, e := caregiverRemoved(db, cur.CaregiverID)
+		if e != nil {
+			return ReconcileResult{}, e
+		}
+		if removed {
+			return ReconcileResult{Kind: "removed"}, nil
+		}
+	}
+
+	var caregiverID, familyID, removedAt string
 	err := db.QueryRow(`
-		SELECT i.caregiver_id, c.family_id
+		SELECT i.caregiver_id, c.family_id, c.removed_at
 		FROM identities i JOIN caregivers c ON c.id = i.caregiver_id
 		WHERE i.provider = ? AND i.provider_user_id = ?`, provider, providerUserID).
-		Scan(&caregiverID, &familyID)
+		Scan(&caregiverID, &familyID, &removedAt)
 
 	if err == sql.ErrNoRows {
 		// No identity yet.
@@ -67,6 +89,13 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 	}
 	if err != nil {
 		return ReconcileResult{}, err
+	}
+	if removedAt != "" {
+		// This provider account was linked to a caregiver who has since been
+		// removed from the family. Signing in again must not resurrect a
+		// session for a removed caregiver, nor silently spin up a fresh
+		// family as if this were a brand-new user.
+		return ReconcileResult{Kind: "removed"}, nil
 	}
 
 	// Identity exists → family B (familyID).
