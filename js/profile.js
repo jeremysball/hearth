@@ -1,9 +1,10 @@
 // profile.js: baby details, reminders, units, caregivers, reset.
 import { state, save } from './store.js';
-import { esc } from './ui.js';
+import { esc, fmt } from './ui.js';
 import { currentVersion, renderChangelog } from './changelog.js';
 import { notifsGranted } from './reminders.js';
 import { accountSection } from './account.js';
+import { loadDeadLetters } from './sync.js';
 
 function buildStamp() {
   const v = document.querySelector('meta[name="version"]')?.content;
@@ -33,6 +34,27 @@ export function tapVersion() {
   return { enabled: true, remaining: 0 };
 }
 
+// Best-effort human label for a dropped outbox op, from its URL and body —
+// enough for a caregiver to recognize what they logged and re-enter it.
+function describeDeadLetter(op) {
+  const body = op.body || {};
+  if (/\/entries\//.test(op.url)) {
+    const kind = body.type ? body.type[0].toUpperCase() + body.type.slice(1) : 'Log entry';
+    return body.start ? `${kind} at ${fmt.clock(body.start)}` : kind;
+  }
+  if (/\/growth\//.test(op.url)) return 'Growth measurement' + (body.date ? ` on ${body.date}` : '');
+  if (/\/baby\b/.test(op.url)) return 'Baby profile update';
+  if (/\/settings\b/.test(op.url)) return 'Settings update';
+  return op.method + ' ' + op.url;
+}
+
+function deadLetterRow(item) {
+  return `<div class="set-row notif-row">
+    <span class="notif-txt"><b>${esc(describeDeadLetter(item.op))}</b><span class="fld-l">Couldn't save (error ${item.status}) · ${esc(fmt.rel(item.droppedAt))}</span></span>
+    <button class="btn-sm" data-action="deadletter:dismiss" data-id="${esc(item.id)}">Dismiss</button>
+  </div>`;
+}
+
 function sw(path, on) {
   return `<button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-action="toggle" data-path="${path}"><span class="knob"></span></button>`;
 }
@@ -50,8 +72,15 @@ export function profile() {
   }
   const themeActive = s.theme || b.theme || 'girl';
   const thOpt = (id, sw, lbl) => `<button type="button" class="theme-opt${themeActive === id ? ' on' : ''}" data-action="theme:pick" data-theme="${id}"><span class="theme-swatch ${sw}"></span><span>${lbl}</span></button>`;
+  const deadLetters = loadDeadLetters();
   return `
     <div class="page-hd"><h1 class="page-title">Profile</h1></div>
+
+    ${deadLetters.length ? `<div class="sec-label">Couldn't save</div>
+    <div class="card row-card">
+      <p class="empty-note">These didn't sync and won't be retried automatically — re-enter them if they still matter.</p>
+      ${deadLetters.map(deadLetterRow).join('')}
+    </div>` : ''}
 
     <div class="card prof-baby">
       <button class="prof-photo" data-action="profile:photo">

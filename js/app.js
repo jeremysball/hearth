@@ -1,6 +1,6 @@
 // app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
-import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount } from './sync.js';
+import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
@@ -298,6 +298,7 @@ document.addEventListener('click', (ev) => {
     'cg:photo': () => caregiverPhoto(d.id),
     'cg:remove': () => removeCaregiver(d.id, d.name),
     'cg:invite': () => inviteCaregiver(),
+    'deadletter:dismiss': () => { dismissDeadLetter(d.id); router.refresh(); },
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },

@@ -2,6 +2,7 @@
 import { log } from './log.js';
 const OUTBOX_KEY = 'hearth.outbox.v1';
 const LAST_SYNC_REV_KEY = 'hearth.lastsyncrev.v1';
+const DEAD_LETTER_KEY = 'hearth.deadletter.v1';
 
 export function loadOutbox() {
   try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (e) { return []; }
@@ -24,6 +25,24 @@ export function enqueue(op) {
 // full resync.
 export function getLastSyncRev() { return localStorage.getItem(LAST_SYNC_REV_KEY) || ''; }
 export function setLastSyncRev(rev) { localStorage.setItem(LAST_SYNC_REV_KEY, String(rev)); }
+
+// Ops the server permanently rejected (see isPermanentFailure below) land
+// here instead of vanishing, so a caregiver can see what didn't save and
+// re-enter it rather than silently losing an entry they typed.
+export function loadDeadLetters() {
+  try { return JSON.parse(localStorage.getItem(DEAD_LETTER_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveDeadLetters(items) {
+  localStorage.setItem(DEAD_LETTER_KEY, JSON.stringify(items));
+}
+function pushDeadLetter(op, status) {
+  const items = loadDeadLetters();
+  items.push({ id: 'dl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), op, status, droppedAt: new Date().toISOString() });
+  saveDeadLetters(items);
+}
+export function dismissDeadLetter(id) {
+  saveDeadLetters(loadDeadLetters().filter((x) => x.id !== id));
+}
 
 // Drains the outbox to the server in order, stopping at the first failure so
 // nothing is lost or reordered. Safe to call repeatedly (e.g. on a timer):
@@ -73,6 +92,7 @@ async function drain(fetchImpl) {
       if (!res.ok) {
         if (isPermanentFailure(res.status)) {
           log.error('outbox', `dropping op the server will never accept (${res.status})`, op.method, op.url);
+          pushDeadLetter(op, res.status);
           ops = loadOutbox().slice(1);
           saveOutbox(ops);
           continue;
