@@ -1,5 +1,5 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
@@ -273,6 +273,7 @@ document.addEventListener('click', (ev) => {
       if (r.remaining > 0 && r.remaining <= 8) toast(`Press ${r.remaining} more ${r.remaining === 1 ? 'time' : 'times'} to enable developer mode`);
     },
     'dev:test-push': () => { sendTestPush().then(() => toast('Test push scheduled — lock your phone now')).catch((err) => toast('Test push failed: ' + err.message)); },
+    'resync:all': () => { enqueueFullResync(); toast('Re-sending every entry on this device to the server'); },
     'entry:delete': () => {
       const e = state().log.find((x) => x.id === d.id);
       removeEntry(d.id); sheet.close(); router.refresh();

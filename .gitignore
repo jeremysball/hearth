@@ -8,12 +8,16 @@ site/sitemap.xml
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 .thumbnail
 node_modules/
 hearth-server
 test-results/
 .superpowers/
-.claude/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
 _screenshot.js
 books/
 docs/superpowers/

@@ -59,6 +59,7 @@ export async function handleAuthRedirect(refresh, onSignup) {
     }
   }
   else if (auth === 'error') { toast('Sign-in failed, please try again'); }
+  else if (auth === 'removed') { toast('You were removed from that family. Ask an admin for a new invite link.'); }
   else if (auth === 'conflict' && pending) {
     try {
       const res = await fetch('/api/conflict/' + encodeURIComponent(pending), { credentials: 'include' });
