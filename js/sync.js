@@ -39,6 +39,23 @@ export function drainOutbox(fetchImpl) {
   return inFlight;
 }
 
+// A 4xx usually means the server rejected this exact request and will keep
+// rejecting it forever (bad payload, stale/removed resource, etc.) — retrying
+// unchanged never helps, so the op is dropped rather than blocking the queue.
+// Three codes are exceptions, kept queued for retry instead:
+// - 408 (timeout) and 429 (rate limit): the server is asking for a retry,
+//   not passing verdict on the request.
+// - 401/403 (auth): a verdict on the *session*, not the payload — dropping
+//   here would silently lose an entry the user typed just because their
+//   cookie expired or was revoked while offline. Keeping it queued means it
+//   sends successfully once they're signed back in.
+// Anything else (network failure, 5xx) is transient, so the op stays queued
+// and drain stops to preserve order.
+function isPermanentFailure(status) {
+  if (status < 400 || status >= 500) return false;
+  return status !== 401 && status !== 403 && status !== 408 && status !== 429;
+}
+
 async function drain(fetchImpl) {
   let ops = loadOutbox();
   if (!ops.length) return true;
@@ -53,7 +70,15 @@ async function drain(fetchImpl) {
         body: op.body ? JSON.stringify(op.body) : undefined,
         credentials: 'include'
       });
-      if (!res.ok) throw new Error('sync request failed: ' + res.status);
+      if (!res.ok) {
+        if (isPermanentFailure(res.status)) {
+          log.error('outbox', `dropping op the server will never accept (${res.status})`, op.method, op.url);
+          ops = loadOutbox().slice(1);
+          saveOutbox(ops);
+          continue;
+        }
+        throw new Error('sync request failed: ' + res.status);
+      }
     } catch (e) {
       log.warn('outbox', `failed (${ops.length} remaining)`, e.message);
       return false;
