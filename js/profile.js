@@ -34,7 +34,7 @@ export function tapVersion() {
   return { enabled: true, remaining: 0 };
 }
 
-// Best-effort human label for a dropped outbox op, from its URL and body —
+// Best-effort human label for a dropped outbox op, from its URL and body:
 // enough for a caregiver to recognize what they logged and re-enter it.
 function describeDeadLetter(op) {
   const body = op.body || {};
@@ -78,7 +78,7 @@ export function profile() {
 
     ${deadLetters.length ? `<div class="sec-label">Couldn't save</div>
     <div class="card row-card">
-      <p class="empty-note">These didn't sync and won't be retried automatically — re-enter them if they still matter.</p>
+      <p class="empty-note">These didn't sync and won't retry automatically. Re-enter them if they still matter.</p>
       ${deadLetters.map(deadLetterRow).join('')}
     </div>` : ''}
 
