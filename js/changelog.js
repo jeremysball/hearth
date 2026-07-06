@@ -4,7 +4,9 @@ export const CHANGELOG = [
   {
     date: '2026-07-06',
     version: '2026-07-06',
-    features: [],
+    features: [
+      'Replaced the night sky\'s stylized star patterns with real constellation shapes for each zodiac sign.'
+    ],
     fixes: [
       'Fixed a lag on the first tap of the day, on the spinner or a log save, by warming up audio ahead of time instead of on first use.',
       'Fixed the view refreshing behind an open sheet when a sync arrived mid-edit; it now waits until you close the sheet.',
