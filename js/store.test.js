@@ -381,6 +381,43 @@ test('weightedMedian shifts toward the high-weight value', () => {
   assert.equal(weightedMedian(obs), 120);
 });
 
+test('weightedVariance returns null with fewer than 2 observations', () => {
+  const { weightedVariance } = _testHelpers;
+  assert.equal(weightedVariance([{ value: 90, weight: 1 }]), null);
+});
+
+test('weightedVariance is small for a tight cluster', () => {
+  const { weightedVariance } = _testHelpers;
+  const obs = [88, 90, 89, 91, 90].map((v) => ({ value: v, weight: 1 }));
+  assert.ok(weightedVariance(obs) < 2, `variance ${weightedVariance(obs)} should be small`);
+});
+
+test('weightedVariance is large for a scattered set', () => {
+  const { weightedVariance } = _testHelpers;
+  const obs = [40, 140, 60, 160, 90].map((v) => ({ value: v, weight: 1 }));
+  assert.ok(weightedVariance(obs) > 1000, `variance ${weightedVariance(obs)} should be large`);
+});
+
+test('shrinkageWeight gives a consistent series more trust than a scattered one at equal n', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const priorVariance = 400; // illustrative population spread
+  const tight = shrinkageWeight(4, 9, priorVariance);        // SD = 2 min
+  const scattered = shrinkageWeight(2500, 9, priorVariance); // SD = 50 min
+  assert.ok(tight > scattered, `tight-cluster weight ${tight} should exceed scattered weight ${scattered}`);
+});
+
+test('shrinkageWeight never exceeds the cap', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const w = shrinkageWeight(0.0001, 1000, 400);
+  assert.ok(w <= 0.9, `weight ${w} should be capped at 0.9`);
+});
+
+test('shrinkageWeight approaches 0 with huge personal variance', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const w = shrinkageWeight(1e9, 9, 400);
+  assert.ok(w < 0.05, `weight ${w} should be near 0 with huge personal variance`);
+});
+
 test('derive.personalWakeWindow returns null with no data for that position', () => {
   // All prior sleeps in the test log are Jan 2026 (outside 21-day cutoff)
   // or have no end, so 'first' position should have zero observations.
