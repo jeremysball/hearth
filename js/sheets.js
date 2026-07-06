@@ -756,7 +756,7 @@ export function editCard(which) {
     sheet.open(`
       ${stepperField('Remind every (hours)', 'c-int', 1, 8, 0.5, s.bottleIntervalH)}
       ${stepperField('Default amount (' + s.units.volume + ')', 'c-amt', 0, 9999, 5, s.bottleAmountDefault)}
-      <p class="empty-note">Next bottle is predicted from your last feed plus this interval.</p>
+      <p class="empty-note">This interval predicts your next bottle from your last feed.</p>
       <button class="btn-primary" data-action="card:save-bottle"><svg class="icon"><use href="#check"></use></svg> Save</button>
       <button class="btn-ghost" data-action="card:hide" data-card="bottle">Hide this card</button>`,
       { title: 'Bottle reminder' });
@@ -764,7 +764,7 @@ export function editCard(which) {
     sheet.open(medForm(), { title: 'Medicines', size: 'sheet-form' });
   } else if (which === 'bath') {
     sheet.open(`
-      <p class="empty-note">The bath card shows how long since the last bath. There's no reminder interval to set.</p>
+      <p class="empty-note">The bath card shows how long since the last bath. It has no reminder interval to set.</p>
       <button class="btn-ghost danger" data-action="card:remove" data-card="bath"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
       { title: 'Bath card' });
   } else if (which === 'hygiene') {
@@ -774,7 +774,7 @@ export function editCard(which) {
     const cur = (s.cards.intervals || {})[which] ?? 3;
     sheet.open(`
       ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, cur)}
-      <p class="empty-note">Next ${esc(c.label.toLowerCase())} is predicted from the last entry plus this interval.</p>
+      <p class="empty-note">This interval predicts the next ${esc(c.label.toLowerCase())} from the last entry.</p>
       <button class="btn-primary" data-action="card:save-interval" data-card="${which}"><svg class="icon"><use href="#check"></use></svg> Save</button>
       <button class="btn-ghost danger" data-action="card:remove" data-card="${which}"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
       { title: c.label + ' reminder' });
@@ -812,7 +812,7 @@ export function pickCard(type) {
   const c = TYPES[type] || { label: type };
   sheet.open(`
     ${stepperField('Remind every (hours)', 'c-int', 1, 24, 0.5, 3)}
-    <p class="empty-note">Next ${esc(c.label.toLowerCase())} is predicted from the last entry plus this interval.</p>
+    <p class="empty-note">This interval predicts the next ${esc(c.label.toLowerCase())} from the last entry.</p>
     <button class="btn-primary" data-action="card:save-new" data-card="${type}"><svg class="icon"><use href="#check"></use></svg> Add card</button>`,
     { title: 'Add ' + c.label });
 }
