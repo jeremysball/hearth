@@ -466,7 +466,7 @@ const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); r
 const FORMS = {
   sleep: () => `
     ${field('Fell asleep', dtPair('f-time', nowLocalDT()))}
-    ${field('Woke (leave blank if still asleep)', dtPair('f-end', ''))}
+    ${field('Woke (leave blank if still asleep)', dtPair('f-end', nowLocalDT().slice(0, 10)))}
     ${field('Quality', seg('quality', ['Restless', 'Okay', 'Good', 'Great'], 'Good'))}
     ${noteRow()}
     <details class="sleep-details">
