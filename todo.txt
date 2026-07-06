@@ -38,6 +38,7 @@ Feat
 [x] Clicker sound when spinning the spinner
 [x] Can we do vibration?  (fx.js buzz())
 [x] I do not like how you can select text on the ui (styles.css user-select: none)
+[ ] Local JSON export (of logged data) - backburner, no rush
 Bugs
 [x] "Could not create an invite — check your connection" on desktop
 [x] Able to create negative sleep log
