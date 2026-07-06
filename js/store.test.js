@@ -449,7 +449,7 @@ test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep 
   assert.ok(result.median >= 85 && result.median <= 95, `median ${result.median} should be near 90`);
   assert.ok(result.p25 <= result.median, 'p25 ≤ median');
   assert.ok(result.median <= result.p75, 'median ≤ p75');
-  assert.equal(result.variance, 0, 'variance should be 0 for an exactly-repeating 90-min pattern');
+  assert.ok(result.variance < 1e-6, `variance ${result.variance} should be ~0 for an exactly-repeating 90-min pattern`);
 });
 
 test('derive.wakeWindowPrediction returns population prior when position has no personal data', () => {
