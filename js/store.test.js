@@ -449,7 +449,7 @@ test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep 
   assert.ok(result.median >= 85 && result.median <= 95, `median ${result.median} should be near 90`);
   assert.ok(result.p25 <= result.median, 'p25 ≤ median');
   assert.ok(result.median <= result.p75, 'median ≤ p75');
-  assert.ok(result.variance < 1e-6, `variance ${result.variance} should be ~0 for an exactly-repeating 90-min pattern`);
+  assert.ok(result.variance !== null && result.variance < 1e-6, `variance ${result.variance} should be ~0 for an exactly-repeating 90-min pattern`);
 });
 
 test('derive.wakeWindowPrediction returns population prior when position has no personal data', () => {
@@ -481,11 +481,11 @@ test('derive.wakeWindowPrediction stays a blend for a scattered personal pattern
   // 10 days of 'last'-position wake windows (previous sleep always ends at
   // 5pm, inside the 4pm-8pm bracket), but the gap to the next sleep swings
   // widely day to day — a scattered, inconsistent pattern rather than a
-  // tight one. Uses days 11-20 ago so it doesn't overlap the 'middle'
-  // fixture's days 2-10 ago.
+  // tight one. Uses days 9-18 ago so it doesn't overlap the 'middle'
+  // fixture's days 2-10 ago, and stays clear of the 21-day cutoff.
   const wakeMinutesByDay = [40, 220, 60, 200, 50, 230, 45, 210, 55, 225];
   for (let i = 0; i < wakeMinutesByDay.length; i++) {
-    const d = 20 - i;
+    const d = 18 - i;
     const base = new Date(now - d * DAY_MS);
     base.setHours(0, 0, 0, 0);
     const sleepAEnd = new Date(base.getTime() + 17 * 60 * MIN_MS); // 5pm
