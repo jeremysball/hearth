@@ -180,7 +180,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only: do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -295,6 +295,29 @@ function stdDev(values) {
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
   return Math.sqrt(variance);
+}
+
+// Recency-weighted variance of observations (same shape as weightedMedian: {value, weight}).
+// Returns null with fewer than 2 observations (variance is undefined).
+function weightedVariance(observations) {
+  if (observations.length < 2) return null;
+  const totalWeight = observations.reduce((s, o) => s + o.weight, 0);
+  const mean = observations.reduce((s, o) => s + o.value * o.weight, 0) / totalWeight;
+  const variance = observations.reduce((s, o) => s + o.weight * (o.value - mean) ** 2, 0) / totalWeight;
+  return variance;
+}
+
+// Precision-weighted shrinkage: how much to trust `n` personal observations
+// with the given variance against a population prior of `priorVariance`.
+// A consistent series (low variance) reaches high trust faster than a
+// scattered one (high variance), even at the same `n` — unlike a weight
+// that depends on `n` alone. Capped at `cap` so the population prior is
+// never fully discarded.
+function shrinkageWeight(personalVariance, n, priorVariance, cap = 0.9) {
+  const safeVariance = Math.max(personalVariance, 1e-6);
+  const personalPrecision = n / safeVariance;
+  const priorPrecision = 1 / priorVariance;
+  return Math.min(cap, personalPrecision / (personalPrecision + priorPrecision));
 }
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
