@@ -551,6 +551,7 @@ export const derive = {
       p25:    Math.round(weightedPercentile(observations, 0.25)),
       p75:    Math.round(weightedPercentile(observations, 0.75)),
       sampleSize: observations.length,
+      variance: weightedVariance(observations),
       napMedianMin: priorSleeps.length ? Math.round(weightedMedian(priorSleeps)) : 0,
     };
   },
