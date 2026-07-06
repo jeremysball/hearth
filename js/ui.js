@@ -258,6 +258,7 @@ export const sheet = {
     scrim.classList.remove('show');
     clearTimeout(sheetCloseTimer);
     sheetCloseTimer = setTimeout(() => { if (scrim) scrim.innerHTML = ''; }, 280);
+    document.dispatchEvent(new CustomEvent('sheet:closed'));
   }
 };
 

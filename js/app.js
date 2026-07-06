@@ -834,6 +834,10 @@ document.addEventListener('click', async (e) => {
 });
 
 // ---------- server sync loop ----------
+let pendingViewRefresh = false;
+document.addEventListener('sheet:closed', () => {
+  if (pendingViewRefresh) { pendingViewRefresh = false; router.refresh(); }
+});
 async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
@@ -847,7 +851,10 @@ async function syncOnce() {
     applySyncResponse(data);
     setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
-    if (n > 0 && (current !== 'home' || $('#view'))) router.refresh();
+    if (n > 0 && (current !== 'home' || $('#view'))) {
+      if ($('#scrim.show')) pendingViewRefresh = true;
+      else router.refresh();
+    }
   } catch (e) {
     log.warn('sync', 'syncOnce failed', e.message);
   }
