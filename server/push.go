@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -34,6 +36,15 @@ func validateVAPIDEnv() error {
 		return nil
 	}
 	return fmt.Errorf("web push is not configured: missing %s. Generate VAPID keys with: cd server && go run ./cmd/vapidgen. Then set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (for example, mailto:you@example.com) before starting Hearth", strings.Join(missing, ", "))
+}
+
+// vapidSubscriber strips a leading "mailto:" so webpush-go doesn't double it:
+// the library prepends "mailto:" to any Subscriber that isn't already an
+// "https:" URL, so passing it a pre-prefixed "mailto:x@y.com" produces the
+// JWT sub claim "mailto:mailto:x@y.com", which Apple's push service rejects
+// with 403 BadJwtToken (Google's FCM tolerates it, so this only broke iOS).
+func vapidSubscriber(subject string) string {
+	return strings.TrimPrefix(subject, "mailto:")
 }
 
 type reminderSettings struct {
@@ -302,15 +313,20 @@ func (s *pushScheduler) sendFamily(familyID string, rem pushReminder) {
 	}
 	rows.Close()
 	payload, _ := json.Marshal(map[string]string{"title": rem.Title, "body": rem.Body, "key": rem.Key})
+	subscriber := vapidSubscriber(subject)
 	for _, su := range subs {
-		resp, err := webpush.SendNotification(payload, &webpush.Subscription{Endpoint: su.endpoint, Keys: webpush.Keys{P256dh: su.p256dh, Auth: su.auth}}, &webpush.Options{Subscriber: subject, VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 86400})
+		resp, err := webpush.SendNotification(payload, &webpush.Subscription{Endpoint: su.endpoint, Keys: webpush.Keys{P256dh: su.p256dh, Auth: su.auth}}, &webpush.Options{Subscriber: subscriber, VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 86400})
 		if resp != nil {
 			if resp.StatusCode == http.StatusGone {
 				deletePushSubscription(s.db, su.endpoint)
+			} else if resp.StatusCode >= 300 {
+				body, _ := io.ReadAll(resp.Body)
+				log.Printf("push send to %s failed: status %d: %s", su.endpoint, resp.StatusCode, body)
 			}
 			resp.Body.Close()
 		}
 		if err != nil {
+			log.Printf("push send to %s failed: %v", su.endpoint, err)
 			continue
 		}
 	}

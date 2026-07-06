@@ -37,6 +37,19 @@ func TestValidateVAPIDEnvPassesWithAllKeys(t *testing.T) {
 	}
 }
 
+func TestVapidSubscriberStripsMailtoPrefix(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"mailto:you@example.com", "you@example.com"},
+		{"you@example.com", "you@example.com"},
+		{"https://example.com/contact", "https://example.com/contact"},
+	}
+	for _, c := range cases {
+		if got := vapidSubscriber(c.in); got != c.want {
+			t.Errorf("vapidSubscriber(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 func TestHandlePushPublicKeyRequiresEnv(t *testing.T) {
 	t.Setenv("VAPID_PUBLIC_KEY", "")
 	req := httptest.NewRequest("GET", "/api/push/public-key", nil)

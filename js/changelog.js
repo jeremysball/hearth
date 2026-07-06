@@ -2,6 +2,13 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-06',
+    version: '2026-07-06',
+    fixes: [
+      'Fixed push notifications silently failing on iPhone.'
+    ]
+  },
+  {
     date: '2026-07-02',
     version: '2026-07-02',
     features: [
