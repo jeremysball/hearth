@@ -313,11 +313,12 @@ function weightedVariance(observations) {
 // scattered one (high variance), even at the same `n` — unlike a weight
 // that depends on `n` alone. Capped at `cap` so the population prior is
 // never fully discarded.
-function shrinkageWeight(personalVariance, n, priorVariance, cap = 0.9) {
+function shrinkageWeight(personalVariance, n, priorVariance) {
   const safeVariance = Math.max(personalVariance, 1e-6);
+  const safePriorVariance = Math.max(priorVariance, 1e-6);
   const personalPrecision = n / safeVariance;
-  const priorPrecision = 1 / priorVariance;
-  return Math.min(cap, personalPrecision / (personalPrecision + priorPrecision));
+  const priorPrecision = 1 / safePriorVariance;
+  return Math.min(0.9, personalPrecision / (personalPrecision + priorPrecision));
 }
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
@@ -556,9 +557,10 @@ export const derive = {
     };
   },
   // Blended wake window prediction. Uses population data until 7 personal
-  // observations accumulate, then smoothly shifts toward personal data.
-  // At n=30 the personal signal reaches 90% weight; population acts as a
-  // sanity check at all times.
+  // observations accumulate, then shifts toward personal data by precision-
+  // weighted shrinkage: a consistent pattern earns trust faster than a
+  // scattered one at the same sample size; population acts as a sanity
+  // check at all times (see shrinkageWeight).
   wakeWindowPrediction(position = 'middle', priorSleepMin = null) {
     if (position === 'night') return null;
     const pop = wakeWindowRange(position);
@@ -567,7 +569,9 @@ export const derive = {
       return { ...pop, source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
     }
     const n = personal.sampleSize;
-    const priorVariance = ((pop.high - pop.low) / 4) ** 2;
+    // Population range is treated as a ±2 SD (95%) band around the midpoint,
+    // so SD ≈ range / 4; floored so a zero-width table row can't divide by zero.
+    const priorVariance = Math.max(((pop.high - pop.low) / 4) ** 2, 1e-6);
     const w_p   = shrinkageWeight(personal.variance, n, priorVariance);
     const w_pop = 1 - w_p;
     let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
