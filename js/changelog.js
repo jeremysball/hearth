@@ -6,7 +6,8 @@ export const CHANGELOG = [
     version: '2026-07-06',
     features: [],
     fixes: [
-      'Fixed a lag on the first tap of the day, on the spinner or a log save, by warming up audio ahead of time instead of on first use.'
+      'Fixed a lag on the first tap of the day, on the spinner or a log save, by warming up audio ahead of time instead of on first use.',
+      'Fixed the view refreshing behind an open sheet when a sync arrived mid-edit; it now waits until you close the sheet.'
     ]
   },
   {
