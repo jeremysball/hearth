@@ -50,6 +50,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `normalizeLog(log)`: fixes swapped sleep start/end
 - `derive`: object of computed getters (last sleep, last feed, awake time, etc.)
 - `wakeWindowRange(position)`: age-appropriate awake window `{low, high, midpoint, ...}` in minutes
+- `derive.wakeWindowPrediction(position)`: blends `wakeWindowRange` with `derive.personalWakeWindow` via a precision-weighted shrinkage (`shrinkageWeight` in `_testHelpers`) — a consistent personal pattern earns trust faster than a scattered one at the same sample size
 - `ageLabel()`: human-readable age string
 - `applySyncResponse(resp)`: merges server sync data into state
 - `enqueueBabySync()`, `enqueueSettingsSync()`: mark items for next sync
