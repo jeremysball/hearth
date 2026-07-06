@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-06',
+    version: '2026-07-06',
+    features: [],
+    fixes: [
+      'Fixed a lag on the first tap of the day, on the spinner or a log save, by warming up audio ahead of time instead of on first use.'
+    ]
+  },
+  {
     date: '2026-07-05',
     version: '2026-07-05',
     features: [
