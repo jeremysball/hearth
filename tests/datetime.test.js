@@ -15,7 +15,7 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('sleep sheet #f-time-time has a full time value', /^\d{2}:\d{2}$/.test(timeVal), timeVal);
     const endDateVal = await page.$eval('#f-end-date', el => el.value);
     const endTimeVal = await page.$eval('#f-end-time', el => el.value);
-    check('sleep sheet #f-end-date starts blank', endDateVal === '', endDateVal);
+    check('sleep sheet #f-end-date defaults to today, not blank', /^\d{4}-\d{2}-\d{2}$/.test(endDateVal), endDateVal);
     check('sleep sheet #f-end-time starts blank', endTimeVal === '', endTimeVal);
   } catch (e) {
     check('datetime test ran without throwing', false, e.message);
