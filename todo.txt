@@ -23,22 +23,23 @@
 
 ---------------------------------------------------
 Feat
-  - Rearranging the cards on the home screen (hold to enter edit mode settings
-    icon becomes a hamburger icon and you can drag them) 
+[x] Rearranging the cards on the home screen (hold to enter edit mode settings
+    icon becomes a hamburger icon and you can drag them) (app.js drag-to-reorder)
   - Some kind of picker on windows / desktop for the time of day when creating a log?
-  - Support for 24 hour time format
-  - The spinner is great but I would 5 more numbers on each top and bottom. Getting smaller
+[x] Support for 24 hour time format (clock24 setting, wired through store/ui/profile)
+[x] The spinner is great but I would 5 more numbers on each top and bottom. Getting smaller
   and more transparent as they move from the center. Creating the illusion of a real spinner
-  - I also should be able to click into the spinner and type a number. The spinner should update
-    to what I type and then I should be able to click the check mark to save it.
+[x] I also should be able to click into the spinner and type a number. The spinner should update
+    to what I type and then I should be able to click the check mark to save it. (sheets.js .spinner-type)
   - More colors?
-  - Different icons for mixed, wet, and dirty diapers
-  - Animations in the UI for when you log a new entry. Maybe a little confetti or something. Something to make it feel more rewarding to log an entry.
-  - Sounds!
-  - Clicker sound when spinning the spinner
-  - Can we do vibration? 
-  - I do not like how you can select text on the ui
+[x] Different icons for mixed, wet, and dirty diapers (diaperIcon() in ui.js)
+[x] Animations in the UI for when you log a new entry. Maybe a little confetti or something. Something to make it feel more rewarding to log an entry. (fx.js confetti())
+[x] Sounds! (fx.js chime/tick)
+[x] Clicker sound when spinning the spinner
+[x] Can we do vibration?  (fx.js buzz())
+[x] I do not like how you can select text on the ui (styles.css user-select: none)
 Bugs
-  - "Could not create an invite — check your connection" on desktop
-  - Able to create negative sleep log
+[x] "Could not create an invite — check your connection" on desktop
+[x] Able to create negative sleep log
     - Sleep counter essentially wraps around. At 1 minute of sleep it says -59 minutes. Whenever I try to log sleep from the sleep tab it doesn't even appear in that tab. Then whenever I see it on the home screen it doesn't properly calculate the amount of sleep at all it says -54, -55, -56
+    (fixed in 03140c6: negative sleep durations, datetime entry, sleep-tab visibility, and invite session recovery)
