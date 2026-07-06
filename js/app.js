@@ -12,7 +12,7 @@ import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView 
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
-import { animateGrow, buzz } from './fx.js';
+import { animateGrow, buzz, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
@@ -876,4 +876,5 @@ document.addEventListener('visibilitychange', () => {
 setInterval(syncOnce, 15000);
 setSyncTrigger(() => { drainOutbox(fetch); syncOnce(); });
 
+document.addEventListener('pointerdown', warmAudio, { once: true });
 document.addEventListener('DOMContentLoaded', init);
