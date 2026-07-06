@@ -109,7 +109,7 @@ function morningLightTip() {
   const timeStr = fmt.clock(todayBase);
   return `<div class="card tip-card">
     <div class="tip-hd"><span class="tip-icon"><svg class="icon"><use href="#${icon('sunrise')}"></use></svg></span>Morning light</div>
-    <p>${name} wakes around ${timeStr} most mornings. Open the curtains or step outside in the first 30 minutes — that light-dark contrast is one of the strongest cues for a predictable sleep clock.</p>
+    <p>${name} wakes around ${timeStr} most mornings. Open the curtains or step outside in the first 30 minutes: that light-dark contrast is one of the strongest cues for a predictable sleep clock.</p>
     <div class="tip-source">Source: Yates 2018; Kok 2024</div>
     <button class="tip-dismiss" data-action="tip:dismiss" data-tip="morning-light">Got it</button>
   </div>`;
@@ -171,7 +171,7 @@ function heroCard() {
 
   // Night hours (midnight–6am): suppress the sweet spot rail entirely.
   // Overnight sleep is not a nap; arousals are circadian, not homeostatic.
-  // No coal bed today, so no ember-glow here either — untouched.
+  // No coal bed today, so no ember-glow here either: untouched.
   if (sp.night) {
     if (asleep) {
       return open('data-state="asleep" data-night') + `
@@ -186,7 +186,7 @@ function heroCard() {
   }
 
   if (asleep) {
-    // Banked ember: a low, steady glow that eases in as the nap settles —
+    // Banked ember: a low, steady glow that eases in as the nap settles,
     // restful, not building tension like the awake state below. The glow
     // sits centered and only its heat (intensity) ramps over the first 20
     // minutes; it doesn't slide left-to-right like the awake ember's

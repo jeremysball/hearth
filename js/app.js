@@ -272,7 +272,7 @@ document.addEventListener('click', (ev) => {
       if (r.enabled) { toast('Developer mode enabled'); router.refresh(); return; }
       if (r.remaining > 0 && r.remaining <= 8) toast(`Press ${r.remaining} more ${r.remaining === 1 ? 'time' : 'times'} to enable developer mode`);
     },
-    'dev:test-push': () => { sendTestPush().then(() => toast('Test push scheduled — lock your phone now')).catch((err) => toast('Test push failed: ' + err.message)); },
+    'dev:test-push': () => { sendTestPush().then(() => toast('Test push scheduled. Lock your phone now.')).catch((err) => toast('Test push failed: ' + err.message)); },
     'resync:all': () => { enqueueFullResync(); toast('Re-sending every entry on this device to the server'); },
     'entry:delete': () => {
       const e = state().log.find((x) => x.id === d.id);
