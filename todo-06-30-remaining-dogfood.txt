@@ -1,16 +1,19 @@
 Remaining dogfood items — 2026-06-30
 
 BUGS / SYNC
-- bottle and medicine notifications not working (sweet spot notification did work)
-- bottle logged but didn't sync — partner had to restart the app
-- each reminder should show elapsed time once it passes
+[x] bottle and medicine notifications not working (sweet spot notification did work) (7f89098)
+[x] bottle logged but didn't sync — partner had to restart the app
+[x] each reminder should show elapsed time once it passes (fmt.untilOrAgo() in home.js, wired into bottle/medicine/hygiene/custom cards)
 
 UI POLISH
-- allow parents to upload profile pictures
-- changelog
-- who-logged-it indicator on events (subtle, only visible when tapping into the event)
-- more trends (e.g. feed size)
-- light interaction on cards (glass effect)
-- align onboarding theme
-- rewrite all prose with writing-concisely skill
+[x] allow parents to upload profile pictures (profile.js profile:photo / cg:photo)
+[x] changelog (js/changelog.js)
+[x] who-logged-it indicator on events (subtle, only visible when tapping into the event) (b4b22eb)
+[x] more trends (e.g. feed size) (trends.js "Feed volume" chart)
+[x] light interaction on cards (glass effect) (backdrop-filter throughout styles.css)
+[x] align onboarding theme (onboarding.js has all 4 theme options)
+- rewrite all prose with writing-concisely skill (full pass, not just em-dashes)
 - NO EM-DASHES
+  (both still open: home.js:112, store.js:324/330/333/339, profile.js:81 are
+  the known em-dash spots, but the ask is a full concision pass over that
+  user-facing copy, not a mechanical dash swap)
