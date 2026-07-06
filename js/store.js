@@ -567,7 +567,8 @@ export const derive = {
       return { ...pop, source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
     }
     const n = personal.sampleSize;
-    const w_p   = Math.min(0.9, Math.max(0, (n - 7) / 23));
+    const priorVariance = ((pop.high - pop.low) / 4) ** 2;
+    const w_p   = shrinkageWeight(personal.variance, n, priorVariance);
     const w_pop = 1 - w_p;
     let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
     // Clamp: personal signal must stay within 0.5×–2× population midpoint.
