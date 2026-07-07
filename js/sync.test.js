@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, loadDeadLetters, dismissDeadLetter } = await import('./sync.js');
+const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, applySyncFamily, clearSyncState, syncChangeCount, loadDeadLetters, dismissDeadLetter } = await import('./sync.js');
 
 test('enqueue appends an op and loadOutbox reads it back', () => {
   saveOutbox([]);
@@ -177,4 +177,54 @@ test('getLastSyncRev defaults to empty string, setLastSyncRev round-trips', () =
   assert.equal(getLastSyncRev(), '');
   setLastSyncRev(42);
   assert.equal(getLastSyncRev(), '42');
+});
+
+test('getLastSyncRev treats a pre-upgrade bare-string cursor as a valid rev', () => {
+  localStorage.setItem('hearth.lastsyncrev.v1', '2026-01-01T00:00:00Z');
+  assert.equal(getLastSyncRev(), '2026-01-01T00:00:00Z');
+});
+
+test('applySyncFamily records the family on first sync without resetting anything', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  setLastSyncRev(7);
+  const switched = applySyncFamily('famA');
+  assert.equal(switched, false);
+  assert.equal(getLastSyncRev(), '7');
+});
+
+test('applySyncFamily is a no-op when the family is unchanged', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  applySyncFamily('famA');
+  setLastSyncRev(99);
+  const switched = applySyncFamily('famA');
+  assert.equal(switched, false);
+  assert.equal(getLastSyncRev(), '99');
+});
+
+test('applySyncFamily detects a family switch, resets the cursor, and quarantines the outbox instead of draining it cross-family', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  localStorage.removeItem('hearth.deadletter.v1');
+  applySyncFamily('famA');
+  setLastSyncRev(500);
+  saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+
+  const switched = applySyncFamily('famB');
+
+  assert.equal(switched, true);
+  assert.equal(getLastSyncRev(), '', 'cursor must reset to force a full resync');
+  assert.equal(loadOutbox().length, 0, 'outbox must not drain into the new family');
+  const letters = loadDeadLetters();
+  assert.equal(letters.length, 1);
+  assert.equal(letters[0].status, 'family-switch');
+  assert.equal(letters[0].op.url, '/api/entries/x');
+});
+
+test('clearSyncState wipes the cursor, outbox, and dead letters', () => {
+  applySyncFamily('famA');
+  setLastSyncRev(10);
+  saveOutbox([{ url: '/api/entries/x', method: 'PUT', body: { id: 'x' } }]);
+  clearSyncState();
+  assert.equal(getLastSyncRev(), '');
+  assert.deepEqual(loadOutbox(), []);
+  assert.deepEqual(loadDeadLetters(), []);
 });
