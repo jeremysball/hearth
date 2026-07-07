@@ -25,7 +25,13 @@ func caregiverRemoved(db *sql.DB, caregiverID string) (bool, error) {
 	return removedAt != "", nil
 }
 
-func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionInfo) (ReconcileResult, error) {
+// reconcile decides what an OAuth sign-in means for this device.
+//
+// cur is the device's live session, if any. deviceFamily is the family id the
+// client last synced with (sent as a hint through the OAuth flow); it lets a
+// device whose session rows were lost prove which family its local data
+// belongs to, so a sign-in cannot silently restore into a different family.
+func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionInfo, deviceFamily string) (ReconcileResult, error) {
 	// A stale session cookie for a caregiver an admin has since removed must
 	// not be treated as a live device to link or restore onto — that would
 	// hand the signed-in-again OAuth account a session that 401s on the very
@@ -92,14 +98,45 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 	}
 	if removedAt != "" {
 		// This provider account was linked to a caregiver who has since been
-		// removed from the family. Signing in again must not resurrect a
-		// session for a removed caregiver, nor silently spin up a fresh
-		// family as if this were a brand-new user.
+		// removed. If the device holds a live session (cur passed the removed
+		// check above), the person behind this verified provider account is a
+		// live member again — e.g. removed and then re-invited. Relink the
+		// identity to the live caregiver so Google sign-in works for the
+		// membership she actually has; no entries move. Without a live
+		// session, signing in must not resurrect the removed caregiver, nor
+		// silently spin up a fresh family as if this were a brand-new user.
+		if cur != nil {
+			if _, e := db.Exec(`UPDATE identities SET caregiver_id = ? WHERE provider = ? AND provider_user_id = ?`,
+				cur.CaregiverID, provider, providerUserID); e != nil {
+				return ReconcileResult{}, e
+			}
+			return ReconcileResult{Kind: "linked", CaregiverID: cur.CaregiverID, FamilyID: cur.FamilyID}, nil
+		}
 		return ReconcileResult{Kind: "removed"}, nil
 	}
 
 	// Identity exists → family B (familyID).
-	if cur == nil || cur.FamilyID == familyID {
+	if cur == nil {
+		// No live session. If the device says its local data belongs to a
+		// different family that actually holds data, restoring into the
+		// identity's family would silently split the two: every write from
+		// this device would land in family B while the rest of the device's
+		// family keeps writing to family A, with zero errors on either side.
+		// Refuse to pick a family; surface the mismatch instead. deviceFamily
+		// is a client-supplied hint, so it never grants access — "mismatch"
+		// creates no session and moves no data.
+		if deviceFamily != "" && deviceFamily != familyID {
+			hasData, e := familyHasData(db, deviceFamily)
+			if e != nil {
+				return ReconcileResult{}, e
+			}
+			if hasData {
+				return ReconcileResult{Kind: "mismatch", TargetFamily: familyID, CurrentFamily: deviceFamily}, nil
+			}
+		}
+		return ReconcileResult{Kind: "restored", CaregiverID: caregiverID, FamilyID: familyID}, nil
+	}
+	if cur.FamilyID == familyID {
 		return ReconcileResult{Kind: "restored", CaregiverID: caregiverID, FamilyID: familyID}, nil
 	}
 	// Different families. Conflict only if the device's family A actually holds data.

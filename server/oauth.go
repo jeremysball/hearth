@@ -15,6 +15,25 @@ import (
 
 const oauthStateCookie = "hearth_oauth"
 
+// oauthDeviceFamilyCookie carries the client's "my local data belongs to this
+// family" hint across the provider redirect, so the callback can detect a
+// sign-in that would land the device in a different family than its data.
+const oauthDeviceFamilyCookie = "hearth_oauth_device_family"
+
+// validDeviceFamily accepts only newID-shaped values (hex, bounded length) so
+// an arbitrary client string never lands in a cookie or a log line.
+func validDeviceFamily(s string) bool {
+	if len(s) == 0 || len(s) > 64 {
+		return false
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
 // initProviders registers goth providers for whichever ones are configured.
 // Unconfigured providers are skipped so the app runs anonymously without creds.
 func initProviders(cfg Config) {
@@ -65,6 +84,17 @@ func handleAuthBegin(cfg Config) http.HandlerFunc {
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int(10 * time.Minute / time.Second),
 		})
+		if df := r.URL.Query().Get("device_family"); validDeviceFamily(df) {
+			http.SetCookie(w, &http.Cookie{
+				Name:     oauthDeviceFamilyCookie,
+				Value:    df,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   true,
+				SameSite: http.SameSiteLaxMode,
+				MaxAge:   int(10 * time.Minute / time.Second),
+			})
+		}
 		http.Redirect(w, r, url, http.StatusFound)
 	}
 }
@@ -137,7 +167,13 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			cur = lookupExistingSession(db, sc.Value)
 		}
 
-		res, err := reconcile(db, name, gu.UserID, gu.Email, cur)
+		deviceFamily := ""
+		if dc, err := r.Cookie(oauthDeviceFamilyCookie); err == nil && validDeviceFamily(dc.Value) {
+			deviceFamily = dc.Value
+		}
+		http.SetCookie(w, &http.Cookie{Name: oauthDeviceFamilyCookie, Path: "/", MaxAge: -1})
+
+		res, err := reconcile(db, name, gu.UserID, gu.Email, cur, deviceFamily)
 		if err != nil {
 			log.Printf("oauth: %s callback: reconcile failed for email=%q: %v", name, gu.Email, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
