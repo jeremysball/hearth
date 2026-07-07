@@ -727,3 +727,71 @@ test('nextHygiene computes per-item due dates like nextMeds', () => {
   assert.ok(after[0].due instanceof Date);
   assert.equal(after[0].due.getTime() - after[0].last.getTime(), 168 * 60 * 60 * 1000);
 });
+
+test('derive.insightWakeCalibration returns null with no personal data', () => {
+  reset();
+  assert.equal(derive.insightWakeCalibration('middle'), null);
+});
+
+test('derive.insightWakeCalibration narrates an earlier-than-typical consistent pattern', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 10 days of 'middle'-position wake windows, each exactly 60 min (well
+  // under the ~95-min population midpoint for the default 4-month bracket).
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS); // noon
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 60 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  const result = derive.insightWakeCalibration('middle');
+  assert.ok(result !== null, 'a consistent 35-min gap should clear the legibility bar');
+  assert.equal(result.direction, 'earlier');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.includes('earlier'), 'text should say earlier');
+});
+
+test('derive.insightWakeCalibration returns null for a scattered personal pattern (low trust)', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  const wakeMinutesByDay = [40, 220, 60, 200, 50, 230, 45, 210, 55, 225];
+  for (let i = 0; i < wakeMinutesByDay.length; i++) {
+    const d = 20 - i;
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 17 * 60 * MIN_MS); // 5pm -> 'last' position
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + wakeMinutesByDay[i] * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  assert.equal(derive.insightWakeCalibration('last'), null);
+});
+
+test('derive.insightWakeCalibration returns null when the gap from population is too small to narrate', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Consistent 92-min pattern -- within 10 min of the ~95-min population midpoint.
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 92 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  assert.equal(derive.insightWakeCalibration('middle'), null);
+});
