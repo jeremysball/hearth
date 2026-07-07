@@ -180,7 +180,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only: do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -295,6 +295,48 @@ function stdDev(values) {
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
   return Math.sqrt(variance);
+}
+
+// Recency-weighted variance of observations (same shape as weightedMedian: {value, weight}).
+// Returns null with fewer than 2 observations (variance is undefined).
+function weightedVariance(observations) {
+  if (observations.length < 2) return null;
+  const totalWeight = observations.reduce((s, o) => s + o.weight, 0);
+  const mean = observations.reduce((s, o) => s + o.value * o.weight, 0) / totalWeight;
+  const variance = observations.reduce((s, o) => s + o.weight * (o.value - mean) ** 2, 0) / totalWeight;
+  return variance;
+}
+
+// Precision-weighted shrinkage: how much to trust `n` personal observations
+// with the given variance against a population prior of `priorVariance`.
+// A consistent series (low variance) reaches high trust faster than a
+// scattered one (high variance), even at the same `n` — unlike a weight
+// that depends on `n` alone. Capped at 0.9 so the population prior is
+// never fully discarded.
+function shrinkageWeight(personalVariance, n, priorVariance) {
+  const safeVariance = Math.max(personalVariance, 1e-6);
+  const safePriorVariance = Math.max(priorVariance, 1e-6);
+  const personalPrecision = n / safeVariance;
+  const priorPrecision = 1 / safePriorVariance;
+  return Math.min(0.9, personalPrecision / (personalPrecision + priorPrecision));
+}
+
+// Parents don't log with stopwatch precision — a wake time jotted down a few
+// minutes late, or rounded to the nearest 5, looks statistically identical to
+// a genuinely tight schedule at small sample sizes. Without a floor, a lucky
+// run of closely-timed entries reads as near-zero variance and triggers
+// instant full trust (js/docs/design/insights-and-shrinkage.md's dispersion
+// weighting). Shrink the raw sample variance toward an assumed measurement-
+// noise floor (~12 min SD, the middle of a plausible 10-15 min logging
+// imprecision) with NOISE_PSEUDO_N pseudo-observations of weight, so early
+// samples can't be mistaken for confirmed consistency; the floor's influence
+// fades as n grows past it. NOISE_PSEUDO_N matches personalWakeWindow's own
+// 7-observation minimum: the prior gets as much say as the least data we'd
+// ever act on.
+const NOISE_PSEUDO_N = 7;
+const LOGGING_NOISE_VARIANCE = 144;
+function noiseFloorVariance(observedVariance, n) {
+  return (n * observedVariance + NOISE_PSEUDO_N * LOGGING_NOISE_VARIANCE) / (n + NOISE_PSEUDO_N);
 }
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
@@ -528,13 +570,15 @@ export const derive = {
       p25:    Math.round(weightedPercentile(observations, 0.25)),
       p75:    Math.round(weightedPercentile(observations, 0.75)),
       sampleSize: observations.length,
+      variance: weightedVariance(observations),
       napMedianMin: priorSleeps.length ? Math.round(weightedMedian(priorSleeps)) : 0,
     };
   },
   // Blended wake window prediction. Uses population data until 7 personal
-  // observations accumulate, then smoothly shifts toward personal data.
-  // At n=30 the personal signal reaches 90% weight; population acts as a
-  // sanity check at all times.
+  // observations accumulate, then shifts toward personal data by precision-
+  // weighted shrinkage: a consistent pattern earns trust faster than a
+  // scattered one at the same sample size; population acts as a sanity
+  // check at all times (see shrinkageWeight).
   wakeWindowPrediction(position = 'middle', priorSleepMin = null) {
     if (position === 'night') return null;
     const pop = wakeWindowRange(position);
@@ -543,7 +587,10 @@ export const derive = {
       return { ...pop, source: 'population', sampleSize: 0, label: 'typical for ' + ageLabel() };
     }
     const n = personal.sampleSize;
-    const w_p   = Math.min(0.9, Math.max(0, (n - 7) / 23));
+    // Population range is treated as a ±2 SD (95%) band around the midpoint,
+    // so SD ≈ range / 4; floored so a zero-width table row can't divide by zero.
+    const priorVariance = Math.max(((pop.high - pop.low) / 4) ** 2, 1e-6);
+    const w_p   = shrinkageWeight(noiseFloorVariance(personal.variance, n), n, priorVariance);
     const w_pop = 1 - w_p;
     let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
     // Clamp: personal signal must stay within 0.5×–2× population midpoint.
