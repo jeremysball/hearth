@@ -6,30 +6,103 @@ import (
 	"net/http"
 )
 
-func mergeFamilies(db *sql.DB, from, to string) error {
+// mergeFamilies moves every log_entries/growth_entries row from `from` into
+// `to`. Each moved row is re-stamped with a fresh rev from the TARGET
+// family's counter (ADR 0003's per-family rev invariant: a row's rev must
+// come from the counter of the family it currently lives in) so the
+// partner's next incremental pull (`rev > cursor`) actually delivers it,
+// instead of the row silently keeping a rev the partner's cursor already
+// passed. hub.Broadcast(to) after commit pushes it over SSE too.
+func mergeFamilies(db *sql.DB, hub *Hub, from, to string) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	// Move entries from `from` family to `to` family by updating family_id.
-	// ON CONFLICT DO UPDATE is required because INSERT … SELECT from the same
-	// table rejects every source row as a PK conflict (do-nothing would skip all).
-	if _, err := tx.Exec(`
-		INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at, deleted_at)
-		SELECT id, ?, type, start, payload_json, created_by, updated_at, deleted_at
-		FROM log_entries WHERE family_id = ?
-		ON CONFLICT(id) DO UPDATE SET family_id = excluded.family_id`, to, from); err != nil {
+	if err := mergeLogEntries(tx, from, to); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`
-		INSERT INTO growth_entries (id, family_id, date, weight_kg, height_cm, head_cm, note, updated_at, deleted_at)
-		SELECT id, ?, date, weight_kg, height_cm, head_cm, note, updated_at, deleted_at
-		FROM growth_entries WHERE family_id = ?
-		ON CONFLICT(id) DO UPDATE SET family_id = excluded.family_id`, to, from); err != nil {
+	if err := mergeGrowthEntries(tx, from, to); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	hub.Broadcast(to)
+	return nil
+}
+
+func mergeLogEntries(tx *sql.Tx, from, to string) error {
+	rows, err := tx.Query(`SELECT id, type, start, payload_json, created_by, updated_at, deleted_at FROM log_entries WHERE family_id = ?`, from)
+	if err != nil {
+		return err
+	}
+	type entry struct {
+		id, typ, start, payload, createdBy, updatedAt string
+		deletedAt                                      sql.NullString
+	}
+	var moved []entry
+	for rows.Next() {
+		var e entry
+		if err := rows.Scan(&e.id, &e.typ, &e.start, &e.payload, &e.createdBy, &e.updatedAt, &e.deletedAt); err != nil {
+			rows.Close()
+			return err
+		}
+		moved = append(moved, e)
+	}
+	rows.Close()
+
+	for _, e := range moved {
+		rev, err := bumpRev(tx, to)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at, deleted_at, rev)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(id) DO UPDATE SET family_id = excluded.family_id, rev = excluded.rev`,
+			e.id, to, e.typ, e.start, e.payload, e.createdBy, e.updatedAt, e.deletedAt, rev); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func mergeGrowthEntries(tx *sql.Tx, from, to string) error {
+	rows, err := tx.Query(`SELECT id, date, weight_kg, height_cm, head_cm, note, updated_at, deleted_at FROM growth_entries WHERE family_id = ?`, from)
+	if err != nil {
+		return err
+	}
+	type entry struct {
+		id, date, updatedAt        string
+		weightKg, heightCm, headCm sql.NullFloat64
+		note, deletedAt            sql.NullString
+	}
+	var moved []entry
+	for rows.Next() {
+		var e entry
+		if err := rows.Scan(&e.id, &e.date, &e.weightKg, &e.heightCm, &e.headCm, &e.note, &e.updatedAt, &e.deletedAt); err != nil {
+			rows.Close()
+			return err
+		}
+		moved = append(moved, e)
+	}
+	rows.Close()
+
+	for _, e := range moved {
+		rev, err := bumpRev(tx, to)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO growth_entries (id, family_id, date, weight_kg, height_cm, head_cm, note, updated_at, deleted_at, rev)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(id) DO UPDATE SET family_id = excluded.family_id, rev = excluded.rev`,
+			e.id, to, e.date, e.weightKg, e.heightCm, e.headCm, e.note, e.updatedAt, e.deletedAt, rev); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type resolveRequest struct {
@@ -68,7 +141,7 @@ func familySummary(db *sql.DB, familyID string) map[string]any {
 	return map[string]any{"familyId": familyID, "babyName": name, "entryCount": count}
 }
 
-func handleResolve(db *sql.DB) http.HandlerFunc {
+func handleResolve(db *sql.DB, hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req resolveRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -95,7 +168,7 @@ func handleResolve(db *sql.DB) http.HandlerFunc {
 			finish()
 			w.WriteHeader(http.StatusNoContent)
 		case "merge":
-			if err := mergeFamilies(db, current, target); err != nil {
+			if err := mergeFamilies(db, hub, current, target); err != nil {
 				http.Error(w, "merge failed", http.StatusInternalServerError)
 				return
 			}

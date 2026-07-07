@@ -248,7 +248,7 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	db.Exec(`UPDATE families SET rev_counter = 3 WHERE id = 'famS'`)
 
 	// She resolves the OAuth conflict with "Merge into my account".
-	if err := mergeFamilies(db, "famS", "famT"); err != nil {
+	if err := mergeFamilies(db, newHub(), "famS", "famT"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -259,30 +259,27 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 		t.Fatalf("expected 3 moved rows, got %d", moved)
 	}
 
-	// …but the partner's incremental pull at cursor 5 NEVER returns them
-	// (their revs are still 1..3, stamped by famS's counter), and serverRev
-	// is still 5, so the cursor never re-covers them. This assertion pins
-	// the bug: if it fails, mergeFamilies has been fixed to re-rev — update
-	// the root-cause report.
+	// mergeFamilies now re-revs every moved row from famT's own counter, so
+	// the partner's incremental pull at cursor 5 DOES deliver them, and
+	// serverRev advances past 5.
 	got := pullEntryIDs(t, "cgPartner", "famT", partnerCursor)
 	for _, id := range []string{"s1", "s2", "s3"} {
-		if got[id] {
-			t.Fatalf("partner pull unexpectedly delivered merged row %s — mergeFamilies re-revs now; update the report", id)
+		if !got[id] {
+			t.Fatalf("partner's incremental pull did not deliver merged row %s", id)
 		}
 	}
-	if rev := pullServerRev(t, "cgPartner", "famT", partnerCursor); rev != 5 {
-		t.Fatalf("serverRev moved to %d without any new write", rev)
+	if rev := pullServerRev(t, "cgPartner", "famT", partnerCursor); rev <= 5 {
+		t.Fatalf("expected serverRev to advance past 5 after the merge re-revved 3 rows, got %d", rev)
 	}
 
-	// A full resync (since=-1) DOES deliver them, proving the data exists and
-	// only the incremental cursor path loses it.
+	// A full resync (since=-1) still delivers them too.
 	full := pullEntryIDs(t, "cgPartner", "famT", -1)
 	for _, id := range []string{"s1", "s2", "s3"} {
 		if !full[id] {
 			t.Fatalf("full resync missing %s: merge lost the row entirely", id)
 		}
 	}
-	t.Logf("PROVEN: merged rows keep source-family revs (1..3) below the partner's cursor (5); incremental sync never delivers them")
+	t.Logf("PROVEN: merged rows are re-revved from the target family's counter, so the partner's incremental pull delivers them")
 }
 
 // pullServerRev runs a real handleSync pull and returns the serverRev the
