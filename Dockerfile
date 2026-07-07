@@ -8,6 +8,7 @@ RUN go mod download
 COPY index.html manifest.webmanifest styles.css sw.js assets.go ./
 COPY js/ ./js/
 COPY icons/ ./icons/
+COPY assets/ ./assets/
 COPY server/ ./server/
 COPY cmd/hearth/ ./cmd/hearth/
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/hearth-server ./cmd/hearth
