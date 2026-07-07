@@ -481,11 +481,12 @@ test('derive.wakeWindowPrediction stays a blend for a scattered personal pattern
   // 10 days of 'last'-position wake windows (previous sleep always ends at
   // 5pm, inside the 4pm-8pm bracket), but the gap to the next sleep swings
   // widely day to day — a scattered, inconsistent pattern rather than a
-  // tight one. Uses days 9-18 ago so it doesn't overlap the 'middle'
-  // fixture's days 2-10 ago, and stays clear of the 21-day cutoff.
+  // tight one. Uses days 11-20 ago so it doesn't overlap the 'middle'
+  // fixture's days 2-10 ago. This is the full disjoint band available
+  // inside the 21-day cutoff — don't shift it without re-checking overlap.
   const wakeMinutesByDay = [40, 220, 60, 200, 50, 230, 45, 210, 55, 225];
   for (let i = 0; i < wakeMinutesByDay.length; i++) {
-    const d = 18 - i;
+    const d = 20 - i;
     const base = new Date(now - d * DAY_MS);
     base.setHours(0, 0, 0, 0);
     const sleepAEnd = new Date(base.getTime() + 17 * 60 * MIN_MS); // 5pm

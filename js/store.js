@@ -311,7 +311,7 @@ function weightedVariance(observations) {
 // with the given variance against a population prior of `priorVariance`.
 // A consistent series (low variance) reaches high trust faster than a
 // scattered one (high variance), even at the same `n` — unlike a weight
-// that depends on `n` alone. Capped at `cap` so the population prior is
+// that depends on `n` alone. Capped at 0.9 so the population prior is
 // never fully discarded.
 function shrinkageWeight(personalVariance, n, priorVariance) {
   const safeVariance = Math.max(personalVariance, 1e-6);
