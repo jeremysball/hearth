@@ -882,3 +882,45 @@ test('derive.insightOvertiredLag returns null with too few valid triples', () =>
   reset();
   assert.equal(derive.insightOvertiredLag(), null);
 });
+
+test('derive.insightDurationTrend narrates a lengthening trend', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Older half (11-20 days ago): 11 naps at exactly 70 min.
+  for (let d = 20; d >= 11; d--) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  // Recent half (1-10 days ago): 10 naps at exactly 100 min.
+  for (let d = 10; d >= 1; d--) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 100 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  const result = derive.insightDurationTrend();
+  assert.ok(result !== null, 'a 30-min lengthening split should clear the threshold');
+  assert.equal(result.deltaMin > 0, true, 'delta should be positive for a lengthening trend');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.includes('longer'), 'text should say longer');
+});
+
+test('derive.insightDurationTrend returns null with no meaningful change', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  for (let d = 20; d >= 1; d--) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 85 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  assert.equal(derive.insightDurationTrend(), null);
+});
+
+test('derive.insightDurationTrend returns null with too few naps', () => {
+  reset();
+  assert.equal(derive.insightDurationTrend(), null);
+});

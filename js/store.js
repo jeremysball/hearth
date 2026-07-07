@@ -687,6 +687,47 @@ export const derive = {
       onTimeGoodP, overshotGoodP, sampleSize: pairs.length,
     };
   },
+  // Is her typical nap length trending up or down over the last 3 weeks?
+  // Splits the window in half and shrinks each half's median toward the
+  // whole-window's own recency-weighted median (rather than an external
+  // age table -- no population duration data exists in this codebase),
+  // weighted by how consistent each half is -- a noisy half can't produce
+  // a confident-looking trend line on its own.
+  insightDurationTrend() {
+    const now = Date.now();
+    const cutoffMs = now - 21 * DAY;
+    const naps = sleeps()
+      .filter((e) => e.end && new Date(e.start).getTime() > cutoffMs)
+      .map((e) => ({
+        value: (new Date(e.end) - new Date(e.start)) / MIN,
+        weight: recencyWeight(new Date(e.start), now),
+        start: new Date(e.start),
+      }))
+      .filter((o) => o.value >= 10 && o.value <= 360);
+    if (naps.length < 14) return null;
+    const splitMs = now - 10.5 * DAY;
+    const recent = naps.filter((o) => o.start.getTime() >= splitMs);
+    const older = naps.filter((o) => o.start.getTime() < splitMs);
+    if (recent.length < 6 || older.length < 6) return null;
+    const asObs = (list) => list.map((o) => ({ value: o.value, weight: o.weight }));
+    const priorVariance = Math.max(weightedVariance(asObs(naps)) ?? 1e-6, 1e-6);
+    const grandMedian = weightedMedian(asObs(naps));
+    const shrinkHalf = (half) => {
+      const halfVariance = weightedVariance(asObs(half)) ?? priorVariance;
+      const w = shrinkageWeight(noiseFloorVariance(halfVariance, half.length), half.length, priorVariance);
+      return w * weightedMedian(asObs(half)) + (1 - w) * grandMedian;
+    };
+    const recentShrunk = shrinkHalf(recent);
+    const olderShrunk = shrinkHalf(older);
+    const deltaMin = recentShrunk - olderShrunk;
+    const MIN_NARRATABLE_DELTA_MIN = 10;
+    if (Math.abs(deltaMin) < MIN_NARRATABLE_DELTA_MIN) return null;
+    const direction = deltaMin > 0 ? 'longer' : 'shorter';
+    return {
+      text: `Nap lengths are trending ${direction} over the last few weeks.`,
+      deltaMin: Math.round(deltaMin), recentShrunk: Math.round(recentShrunk), olderShrunk: Math.round(olderShrunk),
+    };
+  },
   // Recency-weighted median morning wake time. Confidence is gated by sample
   // size and standard deviation: variable schedules cap at 'low'.
   circadianAnchor() {
