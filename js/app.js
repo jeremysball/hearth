@@ -1,6 +1,6 @@
 // app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
-import { drainOutbox, getLastSyncRev, setLastSyncRev, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
+import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
@@ -841,29 +841,32 @@ document.addEventListener('sheet:closed', () => {
 async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
-  // Push queued changes, but never let a stuck outbox block the pull. A write
-  // the server transiently rejected (e.g. SQLITE_BUSY when both caregivers log
-  // at once) stays queued to retry — and if that also halted the pull, this
-  // device would stop receiving the other caregiver's entries too, desyncing
-  // both directions from one failed push. The pull is read-only and safe: it
-  // merges by id and never drops the local, not-yet-pushed entry.
-  const drained = await drainOutbox(fetch);
-  if (!drained) log.warn('sync', 'outbox drain incomplete; pulling anyway');
   try {
+    // Pull first, before draining the outbox. The session cookie already
+    // points at whatever family this pull answers for — if that's a switch
+    // from the family our cursor and outbox belong to (OAuth restore into a
+    // stale identity, a conflict-resolution merge/switch, remove +
+    // re-invite), draining now would push the old family's queued writes
+    // into the new family before we ever notice. Detecting the switch here,
+    // ahead of any drain, is what makes quarantining the outbox actually
+    // prevent the cross-family leak instead of reacting to it too late.
     let res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
     let data = await res.json();
-    // This device's cursor belongs to a different family than the one the
-    // session just answered for (OAuth restore into a stale identity, a
-    // conflict-resolution merge/switch, remove + re-invite). The response
-    // above was filtered by the wrong family's watermark, so re-pull from
-    // scratch rather than trust it.
     if (applySyncFamily(data.familyId)) {
-      log.warn('sync', 'family switch detected, forcing full resync');
+      log.warn('sync', 'family switch detected before any outbox drain, forcing full resync');
       res = await fetch('/api/sync?since=-1', { credentials: 'include' });
       if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
       data = await res.json();
+      if (data.familyId !== getLastSyncFamilyId()) { log.warn('sync', 'family changed again mid-resync, aborting'); return; }
     }
+    // The pull above is read-only and merges by id, so it's safe to apply
+    // before draining: it never drops a local, not-yet-pushed entry. Only
+    // drain once we know the outbox targets the family this session is in —
+    // a write the server transiently rejected (e.g. SQLITE_BUSY when both
+    // caregivers log at once) just stays queued to retry.
+    const drained = await drainOutbox(fetch);
+    if (!drained) log.warn('sync', 'outbox drain incomplete');
     const n = syncChangeCount(data);
     applySyncResponse(data);
     setLastSyncRev(data.serverRev);
@@ -898,7 +901,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 setInterval(syncOnce, 15000);
-setSyncTrigger(() => { drainOutbox(fetch); syncOnce(); });
+setSyncTrigger(syncOnce);
 
 document.addEventListener('pointerdown', warmAudio, { once: true });
 document.addEventListener('DOMContentLoaded', init);
