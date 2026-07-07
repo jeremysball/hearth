@@ -180,7 +180,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only: do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -319,6 +319,24 @@ function shrinkageWeight(personalVariance, n, priorVariance) {
   const personalPrecision = n / safeVariance;
   const priorPrecision = 1 / safePriorVariance;
   return Math.min(0.9, personalPrecision / (personalPrecision + priorPrecision));
+}
+
+// Parents don't log with stopwatch precision — a wake time jotted down a few
+// minutes late, or rounded to the nearest 5, looks statistically identical to
+// a genuinely tight schedule at small sample sizes. Without a floor, a lucky
+// run of closely-timed entries reads as near-zero variance and triggers
+// instant full trust (js/docs/design/insights-and-shrinkage.md's dispersion
+// weighting). Shrink the raw sample variance toward an assumed measurement-
+// noise floor (~12 min SD, the middle of a plausible 10-15 min logging
+// imprecision) with NOISE_PSEUDO_N pseudo-observations of weight, so early
+// samples can't be mistaken for confirmed consistency; the floor's influence
+// fades as n grows past it. NOISE_PSEUDO_N matches personalWakeWindow's own
+// 7-observation minimum: the prior gets as much say as the least data we'd
+// ever act on.
+const NOISE_PSEUDO_N = 7;
+const LOGGING_NOISE_VARIANCE = 144;
+function noiseFloorVariance(observedVariance, n) {
+  return (n * observedVariance + NOISE_PSEUDO_N * LOGGING_NOISE_VARIANCE) / (n + NOISE_PSEUDO_N);
 }
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
@@ -572,7 +590,7 @@ export const derive = {
     // Population range is treated as a ±2 SD (95%) band around the midpoint,
     // so SD ≈ range / 4; floored so a zero-width table row can't divide by zero.
     const priorVariance = Math.max(((pop.high - pop.low) / 4) ** 2, 1e-6);
-    const w_p   = shrinkageWeight(personal.variance, n, priorVariance);
+    const w_p   = shrinkageWeight(noiseFloorVariance(personal.variance, n), n, priorVariance);
     const w_pop = 1 - w_p;
     let midpoint = Math.round(w_p * personal.median + w_pop * pop.midpoint);
     // Clamp: personal signal must stay within 0.5×–2× population midpoint.
