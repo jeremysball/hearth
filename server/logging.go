@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -92,13 +94,79 @@ type requestLogInfo struct {
 	Geo       geoInfo
 }
 
+// requestLogDedupWindow bounds how often an identical (method, path, status)
+// request line repeats in the log. Polling endpoints (/api/events, /api/sync)
+// hit the same outcome every few seconds, which used to bury rare but
+// important lines like an oauth callback failure under a wall of repeats.
+const requestLogDedupWindow = 30 * time.Second
+
+type logDedupEntry struct {
+	lastLogged time.Time
+	suppressed int
+}
+
+var requestDedup = struct {
+	mu      sync.Mutex
+	entries map[string]*logDedupEntry
+}{entries: map[string]*logDedupEntry{}}
+
+// allowRequestLog reports whether the (method, path, status) triple should be
+// printed now, and how many identical requests were suppressed since it was
+// last printed.
+func allowRequestLog(key string) (ok bool, suppressed int) {
+	requestDedup.mu.Lock()
+	defer requestDedup.mu.Unlock()
+	now := time.Now()
+	e, exists := requestDedup.entries[key]
+	if !exists {
+		requestDedup.entries[key] = &logDedupEntry{lastLogged: now}
+		return true, 0
+	}
+	if now.Sub(e.lastLogged) < requestLogDedupWindow {
+		e.suppressed++
+		return false, 0
+	}
+	suppressed = e.suppressed
+	e.suppressed = 0
+	e.lastLogged = now
+	return true, suppressed
+}
+
+func resetLogDedup() {
+	requestDedup.mu.Lock()
+	defer requestDedup.mu.Unlock()
+	requestDedup.entries = map[string]*logDedupEntry{}
+}
+
+// maxLoggedUserAgentLen bounds the "ua=" field. Full browser UA strings
+// ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15
+// (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1") are mostly
+// boilerplate and dominate the width of every request line; keep the
+// device/browser-identifying prefix and drop the rest.
+const maxLoggedUserAgentLen = 40
+
+func shortenUserAgent(ua string) string {
+	ua = strings.TrimSpace(ua)
+	r := []rune(ua)
+	if len(r) <= maxLoggedUserAgentLen {
+		return ua
+	}
+	return string(r[:maxLoggedUserAgentLen]) + "…"
+}
+
 func logRequest(info requestLogInfo) {
+	path := redactTokenPath(info.Path)
+	key := info.Method + " " + path + " " + strconv.Itoa(info.Status)
+	ok, suppressed := allowRequestLog(key)
+	if !ok {
+		return
+	}
 	fields := []string{
 		currentLogStyle.event("request"),
 		"method=" + sanitizeLogValue(info.Method),
 		currentLogStyle.status(info.Status),
 		"duration=" + info.Duration.Round(time.Millisecond).String(),
-		"path=" + sanitizeLogValue(redactTokenPath(info.Path)),
+		"path=" + sanitizeLogValue(path),
 		"ip=" + sanitizeLogValue(info.IP),
 		"remote=" + sanitizeLogValue(info.Remote),
 		"host=" + sanitizeLogValue(info.Host),
@@ -106,12 +174,15 @@ func logRequest(info requestLogInfo) {
 	fields = appendIfSet(fields, "xff", normalizeListHeader(info.XFF))
 	fields = appendIfSet(fields, "xreal", info.XRealIP)
 	fields = appendIfSet(fields, "forwarded", info.Forwarded)
-	fields = appendIfSet(fields, "ua", info.UserAgent)
+	fields = appendIfSet(fields, "ua", shortenUserAgent(info.UserAgent))
 	fields = appendIfSet(fields, "caregiver", info.Caregiver)
 	fields = appendIfSet(fields, "family", info.Family)
 	fields = appendIfSet(fields, "geo_country", info.Geo.Country)
 	fields = appendIfSet(fields, "geo_region", info.Geo.Region)
 	fields = appendIfSet(fields, "geo_city", info.Geo.City)
+	if suppressed > 0 {
+		fields = append(fields, "suppressed="+strconv.Itoa(suppressed))
+	}
 	log.Print(strings.Join(fields, " "))
 }
 
