@@ -8,7 +8,12 @@ export const CHANGELOG = [
       'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.'
     ],
     fixes: [
-      'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.'
+      'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
+      'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',
+      'The night sky\'s constellation now shows varying star sizes and renders a bit larger, so it no longer looks cramped.',
+      'Thinned out Aquarius, Taurus, Gemini, Virgo, Scorpio, and Sagittarius, which were too dense and tangled compared to the rest of the zodiac constellations.',
+      'Fixed overlapping stars in the night sky\'s constellations, and gave each star a size based on how many lines connect to it instead of a random size.',
+      'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.'
     ]
   },
   {
