@@ -18,6 +18,22 @@ function barChart(data, key, unit, fmtFn, tone) {
   </div>`;
 }
 
+function insightsCard() {
+  const insights = [
+    derive.insightWakeCalibration(),
+    derive.insightOvertiredLag(),
+    derive.insightDurationTrend(),
+    derive.insightMethodQuality(),
+  ].filter(Boolean);
+  if (!insights.length) return '';
+  return `<div class="card chart-card insight-card">
+    <div class="chart-hd"><h2>Insights</h2></div>
+    <ul class="insight-list">
+      ${insights.map((i) => `<li>${esc(i.text)}</li>`).join('')}
+    </ul>
+  </div>`;
+}
+
 export function trends() {
   const week = derive.week();
   const days = week.length || 1;
@@ -41,6 +57,7 @@ export function trends() {
       <div class="card stat"><div class="stat-k">Avg bottle vol / day</div><div class="stat-v">${fmt.vol(avgBottleVol)}</div></div>
       <div class="card stat"><div class="stat-k">Avg feed vol / day</div><div class="stat-v">${fmt.vol(avgFeedVol)}</div></div>
     </div>
+    ${insightsCard()}
 
     <div class="card chart-card">
       <div class="chart-hd"><h2>Sleep</h2><span class="chart-note">hours per day</span></div>
