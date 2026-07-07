@@ -820,3 +820,65 @@ test('isGoodQuality treats Good and Great as good, others as not', () => {
   assert.equal(isGoodQuality('Okay'), false);
   assert.equal(isGoodQuality('Restless'), false);
 });
+
+test('derive.insightOvertiredLag narrates when overshooting predicts a rougher next nap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 12 distinct days, each with an isolated napPrev -> napI -> napNext triple.
+  // napPrev always ends at 9:20am ('first' position, pop high = 95 min for
+  // the default 4-month bracket). Half the days overshoot the wake window
+  // before napI by 55 min; the other half undershoot it. napNext's quality
+  // is set so the overshoot group is uniformly bad and the on-time group
+  // uniformly good, giving a large, unambiguous gap.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS); // 9:20am
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70; // pop 'first' high = 95: 150 overshoots, 70 undershoots
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: overshoot ? 'Restless' : 'Great' });
+  }
+  const result = derive.insightOvertiredLag();
+  assert.ok(result !== null, 'a clean 6/6 split should clear the threshold');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.onTimeGoodP > result.overshotGoodP, 'on-time group should show a higher good-quality rate');
+});
+
+test('derive.insightOvertiredLag returns null with no meaningful quality gap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same overshoot/on-time split as above, but napNext quality is unrelated
+  // to overshoot (alternating regardless of group) -- no real signal.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70;
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  assert.equal(derive.insightOvertiredLag(), null);
+});
+
+test('derive.insightOvertiredLag returns null with too few valid triples', () => {
+  reset();
+  assert.equal(derive.insightOvertiredLag(), null);
+});

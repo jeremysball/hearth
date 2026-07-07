@@ -651,6 +651,42 @@ export const derive = {
       direction, gapMin: Math.round(gapMin), w_p, sampleSize: n,
     };
   },
+  // Does overshooting the wake window before nap i predict worse quality on
+  // nap i+1 (the *next* nap, not the same one)? Correlating overshoot with
+  // the same nap's own quality would be confounded -- a nap that's already
+  // going badly may get a low quality rating for unrelated reasons. The
+  // lagged version asks the causally cleaner question: does today's overshoot
+  // predict tomorrow's nap.
+  insightOvertiredLag() {
+    const cutoffMs = Date.now() - 21 * DAY;
+    const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs)
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+    const pairs = [];
+    for (let i = 1; i < ss.length - 1; i++) {
+      const napPrev = ss[i - 1], napI = ss[i], napNext = ss[i + 1];
+      if (!napPrev.end || !napNext.quality) continue;
+      const wakeGapMin = (new Date(napI.start) - new Date(napPrev.end)) / MIN;
+      if (wakeGapMin < 10 || wakeGapMin > 360) continue;
+      const pos = wakePosition(new Date(napPrev.end));
+      if (pos === 'night') continue;
+      const pop = wakeWindowRange(pos);
+      pairs.push({ overshoot: wakeGapMin - pop.high, goodNext: isGoodQuality(napNext.quality) });
+    }
+    const OVERSHOOT_THRESHOLD_MIN = 15;
+    const overshotGroup = pairs.filter((p) => p.overshoot > OVERSHOOT_THRESHOLD_MIN);
+    const onTimeGroup = pairs.filter((p) => p.overshoot <= OVERSHOOT_THRESHOLD_MIN);
+    if (pairs.length < 8 || overshotGroup.length < 4 || onTimeGroup.length < 4) return null;
+    const priorP = pairs.filter((p) => p.goodNext).length / pairs.length;
+    const PRIOR_STRENGTH = 6;
+    const overshotGoodP = betaShrinkage(overshotGroup.filter((p) => p.goodNext).length, overshotGroup.length, priorP, PRIOR_STRENGTH);
+    const onTimeGoodP = betaShrinkage(onTimeGroup.filter((p) => p.goodNext).length, onTimeGroup.length, priorP, PRIOR_STRENGTH);
+    const MIN_NARRATABLE_GAP = 0.15;
+    if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_GAP) return null;
+    return {
+      text: 'A late wake window often means a rougher next nap.',
+      onTimeGoodP, overshotGoodP, sampleSize: pairs.length,
+    };
+  },
   // Recency-weighted median morning wake time. Confidence is gated by sample
   // size and standard deviation: variable schedules cap at 'low'.
   circadianAnchor() {
