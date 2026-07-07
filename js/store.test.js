@@ -425,15 +425,17 @@ test('derive.personalWakeWindow returns null with no data for that position', ()
   assert.equal(result, null);
 });
 
-test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep pairs', () => {
+test('derive.personalWakeWindow returns ~90-min median from 10 consecutive sleep pairs', () => {
   const now = Date.now();
   const DAY_MS = 86400000;
   const MIN_MS = 60000;
-  // Add 9 days of sleep pairs (days 10 to 2 ago). Each pair:
+  // Add 10 days of sleep pairs (days 10 to 1 ago). Each pair:
   //   Sleep A: ends at noon local (wakePosition = 'middle')
   //   Sleep B: starts 90 min later (noon + 90 min)
   // The algorithm pairs consecutive sleeps: (B_day, A_day) → 90-min wake window.
-  for (let d = 10; d >= 2; d--) {
+  // Stays clear of day 0 (an unrelated ongoing sleep from an earlier test
+  // lives near "now") and of the scattered fixture's days 11-20.
+  for (let d = 10; d >= 1; d--) {
     const base = new Date(now - d * DAY_MS);
     base.setHours(0, 0, 0, 0);
     const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);   // noon
@@ -444,8 +446,8 @@ test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep 
     addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
   }
   const result = derive.personalWakeWindow('middle');
-  assert.ok(result !== null, 'should return data with 9 middle-position observations');
-  assert.ok(result.sampleSize >= 9, `sampleSize ${result.sampleSize} should be ≥ 9`);
+  assert.ok(result !== null, 'should return data with 10 middle-position observations');
+  assert.ok(result.sampleSize >= 10, `sampleSize ${result.sampleSize} should be ≥ 10`);
   assert.ok(result.median >= 85 && result.median <= 95, `median ${result.median} should be near 90`);
   assert.ok(result.p25 <= result.median, 'p25 ≤ median');
   assert.ok(result.median <= result.p75, 'median ≤ p75');
@@ -460,11 +462,13 @@ test('derive.wakeWindowPrediction returns population prior when position has no 
   assert.equal(pred.sampleSize, 0);
 });
 
-test('derive.wakeWindowPrediction reaches full personal trust quickly for a perfectly consistent pattern', () => {
-  // The personalWakeWindow test added 9 'middle' observations at exactly 90
-  // min each (zero variance) — a dispersion-aware weight should cap out at
-  // 0.9 immediately, rather than needing ~30 observations like the old
-  // sample-count-only ramp required.
+test('derive.wakeWindowPrediction reaches full personal trust for a perfectly consistent pattern', () => {
+  // The personalWakeWindow test added 11 'middle' observations at exactly 90
+  // min each (zero recorded variance) — dispersion-aware weighting reaches
+  // 0.9 faster than the old sample-count-only ramp (which needed ~30), but
+  // not instantly: a noise floor (js/store.js noiseFloorVariance) assumes
+  // some of that apparent zero variance could just be logging imprecision,
+  // so it still takes more than the bare 7-observation minimum.
   const pred = derive.wakeWindowPrediction('middle');
   assert.equal(pred.source, 'personal');
   const pop = wakeWindowRange('middle');
@@ -472,6 +476,16 @@ test('derive.wakeWindowPrediction reaches full personal trust quickly for a perf
   assert.ok(pred.midpoint >= pop.low && pred.midpoint <= pop.high,
     `midpoint ${pred.midpoint} should stay within population range`);
   assert.ok(pred.label.includes("pattern"), 'label should mention her own pattern');
+});
+
+test('shrinkageWeight: noiseFloorVariance keeps a small sample of apparent zero variance from over-trusting', () => {
+  const { noiseFloorVariance, shrinkageWeight } = _testHelpers;
+  const priorVariance = 56.25; // ~5-7mo 'middle' bracket population spread
+  // 9 observations with zero recorded variance — the bare personalWakeWindow
+  // minimum. Logging imprecision means this shouldn't yet mean full trust.
+  const adjusted = noiseFloorVariance(0, 9);
+  const w = shrinkageWeight(adjusted, 9, priorVariance);
+  assert.ok(w < 0.9, `weight ${w} should stay below the cap at only 9 samples of apparent zero variance`);
 });
 
 test('derive.wakeWindowPrediction stays a blend for a scattered personal pattern', () => {
