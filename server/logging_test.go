@@ -12,6 +12,7 @@ import (
 
 func captureLogs(t *testing.T) *bytes.Buffer {
 	t.Helper()
+	resetLogDedup()
 	var buf bytes.Buffer
 	prev := log.Writer()
 	log.SetOutput(&buf)
@@ -226,6 +227,57 @@ func TestRedactTokenPathRedactsKnownRoutes(t *testing.T) {
 		if got := redactTokenPath(path); got != want {
 			t.Errorf("redactTokenPath(%q) = %q, want %q", path, got, want)
 		}
+	}
+}
+
+func TestLogRequestDedupsRepeatedRequestsWithinWindow(t *testing.T) {
+	logs := captureLogs(t)
+
+	info := requestLogInfo{Method: "GET", Path: "/api/events", Status: http.StatusUnauthorized}
+	logRequest(info)
+	logRequest(info)
+	logRequest(info)
+
+	lines := strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected repeated identical requests to log once, got %d lines: %q", len(lines), logs.String())
+	}
+
+	// A different status for the same path is not deduped against the first key.
+	logRequest(requestLogInfo{Method: "GET", Path: "/api/events", Status: http.StatusOK})
+	lines = strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected a distinct status to log separately, got %d lines: %q", len(lines), logs.String())
+	}
+
+	// Once the dedup window has elapsed, the next occurrence logs again and
+	// reports how many were suppressed in between.
+	requestDedup.mu.Lock()
+	requestDedup.entries["GET /api/events 401"].lastLogged = time.Now().Add(-requestLogDedupWindow - time.Second)
+	requestDedup.mu.Unlock()
+	logRequest(info)
+	lines = strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected the request to log again after the window elapsed, got %d lines: %q", len(lines), logs.String())
+	}
+	if !strings.Contains(lines[2], "suppressed=2") {
+		t.Fatalf("expected suppressed count of 2, got %q", lines[2])
+	}
+}
+
+func TestLogRequestTruncatesLongUserAgent(t *testing.T) {
+	logs := captureLogs(t)
+
+	longUA := "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1"
+	logRequest(requestLogInfo{Method: "GET", Path: "/api/me", Status: http.StatusOK, UserAgent: longUA})
+
+	line := logs.String()
+	if strings.Contains(line, longUA) {
+		t.Fatalf("expected long user agent to be truncated, got %q", line)
+	}
+	want := `ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 …"`
+	if !strings.Contains(line, want) {
+		t.Fatalf("expected truncated ua %q in %q", want, line)
 	}
 }
 
