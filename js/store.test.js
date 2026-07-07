@@ -990,6 +990,35 @@ test('derive.insightMethodQuality returns null with too few naps in one group', 
   assert.equal(derive.insightMethodQuality(), null);
 });
 
+test('derive.insightMethodQuality returns null (not NaN or a throw) with zero naps', () => {
+  reset();
+  assert.equal(derive.insightMethodQuality(), null);
+});
+
+test('derive.insightOvertiredLag returns null when every pair falls in the same overshoot group', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 10 triples, all with a large overshoot -- the on-time group stays empty,
+  // exercising shrunkGroupRates with one empty group rather than the
+  // pairs.length < 8 gate the "too few valid triples" test exercises.
+  for (let d = 1; d <= 10; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const napIStart = new Date(napPrevEnd.getTime() + 150 * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: 'Restless' });
+  }
+  assert.equal(derive.insightOvertiredLag(), null);
+});
+
 test('isNap treats a daytime start as a nap and a nighttime start as not', () => {
   const { isNap } = _testHelpers;
   assert.equal(isNap({ start: new Date(2026, 0, 1, 13, 0).toISOString() }), true);

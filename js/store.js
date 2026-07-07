@@ -381,6 +381,19 @@ const MIN_NARRATABLE_QUALITY_GAP = 0.15;
 // every other method string counts as assisted.
 const SELF_SETTLED_METHOD = 'On own in bed';
 
+// Splits items into two groups by predicate and Beta-shrinks each group's
+// "good" rate toward the shared prior across all items. Used by the two
+// Beta-Binomial quality insights (overtired-lag, method comparison); callers
+// own group-size gating and gap-direction/message logic, since those differ
+// (overtired-lag is a one-directional claim, method comparison is not).
+function shrunkGroupRates(items, groupAPredicate, isGoodFn) {
+  const groupA = items.filter(groupAPredicate);
+  const groupB = items.filter((e) => !groupAPredicate(e));
+  const priorP = items.filter(isGoodFn).length / items.length;
+  const rateOf = (group) => betaShrinkage(group.filter(isGoodFn).length, group.length, priorP, QUALITY_PRIOR_STRENGTH);
+  return { groupA, groupB, aP: rateOf(groupA), bP: rateOf(groupB) };
+}
+
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
 // The banner fires when the baby is within onsetWeeksBefore weeks of minMonths.
 const REGRESSION_TABLE = [
@@ -694,15 +707,16 @@ export const derive = {
       const pos = wakePosition(new Date(napPrev.end));
       if (pos === 'night') continue;
       const pop = wakeWindowRange(pos);
-      pairs.push({ overshoot: wakeGapMin - pop.high, goodNext: isGoodQuality(napNext.quality) });
+      pairs.push({ overshoot: wakeGapMin - pop.high, good: isGoodQuality(napNext.quality) });
     }
+    if (pairs.length < 8) return null;
     const OVERSHOOT_THRESHOLD_MIN = 15;
-    const overshotGroup = pairs.filter((p) => p.overshoot > OVERSHOOT_THRESHOLD_MIN);
-    const onTimeGroup = pairs.filter((p) => p.overshoot <= OVERSHOOT_THRESHOLD_MIN);
-    if (pairs.length < 8 || overshotGroup.length < 4 || onTimeGroup.length < 4) return null;
-    const priorP = pairs.filter((p) => p.goodNext).length / pairs.length;
-    const overshotGoodP = betaShrinkage(overshotGroup.filter((p) => p.goodNext).length, overshotGroup.length, priorP, QUALITY_PRIOR_STRENGTH);
-    const onTimeGoodP = betaShrinkage(onTimeGroup.filter((p) => p.goodNext).length, onTimeGroup.length, priorP, QUALITY_PRIOR_STRENGTH);
+    const { groupA: overshotGroup, groupB: onTimeGroup, aP: overshotGoodP, bP: onTimeGoodP } =
+      shrunkGroupRates(pairs, (p) => p.overshoot > OVERSHOOT_THRESHOLD_MIN, (p) => p.good);
+    if (overshotGroup.length < 4 || onTimeGroup.length < 4) return null;
+    // Directional on purpose: the narration claims overshoot makes the next
+    // nap *worse*, so only that direction of gap is narratable -- an overshoot
+    // group that happens to look better is not a story this insight tells.
     if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_QUALITY_GAP) return null;
     return {
       text: 'A late wake window often means a rougher next nap.',
@@ -759,13 +773,10 @@ export const derive = {
   insightMethodQuality() {
     const cutoffMs = Date.now() - 21 * DAY;
     const naps = sleeps().filter((e) => e.end && new Date(e.start).getTime() > cutoffMs && e.method && e.quality && isNap(e));
-    const selfSettled = naps.filter((e) => e.method === SELF_SETTLED_METHOD);
-    const assisted = naps.filter((e) => e.method !== SELF_SETTLED_METHOD);
     const MIN_PER_GROUP = 5;
+    const { groupA: selfSettled, groupB: assisted, aP: selfP, bP: assistedP } =
+      shrunkGroupRates(naps, (e) => e.method === SELF_SETTLED_METHOD, (e) => isGoodQuality(e.quality));
     if (selfSettled.length < MIN_PER_GROUP || assisted.length < MIN_PER_GROUP) return null;
-    const priorP = naps.filter((e) => isGoodQuality(e.quality)).length / naps.length;
-    const selfP = betaShrinkage(selfSettled.filter((e) => isGoodQuality(e.quality)).length, selfSettled.length, priorP, QUALITY_PRIOR_STRENGTH);
-    const assistedP = betaShrinkage(assisted.filter((e) => isGoodQuality(e.quality)).length, assisted.length, priorP, QUALITY_PRIOR_STRENGTH);
     const gap = selfP - assistedP;
     if (Math.abs(gap) < MIN_NARRATABLE_QUALITY_GAP) return null;
     const better = gap > 0 ? 'Self-settled' : 'Assisted';
