@@ -1236,9 +1236,9 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
    y22% with a bottom edge around y29% — is enough; no mode-conditional
    override needed. The moon still paints after the stars in the DOM, so it
    stays unambiguously in front. */
-.sky-constellation { position: absolute; left: 56%; top: 35%; width: 38%; opacity: 1; }
+.sky-constellation { position: absolute; left: 50%; top: 33%; width: 46%; opacity: 1; }
 .sky-constellation line { stroke: oklch(0.95 0.03 90 / 0.28); stroke-width: 0.16; }
-.sky-constellation circle { r: 0.62; fill: oklch(0.98 0.02 90 / 0.95); filter: drop-shadow(0 0 1.1px oklch(0.92 0.05 85 / .75)); }
+.sky-constellation circle { fill: oklch(0.98 0.02 90 / 0.95); filter: drop-shadow(0 0 1.1px oklch(0.92 0.05 85 / .75)); }
 [data-sky="twilight"] .sky-stars { opacity: .5; }
 
 /* sun: a lit sphere (off-center specular highlight, warm rim via SVG gradient
