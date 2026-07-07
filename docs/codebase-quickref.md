@@ -51,6 +51,7 @@ A dense orientation doc for new sessions. Read before exploring files.
 - `derive`: object of computed getters (last sleep, last feed, awake time, etc.)
 - `wakeWindowRange(position)`: age-appropriate awake window `{low, high, midpoint, ...}` in minutes
 - `derive.wakeWindowPrediction(position)`: blends `wakeWindowRange` with `derive.personalWakeWindow` via a precision-weighted shrinkage (`shrinkageWeight` in `_testHelpers`) — a consistent personal pattern earns trust faster than a scattered one at the same sample size
+- `derive.insightWakeCalibration()`, `derive.insightOvertiredLag()`, `derive.insightDurationTrend()`, `derive.insightMethodQuality()`: Trends' Insights section — each returns `null` below its data/legibility threshold or `{text, ...}` when it clears the bar. Built on the same shrinkage primitives as `wakeWindowPrediction` (Normal-Normal for the first and third, Beta-Binomial `betaShrinkage` for the second and fourth).
 - `ageLabel()`: human-readable age string
 - `applySyncResponse(resp)`: merges server sync data into state
 - `enqueueBabySync()`, `enqueueSettingsSync()`: mark items for next sync
