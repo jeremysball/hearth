@@ -47,20 +47,24 @@ function saveCursor(familyId, rev) {
 
 export function getLastSyncRev() { return loadCursor().rev; }
 export function setLastSyncRev(rev) { saveCursor(loadCursor().familyId, rev); }
+export function getLastSyncFamilyId() { return loadCursor().familyId; }
 
 // Called with the familyId a sync response came back for. If the device's
 // cursor already belongs to a different, non-empty family, this is a family
 // switch: the outbox is quarantined (dead-lettered, not drained cross-family)
 // and the cursor is reset so the caller re-pulls with since=-1. Returns true
-// when a switch was detected.
+// when a switch was detected. A falsy familyId (should never happen for an
+// authenticated response, but is the safer default) is a no-op rather than
+// a guess either way.
 export function applySyncFamily(familyId) {
+  if (!familyId) return false;
   const cur = loadCursor();
-  if (cur.familyId && familyId && cur.familyId !== familyId) {
+  if (cur.familyId && cur.familyId !== familyId) {
     quarantineOutbox();
     saveCursor(familyId, '');
     return true;
   }
-  if (!cur.familyId && familyId) saveCursor(familyId, cur.rev);
+  if (!cur.familyId) saveCursor(familyId, cur.rev);
   return false;
 }
 

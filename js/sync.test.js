@@ -9,7 +9,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, applySyncFamily, clearSyncState, syncChangeCount, loadDeadLetters, dismissDeadLetter } = await import('./sync.js');
+const { loadOutbox, saveOutbox, enqueue, mergeById, drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, clearSyncState, syncChangeCount, loadDeadLetters, dismissDeadLetter } = await import('./sync.js');
 
 test('enqueue appends an op and loadOutbox reads it back', () => {
   saveOutbox([]);
@@ -217,6 +217,23 @@ test('applySyncFamily detects a family switch, resets the cursor, and quarantine
   assert.equal(letters.length, 1);
   assert.equal(letters[0].status, 'family-switch');
   assert.equal(letters[0].op.url, '/api/entries/x');
+});
+
+test('applySyncFamily with a falsy familyId is a no-op', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  applySyncFamily('famA');
+  setLastSyncRev(12);
+  const switched = applySyncFamily('');
+  assert.equal(switched, false);
+  assert.equal(getLastSyncFamilyId(), 'famA');
+  assert.equal(getLastSyncRev(), '12');
+});
+
+test('getLastSyncFamilyId defaults to empty string and tracks applySyncFamily', () => {
+  localStorage.removeItem('hearth.lastsyncrev.v1');
+  assert.equal(getLastSyncFamilyId(), '');
+  applySyncFamily('famA');
+  assert.equal(getLastSyncFamilyId(), 'famA');
 });
 
 test('clearSyncState wipes the cursor, outbox, and dead letters', () => {
