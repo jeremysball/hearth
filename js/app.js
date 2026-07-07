@@ -841,8 +841,14 @@ document.addEventListener('sheet:closed', () => {
 async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
+  // Push queued changes, but never let a stuck outbox block the pull. A write
+  // the server transiently rejected (e.g. SQLITE_BUSY when both caregivers log
+  // at once) stays queued to retry — and if that also halted the pull, this
+  // device would stop receiving the other caregiver's entries too, desyncing
+  // both directions from one failed push. The pull is read-only and safe: it
+  // merges by id and never drops the local, not-yet-pushed entry.
   const drained = await drainOutbox(fetch);
-  if (!drained) { log.warn('sync', 'outbox drain failed, aborting pull'); return; }
+  if (!drained) log.warn('sync', 'outbox drain incomplete; pulling anyway');
   try {
     const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }

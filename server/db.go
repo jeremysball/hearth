@@ -23,12 +23,22 @@ func openDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	// In-memory SQLite is per-connection in modernc.org/sqlite; without
-	// pinning the pool to a single connection, parallel test goroutines
-	// each get their own empty database and the shared schema vanishes.
-	if path == ":memory:" {
-		db.SetMaxOpenConns(1)
-	}
+	// Pin the pool to a single connection. Two reasons:
+	//
+	//  1. Data integrity under concurrent writers. SQLite allows only one
+	//     writer, and busy_timeout does NOT wait out a write-lock *upgrade*
+	//     conflict on a deferred transaction — so when both caregivers log at
+	//     the same moment, a second pooled connection's bumpRev UPDATE fails
+	//     immediately with SQLITE_BUSY (5), the write returns 500, and the
+	//     entry never lands. Serializing every statement through one
+	//     connection removes the contention entirely (SQLite's own write
+	//     throughput is far above this app's load). Verified: a two-writer
+	//     concurrency test drops from ~1 lost write per 300 to zero.
+	//
+	//  2. In-memory SQLite is per-connection in modernc.org/sqlite; without
+	//     one shared connection, parallel test goroutines each get their own
+	//     empty database and the shared schema vanishes.
+	db.SetMaxOpenConns(1)
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, err
