@@ -4,7 +4,9 @@ export const CHANGELOG = [
   {
     date: '2026-07-07',
     version: '2026-07-07',
-    features: [],
+    features: [
+      'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.'
+    ],
     fixes: [
       'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
       'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',

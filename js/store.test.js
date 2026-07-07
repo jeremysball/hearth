@@ -727,3 +727,408 @@ test('nextHygiene computes per-item due dates like nextMeds', () => {
   assert.ok(after[0].due instanceof Date);
   assert.equal(after[0].due.getTime() - after[0].last.getTime(), 168 * 60 * 60 * 1000);
 });
+
+test('derive.insightWakeCalibration returns null with no personal data', () => {
+  reset();
+  assert.equal(derive.insightWakeCalibration('middle'), null);
+});
+
+test('derive.insightWakeCalibration narrates an earlier-than-typical consistent pattern', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 10 days of 'middle'-position wake windows, each exactly 60 min (well
+  // under the ~95-min population midpoint for the default 4-month bracket).
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS); // noon
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 60 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  const result = derive.insightWakeCalibration('middle');
+  assert.ok(result !== null, 'a consistent 35-min gap should clear the legibility bar');
+  assert.equal(result.direction, 'earlier');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.includes('earlier'), 'text should say earlier');
+});
+
+test('derive.insightWakeCalibration returns null for a scattered personal pattern (low trust)', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  const wakeMinutesByDay = [40, 220, 60, 200, 50, 230, 45, 210, 55, 225];
+  for (let i = 0; i < wakeMinutesByDay.length; i++) {
+    const d = 20 - i;
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 17 * 60 * MIN_MS); // 5pm -> 'last' position
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + wakeMinutesByDay[i] * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  assert.equal(derive.insightWakeCalibration('last'), null);
+});
+
+test('derive.insightWakeCalibration returns null when the gap from population is too small to narrate', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Consistent 92-min pattern -- within 10 min of the ~95-min population midpoint.
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 92 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  assert.equal(derive.insightWakeCalibration('middle'), null);
+});
+
+test('betaShrinkage returns the prior when n is 0', () => {
+  const { betaShrinkage } = _testHelpers;
+  assert.equal(betaShrinkage(0, 0, 0.4, 6), 0.4);
+});
+
+test('betaShrinkage converges to the raw proportion as n grows large', () => {
+  const { betaShrinkage } = _testHelpers;
+  const shrunk = betaShrinkage(90, 100, 0.5, 6);
+  assert.ok(Math.abs(shrunk - 0.9) < 0.05, `shrunk ${shrunk} should be close to raw 0.9 at large n`);
+});
+
+test('betaShrinkage stays close to the prior at small n', () => {
+  const { betaShrinkage } = _testHelpers;
+  const shrunk = betaShrinkage(1, 2, 0.5, 6);
+  assert.ok(Math.abs(shrunk - 0.5) < 0.15, `shrunk ${shrunk} should stay near the 0.5 prior at n=2`);
+});
+
+test('isGoodQuality treats Good and Great as good, others as not', () => {
+  const { isGoodQuality } = _testHelpers;
+  assert.equal(isGoodQuality('Good'), true);
+  assert.equal(isGoodQuality('Great'), true);
+  assert.equal(isGoodQuality('Okay'), false);
+  assert.equal(isGoodQuality('Restless'), false);
+});
+
+test('derive.insightOvertiredLag narrates when overshooting predicts a rougher next nap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 12 distinct days, each with an isolated napPrev -> napI -> napNext triple.
+  // napPrev always ends at 9:20am ('first' position, pop high = 95 min for
+  // the default 4-month bracket). Half the days overshoot the wake window
+  // before napI by 55 min; the other half undershoot it. napNext's quality
+  // is set so the overshoot group is uniformly bad and the on-time group
+  // uniformly good, giving a large, unambiguous gap.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS); // 9:20am
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70; // pop 'first' high = 95: 150 overshoots, 70 undershoots
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: overshoot ? 'Restless' : 'Great' });
+  }
+  const result = derive.insightOvertiredLag();
+  assert.ok(result !== null, 'a clean 6/6 split should clear the threshold');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.onTimeGoodP > result.overshotGoodP, 'on-time group should show a higher good-quality rate');
+});
+
+test('derive.insightOvertiredLag returns null with no meaningful quality gap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same overshoot/on-time split as above, but napNext quality is unrelated
+  // to overshoot (alternating regardless of group) -- no real signal.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70;
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  assert.equal(derive.insightOvertiredLag(), null);
+});
+
+test('derive.insightOvertiredLag returns null with too few valid triples', () => {
+  reset();
+  assert.equal(derive.insightOvertiredLag(), null);
+});
+
+test('derive.insightDurationTrend narrates a lengthening trend', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Older half (11-20 days ago): 11 naps at exactly 70 min.
+  for (let d = 20; d >= 11; d--) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0); // pin to a daytime hour so isNap() passes regardless of wall-clock time
+    const end = new Date(start.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  // Recent half (1-10 days ago): 10 naps at exactly 100 min.
+  for (let d = 10; d >= 1; d--) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 100 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  const result = derive.insightDurationTrend();
+  assert.ok(result !== null, 'a 30-min lengthening split should clear the threshold');
+  assert.equal(result.deltaMin > 0, true, 'delta should be positive for a lengthening trend');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.includes('longer'), 'text should say longer');
+});
+
+test('derive.insightDurationTrend returns null with no meaningful change', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  for (let d = 20; d >= 1; d--) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 85 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  assert.equal(derive.insightDurationTrend(), null);
+});
+
+test('derive.insightDurationTrend returns null with too few naps', () => {
+  reset();
+  assert.equal(derive.insightDurationTrend(), null);
+});
+
+test('derive.insightMethodQuality narrates when self-settled naps run higher quality', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  // 6 self-settled naps, mostly Great; 6 assisted naps, mostly Restless.
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: d === 1 ? 'Restless' : 'Great' });
+  }
+  for (let d = 7; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: d === 7 ? 'Great' : 'Restless' });
+  }
+  const result = derive.insightMethodQuality();
+  assert.ok(result !== null, 'a clean 5/1 vs 1/5 split should clear the threshold');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.startsWith('Self-settled'), 'self-settled should be named as the better group');
+});
+
+test('derive.insightMethodQuality returns null with no meaningful gap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  for (let d = 7; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  assert.equal(derive.insightMethodQuality(), null);
+});
+
+test('derive.insightMethodQuality returns null with too few naps in one group', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: 'Great' });
+  }
+  // Only 2 assisted naps -- below the per-group minimum.
+  for (let d = 7; d <= 8; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: 'Restless' });
+  }
+  assert.equal(derive.insightMethodQuality(), null);
+});
+
+test('isNap treats a daytime start as a nap and a nighttime start as not', () => {
+  const { isNap } = _testHelpers;
+  assert.equal(isNap({ start: new Date(2026, 0, 1, 13, 0).toISOString() }), true);
+  assert.equal(isNap({ start: new Date(2026, 0, 1, 22, 0).toISOString() }), false);
+  assert.equal(isNap({ start: new Date(2026, 0, 1, 3, 0).toISOString() }), false);
+});
+
+test('derive.insightWakeCalibration narrates the same midpoint wakeWindowPrediction shows, not the raw personal median', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same fixture as the "earlier-than-typical" test above -- a consistent
+  // but not perfectly noiseless pattern, so w_p lands short of 1.0 and a
+  // raw-vs-shrunk gap would diverge if the insight ever regressed to using
+  // the unshrunk personal median again.
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 60 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  const prediction = derive.wakeWindowPrediction('middle');
+  const pop = wakeWindowRange('middle');
+  const result = derive.insightWakeCalibration('middle');
+  assert.ok(result !== null);
+  assert.equal(result.gapMin, Math.round(prediction.midpoint - pop.midpoint),
+    'gapMin should track the same shrunk midpoint SweetSpot predicts, not an independently-derived raw median');
+});
+
+test('derive.insightOvertiredLag ignores an overnight sleep standing in for napI', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same overshoot/on-time split and signal as the narrating test above, but
+  // napI is now an overnight sleep (10pm-6am) instead of a daytime nap on
+  // half the days. Those triples must not count toward the pairs sample --
+  // otherwise a bedtime-sleep entry gets treated as a "nap" and its
+  // wake-to-wake gap pollutes the overtired-lag signal.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70;
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    if (overshoot) {
+      // Replace what would have been napI with an overnight sleep at the
+      // same slot -- it must be filtered out, not counted as a nap triple.
+      const nightStart = new Date(base.getTime() + 22 * 60 * MIN_MS);
+      const nightEnd = new Date(nightStart.getTime() + 8 * 60 * MIN_MS);
+      addEntry({ type: 'sleep', start: nightStart.toISOString(), end: nightEnd.toISOString() });
+    } else {
+      addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    }
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: overshoot ? 'Restless' : 'Great' });
+  }
+  // With half the triples' napI replaced by an excluded overnight sleep,
+  // too few valid pairs remain to clear the sample-size gate.
+  assert.equal(derive.insightOvertiredLag(), null);
+});
+
+test('derive.insightDurationTrend ignores an overnight sleep even within the plausible duration bounds', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Older half: 11 daytime naps at 70 min.
+  for (let d = 20; d >= 11; d--) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+  }
+  // Recent half: 10 daytime naps at 70 min (no real trend) plus a short,
+  // 300-min overnight sleep each day -- within the 10-360 plausibility
+  // bounds, so only the isNap() filter can keep it out of the trend.
+  for (let d = 10; d >= 1; d--) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString() });
+    const nightStart = new Date(now - d * DAY_MS);
+    nightStart.setHours(22, 0, 0, 0);
+    const nightEnd = new Date(nightStart.getTime() + 300 * MIN_MS);
+    addEntry({ type: 'sleep', start: nightStart.toISOString(), end: nightEnd.toISOString() });
+  }
+  assert.equal(derive.insightDurationTrend(), null, 'a flat 70-min nap pattern should not read as a lengthening trend just because overnight sleep was logged too');
+});
+
+test('derive.insightMethodQuality ignores an overnight sleep even when method and quality are logged', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  // 6 self-settled daytime naps, all Great; 6 assisted daytime naps, all Restless --
+  // matches the narrating fixture above, so this should narrate self-settled as better.
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: 'Great' });
+  }
+  for (let d = 7; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: 'Restless' });
+  }
+  // Overnight sleep logged as assisted+Great every night -- if it leaked into
+  // the assisted group it would erase the quality gap between the groups.
+  for (let d = 1; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    start.setHours(22, 0, 0, 0);
+    const end = new Date(start.getTime() + 9 * 60 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: 'Great' });
+  }
+  const result = derive.insightMethodQuality();
+  assert.ok(result !== null);
+  assert.ok(result.text.startsWith('Self-settled'), 'overnight sleep leaking into the assisted group would have erased the self-settled advantage');
+});
+
+test('seed() logs the overnight sleep quality using the same capitalized vocabulary as isGoodQuality expects', async () => {
+  const { isGoodQuality } = _testHelpers;
+  const { seed } = await import('./store.js');
+  reset();
+  seed();
+  const qualitySleeps = state().log.filter((e) => e.type === 'sleep' && e.quality);
+  assert.ok(qualitySleeps.length > 0);
+  for (const e of qualitySleeps) {
+    assert.equal(isGoodQuality(e.quality), true, `quality "${e.quality}" should match isGoodQuality's capitalized vocabulary`);
+  }
+});
