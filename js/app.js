@@ -1,6 +1,6 @@
 // app.js: shell, router, event delegation, binders, PWA.
 import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
-import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, dismissDeadLetter } from './sync.js';
+import { drainOutbox, getLastSyncRev, setLastSyncRev, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
@@ -850,9 +850,20 @@ async function syncOnce() {
   const drained = await drainOutbox(fetch);
   if (!drained) log.warn('sync', 'outbox drain incomplete; pulling anyway');
   try {
-    const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
+    let res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
-    const data = await res.json();
+    let data = await res.json();
+    // This device's cursor belongs to a different family than the one the
+    // session just answered for (OAuth restore into a stale identity, a
+    // conflict-resolution merge/switch, remove + re-invite). The response
+    // above was filtered by the wrong family's watermark, so re-pull from
+    // scratch rather than trust it.
+    if (applySyncFamily(data.familyId)) {
+      log.warn('sync', 'family switch detected, forcing full resync');
+      res = await fetch('/api/sync?since=-1', { credentials: 'include' });
+      if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
+      data = await res.json();
+    }
     const n = syncChangeCount(data);
     applySyncResponse(data);
     setLastSyncRev(data.serverRev);

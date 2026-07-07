@@ -15,7 +15,8 @@ export const CHANGELOG = [
       'The night sky\'s constellation now shows varying star sizes and renders a bit larger, so it no longer looks cramped.',
       'Thinned out Aquarius, Taurus, Gemini, Virgo, Scorpio, and Sagittarius, which were too dense and tangled compared to the rest of the zodiac constellations.',
       'Fixed overlapping stars in the night sky\'s constellations, and gave each star a size based on how many lines connect to it instead of a random size.',
-      'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.'
+      'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.',
+      'Switching accounts no longer silently loses history: the app now notices when a device\'s data belongs to a different family and does a full resync instead of quietly skipping entries.'
     ]
   },
   {

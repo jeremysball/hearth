@@ -1,5 +1,5 @@
 // store.js: Hearth state, persistence, derived data, seeding.
-import { enqueue, mergeById } from './sync.js';
+import { enqueue, mergeById, clearSyncState } from './sync.js';
 import { log } from './log.js';
 
 let _syncTrigger = null;
@@ -89,7 +89,7 @@ export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {}
 }
 export function markSynced() { _state.synced = true; save(); }
-export function reset() { _state = DEFAULT(); save(); }
+export function reset() { _state = DEFAULT(); save(); clearSyncState(); }
 
 export function state() { return _state; }
 
