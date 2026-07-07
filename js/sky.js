@@ -186,29 +186,44 @@ export function zodiacSign(birthdate) {
 // constellation lines, via d3-celestial) into a 24x14 box, one constellation
 // per zodiac sign. Points in the box, lines as point-index pairs.
 const CONSTELLATIONS = {
-  capricorn:   { pts: [[3.47,1.5],[4.11,3.24],[5.61,5.55],[8.9,11.24],[9.99,12.5],[16.64,9.06],[20.53,4.26],[19.2,4.67],[15.8,4.8],[12.69,5.11]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0]] },
-  aquarius:    { pts: [[1.5,6.81],[2.1,6.56],[6.79,4.91],[10.92,2.38],[13.7,2.23],[16.57,5.88],[19.62,6.66],[18.6,12.44],[12.26,5.98],[22.5,10.82]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[3,8],[6,9]] },
-  pisces:      { pts: [[15.89,3.6],[15.69,1.5],[16.44,2.58],[15.67,4.95],[17.58,7.12],[20.5,11.92],[18.53,10.89],[15.89,10.09],[13.5,10.09],[6.94,10.83],[5.8,10.55],[4.77,11.73],[7.14,12.3]], lines: [[0,1],[1,2],[2,0],[0,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,9]] },
+  capricorn:   { pts: [[3.47,1.5],[4.11,3.24],[5.61,5.55],[8.9,11.24],[9.99,12.5],[16.64,9.06],[19.865000000000002,4.465],[15.8,4.8],[12.69,5.11]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,0]] },
+  aquarius:    { pts: [[1.8,6.685],[6.79,4.91],[10.92,2.38],[13.7,2.23],[16.57,5.88],[19.62,6.66],[18.6,12.44],[12.26,5.98],[22.5,10.82]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[2,7],[5,8]] },
+  pisces:      { pts: [[16.165,3.09],[15.69,1.5],[15.67,4.95],[17.58,7.12],[20.5,11.92],[18.53,10.89],[15.89,10.09],[13.5,10.09],[6.37,10.690000000000001],[4.77,11.73],[7.14,12.3]], lines: [[0,1],[0,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,8]] },
   aries:       { pts: [[21.74,1.5],[6.97,6.74],[2.64,10.41],[2.26,12.5]], lines: [[0,1],[1,2],[2,3]] },
-  taurus:      { pts: [[18.48,4.41],[10.89,6.56],[11.75,5.18],[17.37,1.5],[9.02,7.79],[5.75,8.86],[9.26,10.32],[5.52,9.14],[6.7,12.5]], lines: [[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[5,7],[7,8]] },
+  taurus:      { pts: [[18.48,4.41],[11.32,5.869999999999999],[17.37,1.5],[9.02,7.79],[5.635,9],[9.26,10.32],[6.7,12.5]], lines: [[0,1],[1,2],[1,3],[3,4],[4,5],[4,6]] },
   gemini:      { pts: [[5.45,6.93],[9.66,5.41],[17,1.5],[17.19,4.39],[14.9,7.24],[12.58,8.06],[9.86,12.5],[14.61,10.39]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[4,7]] },
   cancer:      { pts: [[14.95,11],[13.01,7.46],[12.81,5.6],[13.29,1.5],[9.05,12.5]], lines: [[0,1],[1,2],[2,3],[1,4]] },
   leo:         { pts: [[5.34,11.79],[5.16,8.52],[7.32,6.42],[16.54,5.95],[22.5,10.01],[16.57,9.43],[6.76,3.98],[2.68,2.21],[1.5,3.74]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6],[6,7],[7,8]] },
   virgo:       { pts: [[1.5,3.91],[2.06,6.13],[8,7.63],[11.29,9.53],[18.98,9.75],[22.13,9.59],[10.38,1.85],[14.17,7.23],[17.31,6.23],[22.5,6.07]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[6,2],[3,7],[7,8],[8,9]] },
-  libra:       { pts: [[10.56,10.08],[8.78,5.09],[12.3,1.5],[14.8,4.42],[15,11.61],[15.22,12.5]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[1,3]] },
-  scorpio:     { pts: [[5.62,4.46],[5.79,2.82],[6.39,1.5],[8.24,4.22],[9.21,4.61],[11.64,8.3],[11.84,10.06],[14.22,12.5],[17.18,12.39],[17.78,10.52],[16.74,9.62]], lines: [[0,1],[1,2],[1,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]] },
-  sagittarius: { pts: [[7.64,9.53],[8.28,8.61],[7.97,6.85],[7.27,3.47],[13.92,12.5],[14.04,11.02],[10.35,5.76],[17.06,11.5],[17.5,8.96],[17.12,5.49],[14.17,4.8]], lines: [[0,1],[1,2],[2,6],[2,3],[6,10],[10,9],[9,8],[8,7],[7,5],[5,4]] },
+  libra:       { pts: [[10.56,10.08],[8.78,5.09],[12.3,1.5],[14.8,4.42],[15.11,12.055]], lines: [[0,1],[1,2],[2,3],[3,4],[1,3]] },
+  scorpio:     { pts: [[5.62,4.46],[6.09,2.16],[8.725000000000001,4.415],[11.64,8.3],[11.84,10.06],[14.22,12.5],[17.18,12.39],[17.78,10.52],[16.74,9.62]], lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]] },
+  sagittarius: { pts: [[7.959999999999999,9.07],[7.97,6.85],[7.27,3.47],[13.98,11.76],[10.35,5.76],[17.06,11.5],[17.5,8.96],[17.12,5.49],[14.17,4.8]], lines: [[0,1],[1,4],[1,2],[4,8],[8,7],[7,6],[6,5],[5,3]] },
 };
 
 // Never announced; discovered — but visible enough to actually notice at a
 // glance, unlike the original near-invisible 8%-opacity version. Opacity and
 // position are CSS-only (see styles.css); this just emits the geometry.
-// Deterministic per-point "magnitude": real constellations read as a mix of a
-// few bright anchor stars among smaller ones, not a uniform dot pattern. Hashed
-// from the point's own coordinates so it's stable across re-renders without
-// needing a seed or real magnitude data.
-function starMagnitude(x, y) {
-  const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+// Radius is driven by each point's role in the line graph, not an arbitrary
+// per-coordinate hash: branch tips (degree 1) are where a real constellation's
+// named bright star usually sits (Antares, Aldebaran, Shaula), so they read as
+// the biggest anchors; hubs (degree 3+) are secondary; interior chain links
+// (degree 2) recede as the dimmest. Deterministic and explainable from the
+// shape itself, so it can't drift into the "arbitrary-looking" territory a
+// coordinate hash did.
+const RADIUS_BY_ROLE = { tip: 0.85, hub: 0.65, chain: 0.45 };
+
+function pointRadii(pts, lines) {
+  const degree = new Array(pts.length).fill(0);
+  for (const [a, b] of lines) { degree[a]++; degree[b]++; }
+  return degree.map((d) => (d <= 1 ? RADIUS_BY_ROLE.tip : d === 2 ? RADIUS_BY_ROLE.chain : RADIUS_BY_ROLE.hub));
+}
+
+// Timing-only hash (reuses starsSVG's twinkle mechanics, not size): a real
+// sky's twinkle is only noticeable on the brighter points, so only tip/hub
+// stars twinkle here, each on its own phase so a constellation's anchors
+// don't flicker in sync.
+function twinklePhase(x, y) {
+  const h = Math.sin(x * 91.345 + y * 47.853) * 12958.234;
   return h - Math.floor(h);
 }
 
@@ -216,12 +231,15 @@ export function constellationSVG(birthdate) {
   const sign = zodiacSign(birthdate);
   if (!sign) return '';
   const c = CONSTELLATIONS[sign];
+  const radii = pointRadii(c.pts, c.lines);
   const lines = c.lines.map(([a, b]) =>
     `<line x1="${c.pts[a][0]}" y1="${c.pts[a][1]}" x2="${c.pts[b][0]}" y2="${c.pts[b][1]}"/>`).join('');
-  const pts = c.pts.map(([x, y]) => {
-    const t = starMagnitude(x, y);
-    const r = t < 0.25 ? (0.75 + t * 1.4).toFixed(2) : (0.32 + t * 0.5).toFixed(2);
-    return `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+  const pts = c.pts.map(([x, y], i) => {
+    const twinkle = radii[i] > RADIUS_BY_ROLE.chain;
+    if (!twinkle) return `<circle cx="${x}" cy="${y}" r="${radii[i]}"/>`;
+    const p = twinklePhase(x, y);
+    const style = ` style="--tw-d:${(2.2 + p * 2.6).toFixed(2)}s;--tw-o:-${(p * 4).toFixed(2)}s"`;
+    return `<circle cx="${x}" cy="${y}" r="${radii[i]}" class="star-twinkle"${style}/>`;
   }).join('');
   return `<svg class="sky-constellation" viewBox="0 0 24 14" aria-hidden="true">${lines}${pts}</svg>`;
 }
