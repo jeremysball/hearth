@@ -612,6 +612,28 @@ export const derive = {
       : `based on ${name}'s recent naps`;
     return { low, high, midpoint, source, sampleSize: n, label };
   },
+  // Narrates the gap between the shrunk personal wake-window midpoint and the
+  // population midpoint, once the shrinkage weight clears a legibility bar
+  // (population contribution small enough that the personal number stands on
+  // its own) and the gap is large enough to be worth saying out loud.
+  insightWakeCalibration(position = 'middle') {
+    const personal = derive.personalWakeWindow(position);
+    if (!personal) return null;
+    const pop = wakeWindowRange(position);
+    const n = personal.sampleSize;
+    const priorVariance = Math.max(((pop.high - pop.low) / 4) ** 2, 1e-6);
+    const w_p = shrinkageWeight(noiseFloorVariance(personal.variance, n), n, priorVariance);
+    const LEGIBILITY_MIN_W_P = 0.6;
+    if (w_p < LEGIBILITY_MIN_W_P) return null;
+    const gapMin = personal.median - pop.midpoint;
+    const MIN_NARRATABLE_GAP_MIN = 10;
+    if (Math.abs(gapMin) < MIN_NARRATABLE_GAP_MIN) return null;
+    const direction = gapMin > 0 ? 'later' : 'earlier';
+    return {
+      text: `Naps tend to land ${direction} than the age guide, around ${Math.round(Math.abs(gapMin))} min.`,
+      direction, gapMin: Math.round(gapMin), w_p, sampleSize: n,
+    };
+  },
   // Recency-weighted median morning wake time. Confidence is gated by sample
   // size and standard deviation: variable schedules cap at 'low'.
   circadianAnchor() {
