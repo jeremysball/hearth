@@ -203,13 +203,26 @@ const CONSTELLATIONS = {
 // Never announced; discovered — but visible enough to actually notice at a
 // glance, unlike the original near-invisible 8%-opacity version. Opacity and
 // position are CSS-only (see styles.css); this just emits the geometry.
+// Deterministic per-point "magnitude": real constellations read as a mix of a
+// few bright anchor stars among smaller ones, not a uniform dot pattern. Hashed
+// from the point's own coordinates so it's stable across re-renders without
+// needing a seed or real magnitude data.
+function starMagnitude(x, y) {
+  const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return h - Math.floor(h);
+}
+
 export function constellationSVG(birthdate) {
   const sign = zodiacSign(birthdate);
   if (!sign) return '';
   const c = CONSTELLATIONS[sign];
   const lines = c.lines.map(([a, b]) =>
     `<line x1="${c.pts[a][0]}" y1="${c.pts[a][1]}" x2="${c.pts[b][0]}" y2="${c.pts[b][1]}"/>`).join('');
-  const pts = c.pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="0.4"/>`).join('');
+  const pts = c.pts.map(([x, y]) => {
+    const t = starMagnitude(x, y);
+    const r = t < 0.25 ? (0.75 + t * 1.4).toFixed(2) : (0.32 + t * 0.5).toFixed(2);
+    return `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+  }).join('');
   return `<svg class="sky-constellation" viewBox="0 0 24 14" aria-hidden="true">${lines}${pts}</svg>`;
 }
 
