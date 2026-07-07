@@ -180,7 +180,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only: do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance, betaShrinkage, isGoodQuality };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance, betaShrinkage, isGoodQuality, isNap };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -355,6 +355,31 @@ function betaShrinkage(k, n, priorP, priorStrength) {
   if (n === 0) return priorP;
   return (k + priorP * priorStrength) / (n + priorStrength);
 }
+
+// There's no separate "nap" vs "night sleep" type in the data model — both
+// are `type: 'sleep'`. A sleep entry counts as a nap for the day-nap insights
+// below if it began during daytime hours, keeping overnight sleep out of
+// nap-to-nap comparisons.
+function isNap(entry) {
+  return wakePosition(new Date(entry.start)) !== 'night';
+}
+
+// Shared sanity bounds for a plausible sleep/wake duration in minutes, used
+// to reject clearly-bad data (an interrupted-sleep artifact, a forgotten
+// end time) from the wake-window and duration insights below.
+const MIN_PLAUSIBLE_MIN = 10;
+const MAX_PLAUSIBLE_MIN = 360;
+
+// Shared tuning for the two Beta-Binomial quality-rate insights (overtired-
+// lag and method comparison): how strongly each pulls a small group's rate
+// toward the shared prior, and how large a gap has to be before it's worth
+// narrating.
+const QUALITY_PRIOR_STRENGTH = 6;
+const MIN_NARRATABLE_QUALITY_GAP = 0.15;
+
+// The settling-method label sheets.js's quality form treats as "self-settled";
+// every other method string counts as assisted.
+const SELF_SETTLED_METHOD = 'On own in bed';
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
 // The banner fires when the baby is within onsetWeeksBefore weeks of minMonths.
@@ -627,28 +652,27 @@ export const derive = {
     const label = w_p >= 0.9
       ? `based on ${name}'s pattern`
       : `based on ${name}'s recent naps`;
-    return { low, high, midpoint, source, sampleSize: n, label };
+    return { low, high, midpoint, source, sampleSize: n, label, w_p };
   },
   // Narrates the gap between the shrunk personal wake-window midpoint and the
   // population midpoint, once the shrinkage weight clears a legibility bar
   // (population contribution small enough that the personal number stands on
-  // its own) and the gap is large enough to be worth saying out loud.
+  // its own) and the gap is large enough to be worth saying out loud. Reuses
+  // wakeWindowPrediction's own midpoint (not a re-derived raw personal
+  // median) so this never disagrees with what SweetSpot actually predicts.
   insightWakeCalibration(position = 'middle') {
-    const personal = derive.personalWakeWindow(position);
-    if (!personal) return null;
+    const prediction = derive.wakeWindowPrediction(position);
+    if (!prediction || prediction.sampleSize === 0) return null;
     const pop = wakeWindowRange(position);
-    const n = personal.sampleSize;
-    const priorVariance = Math.max(((pop.high - pop.low) / 4) ** 2, 1e-6);
-    const w_p = shrinkageWeight(noiseFloorVariance(personal.variance, n), n, priorVariance);
     const LEGIBILITY_MIN_W_P = 0.6;
-    if (w_p < LEGIBILITY_MIN_W_P) return null;
-    const gapMin = personal.median - pop.midpoint;
+    if (prediction.w_p < LEGIBILITY_MIN_W_P) return null;
+    const gapMin = prediction.midpoint - pop.midpoint;
     const MIN_NARRATABLE_GAP_MIN = 10;
     if (Math.abs(gapMin) < MIN_NARRATABLE_GAP_MIN) return null;
     const direction = gapMin > 0 ? 'later' : 'earlier';
     return {
       text: `Naps tend to land ${direction} than the age guide, around ${Math.round(Math.abs(gapMin))} min.`,
-      direction, gapMin: Math.round(gapMin), w_p, sampleSize: n,
+      direction, gapMin: Math.round(gapMin), w_p: prediction.w_p, sampleSize: prediction.sampleSize,
     };
   },
   // Does overshooting the wake window before nap i predict worse quality on
@@ -659,14 +683,14 @@ export const derive = {
   // predict tomorrow's nap.
   insightOvertiredLag() {
     const cutoffMs = Date.now() - 21 * DAY;
-    const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs)
+    const ss = sleeps().filter((e) => e.end && new Date(e.end).getTime() > cutoffMs && isNap(e))
       .sort((a, b) => new Date(a.start) - new Date(b.start));
     const pairs = [];
     for (let i = 1; i < ss.length - 1; i++) {
       const napPrev = ss[i - 1], napI = ss[i], napNext = ss[i + 1];
-      if (!napPrev.end || !napNext.quality) continue;
+      if (!napNext.quality) continue;
       const wakeGapMin = (new Date(napI.start) - new Date(napPrev.end)) / MIN;
-      if (wakeGapMin < 10 || wakeGapMin > 360) continue;
+      if (wakeGapMin < MIN_PLAUSIBLE_MIN || wakeGapMin > MAX_PLAUSIBLE_MIN) continue;
       const pos = wakePosition(new Date(napPrev.end));
       if (pos === 'night') continue;
       const pop = wakeWindowRange(pos);
@@ -677,11 +701,9 @@ export const derive = {
     const onTimeGroup = pairs.filter((p) => p.overshoot <= OVERSHOOT_THRESHOLD_MIN);
     if (pairs.length < 8 || overshotGroup.length < 4 || onTimeGroup.length < 4) return null;
     const priorP = pairs.filter((p) => p.goodNext).length / pairs.length;
-    const PRIOR_STRENGTH = 6;
-    const overshotGoodP = betaShrinkage(overshotGroup.filter((p) => p.goodNext).length, overshotGroup.length, priorP, PRIOR_STRENGTH);
-    const onTimeGoodP = betaShrinkage(onTimeGroup.filter((p) => p.goodNext).length, onTimeGroup.length, priorP, PRIOR_STRENGTH);
-    const MIN_NARRATABLE_GAP = 0.15;
-    if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_GAP) return null;
+    const overshotGoodP = betaShrinkage(overshotGroup.filter((p) => p.goodNext).length, overshotGroup.length, priorP, QUALITY_PRIOR_STRENGTH);
+    const onTimeGoodP = betaShrinkage(onTimeGroup.filter((p) => p.goodNext).length, onTimeGroup.length, priorP, QUALITY_PRIOR_STRENGTH);
+    if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_QUALITY_GAP) return null;
     return {
       text: 'A late wake window often means a rougher next nap.',
       onTimeGoodP, overshotGoodP, sampleSize: pairs.length,
@@ -697,23 +719,25 @@ export const derive = {
     const now = Date.now();
     const cutoffMs = now - 21 * DAY;
     const naps = sleeps()
-      .filter((e) => e.end && new Date(e.start).getTime() > cutoffMs)
+      .filter((e) => e.end && new Date(e.start).getTime() > cutoffMs && isNap(e))
       .map((e) => ({
         value: (new Date(e.end) - new Date(e.start)) / MIN,
         weight: recencyWeight(new Date(e.start), now),
         start: new Date(e.start),
       }))
-      .filter((o) => o.value >= 10 && o.value <= 360);
+      .filter((o) => o.value >= MIN_PLAUSIBLE_MIN && o.value <= MAX_PLAUSIBLE_MIN);
     if (naps.length < 14) return null;
     const splitMs = now - 10.5 * DAY;
     const recent = naps.filter((o) => o.start.getTime() >= splitMs);
     const older = naps.filter((o) => o.start.getTime() < splitMs);
     if (recent.length < 6 || older.length < 6) return null;
+    // naps.length >= 14 and each half's length >= 6 (both gated above), so
+    // weightedVariance (needs >= 2 observations) never returns null here.
     const asObs = (list) => list.map((o) => ({ value: o.value, weight: o.weight }));
-    const priorVariance = Math.max(weightedVariance(asObs(naps)) ?? 1e-6, 1e-6);
+    const priorVariance = Math.max(weightedVariance(asObs(naps)), 1e-6);
     const grandMedian = weightedMedian(asObs(naps));
     const shrinkHalf = (half) => {
-      const halfVariance = weightedVariance(asObs(half)) ?? priorVariance;
+      const halfVariance = weightedVariance(asObs(half));
       const w = shrinkageWeight(noiseFloorVariance(halfVariance, half.length), half.length, priorVariance);
       return w * weightedMedian(asObs(half)) + (1 - w) * grandMedian;
     };
@@ -734,18 +758,16 @@ export const derive = {
   // meaningfully.
   insightMethodQuality() {
     const cutoffMs = Date.now() - 21 * DAY;
-    const naps = sleeps().filter((e) => e.end && new Date(e.start).getTime() > cutoffMs && e.method && e.quality);
-    const selfSettled = naps.filter((e) => e.method === 'On own in bed');
-    const assisted = naps.filter((e) => e.method !== 'On own in bed');
+    const naps = sleeps().filter((e) => e.end && new Date(e.start).getTime() > cutoffMs && e.method && e.quality && isNap(e));
+    const selfSettled = naps.filter((e) => e.method === SELF_SETTLED_METHOD);
+    const assisted = naps.filter((e) => e.method !== SELF_SETTLED_METHOD);
     const MIN_PER_GROUP = 5;
     if (selfSettled.length < MIN_PER_GROUP || assisted.length < MIN_PER_GROUP) return null;
     const priorP = naps.filter((e) => isGoodQuality(e.quality)).length / naps.length;
-    const PRIOR_STRENGTH = 6;
-    const selfP = betaShrinkage(selfSettled.filter((e) => isGoodQuality(e.quality)).length, selfSettled.length, priorP, PRIOR_STRENGTH);
-    const assistedP = betaShrinkage(assisted.filter((e) => isGoodQuality(e.quality)).length, assisted.length, priorP, PRIOR_STRENGTH);
-    const MIN_NARRATABLE_GAP = 0.15;
+    const selfP = betaShrinkage(selfSettled.filter((e) => isGoodQuality(e.quality)).length, selfSettled.length, priorP, QUALITY_PRIOR_STRENGTH);
+    const assistedP = betaShrinkage(assisted.filter((e) => isGoodQuality(e.quality)).length, assisted.length, priorP, QUALITY_PRIOR_STRENGTH);
     const gap = selfP - assistedP;
-    if (Math.abs(gap) < MIN_NARRATABLE_GAP) return null;
+    if (Math.abs(gap) < MIN_NARRATABLE_QUALITY_GAP) return null;
     const better = gap > 0 ? 'Self-settled' : 'Assisted';
     return {
       text: `${better} naps tend to run higher quality than the other kind.`,
@@ -852,7 +874,7 @@ export function seed() {
   for (let day = 0; day < 6; day++) {
     const base = day * 24 * 60; // minutes ago at midnight-ish anchor
     // overnight sleep
-    addRange('sleep', base + 60, base + 60 + 9.5 * 60, { quality: 'good' });
+    addRange('sleep', base + 60, base + 60 + 9.5 * 60, { quality: 'Good' });
     // morning nap
     addRange('sleep', base - 6.3 * 60 + 24 * 60, base - 4.9 * 60 + 24 * 60, {});
     // feeds & diapers scattered
