@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-07',
+    version: '2026-07-07',
+    features: [],
+    fixes: [
+      'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.'
+    ]
+  },
+  {
     date: '2026-07-06',
     version: '2026-07-06',
     features: [
