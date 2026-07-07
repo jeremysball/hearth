@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/base64"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -96,12 +97,14 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		}
 		cookie, err := r.Cookie(oauthStateCookie)
 		if err != nil {
+			log.Printf("oauth: %s callback: missing state cookie (likely served over non-HTTPS, so the Secure cookie was dropped): %v", name, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
 		// cookie value is base64(name|marshaledSession)
 		decoded, decErr := base64.StdEncoding.DecodeString(cookie.Value)
 		if decErr != nil {
+			log.Printf("oauth: %s callback: state cookie not valid base64: %v", name, decErr)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
@@ -111,15 +114,18 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		}
 		sess, err := provider.UnmarshalSession(marshaled)
 		if err != nil {
+			log.Printf("oauth: %s callback: failed to unmarshal provider session: %v", name, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
 		if _, err = sess.Authorize(provider, r.URL.Query()); err != nil {
+			log.Printf("oauth: %s callback: provider authorize failed (check PUBLIC_BASE_URL matches the redirect URI registered with the provider): %v", name, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
 		gu, err := provider.FetchUser(sess)
 		if err != nil {
+			log.Printf("oauth: %s callback: fetch user info failed: %v", name, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
@@ -133,6 +139,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 
 		res, err := reconcile(db, name, gu.UserID, gu.Email, cur)
 		if err != nil {
+			log.Printf("oauth: %s callback: reconcile failed for email=%q: %v", name, gu.Email, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
 			return
 		}
@@ -140,6 +147,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		case "linked", "restored", "signedup":
 			token, e := createSession(db, res.CaregiverID, res.FamilyID)
 			if e != nil {
+				log.Printf("oauth: %s callback: create session failed for caregiver=%s family=%s: %v", name, res.CaregiverID, res.FamilyID, e)
 				http.Redirect(w, r, "/?auth=error", http.StatusFound)
 				return
 			}
@@ -153,6 +161,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 			pending := newID()
 			if _, e := db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,
 				hashToken(pending), name, gu.UserID, gu.Email, res.TargetFamily, res.CurrentFamily, res.CurrentCaregiver, nowISO()); e != nil {
+				log.Printf("oauth: %s callback: pending_auth insert failed: %v", name, e)
 				http.Redirect(w, r, "/?auth=error", http.StatusFound)
 				return
 			}
