@@ -924,3 +924,59 @@ test('derive.insightDurationTrend returns null with too few naps', () => {
   reset();
   assert.equal(derive.insightDurationTrend(), null);
 });
+
+test('derive.insightMethodQuality narrates when self-settled naps run higher quality', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  // 6 self-settled naps, mostly Great; 6 assisted naps, mostly Restless.
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: d === 1 ? 'Restless' : 'Great' });
+  }
+  for (let d = 7; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: d === 7 ? 'Great' : 'Restless' });
+  }
+  const result = derive.insightMethodQuality();
+  assert.ok(result !== null, 'a clean 5/1 vs 1/5 split should clear the threshold');
+  assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
+  assert.ok(result.text.startsWith('Self-settled'), 'self-settled should be named as the better group');
+});
+
+test('derive.insightMethodQuality returns null with no meaningful gap', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  for (let d = 7; d <= 12; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: d % 2 === 0 ? 'Great' : 'Restless' });
+  }
+  assert.equal(derive.insightMethodQuality(), null);
+});
+
+test('derive.insightMethodQuality returns null with too few naps in one group', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  for (let d = 1; d <= 6; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'On own in bed', quality: 'Great' });
+  }
+  // Only 2 assisted naps -- below the per-group minimum.
+  for (let d = 7; d <= 8; d++) {
+    const start = new Date(now - d * DAY_MS);
+    const end = new Date(start.getTime() + 70 * 60000);
+    addEntry({ type: 'sleep', start: start.toISOString(), end: end.toISOString(), method: 'Worn or held', quality: 'Restless' });
+  }
+  assert.equal(derive.insightMethodQuality(), null);
+});
