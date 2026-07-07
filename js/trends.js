@@ -19,8 +19,15 @@ function barChart(data, key, unit, fmtFn, tone) {
 }
 
 function insightsCard() {
+  // insightWakeCalibration takes a single day-position; check all three so a
+  // drift that only shows up at the first or last nap isn't silently missed
+  // just because 'middle' happens to look on-track.
+  const wakeCalibration = ['first', 'middle', 'last']
+    .map((position) => derive.insightWakeCalibration(position))
+    .filter(Boolean)
+    .reduce((most, next) => (most && Math.abs(most.gapMin) >= Math.abs(next.gapMin) ? most : next), null);
   const insights = [
-    derive.insightWakeCalibration(),
+    wakeCalibration,
     derive.insightOvertiredLag(),
     derive.insightDurationTrend(),
     derive.insightMethodQuality(),
