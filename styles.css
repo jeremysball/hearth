@@ -1138,6 +1138,32 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   color: var(--soft);
 }
 
+.insight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.insight-list li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--soft);
+  padding-left: 1rem;
+  position: relative;
+}
+.insight-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .bedtime-chip {
   display: flex;
   align-items: center;
