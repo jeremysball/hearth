@@ -728,6 +728,30 @@ export const derive = {
       deltaMin: Math.round(deltaMin), recentShrunk: Math.round(recentShrunk), olderShrunk: Math.round(olderShrunk),
     };
   },
+  // Beta-Binomial comparison of quality outcomes between self-settled naps
+  // ("On own in bed") and every other settling method, gated so it only
+  // surfaces once both groups have enough shrunk-precision to separate
+  // meaningfully.
+  insightMethodQuality() {
+    const cutoffMs = Date.now() - 21 * DAY;
+    const naps = sleeps().filter((e) => e.end && new Date(e.start).getTime() > cutoffMs && e.method && e.quality);
+    const selfSettled = naps.filter((e) => e.method === 'On own in bed');
+    const assisted = naps.filter((e) => e.method !== 'On own in bed');
+    const MIN_PER_GROUP = 5;
+    if (selfSettled.length < MIN_PER_GROUP || assisted.length < MIN_PER_GROUP) return null;
+    const priorP = naps.filter((e) => isGoodQuality(e.quality)).length / naps.length;
+    const PRIOR_STRENGTH = 6;
+    const selfP = betaShrinkage(selfSettled.filter((e) => isGoodQuality(e.quality)).length, selfSettled.length, priorP, PRIOR_STRENGTH);
+    const assistedP = betaShrinkage(assisted.filter((e) => isGoodQuality(e.quality)).length, assisted.length, priorP, PRIOR_STRENGTH);
+    const MIN_NARRATABLE_GAP = 0.15;
+    const gap = selfP - assistedP;
+    if (Math.abs(gap) < MIN_NARRATABLE_GAP) return null;
+    const better = gap > 0 ? 'Self-settled' : 'Assisted';
+    return {
+      text: `${better} naps tend to run higher quality than the other kind.`,
+      selfP, assistedP, sampleSize: naps.length,
+    };
+  },
   // Recency-weighted median morning wake time. Confidence is gated by sample
   // size and standard deviation: variable schedules cap at 'low'.
   circadianAnchor() {
