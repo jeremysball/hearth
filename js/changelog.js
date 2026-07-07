@@ -7,7 +7,8 @@ export const CHANGELOG = [
     features: [],
     fixes: [
       'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
-      'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.'
+      'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',
+      'The night sky\'s constellation now shows varying star sizes and renders a bit larger, so it no longer looks cramped.'
     ]
   },
   {
