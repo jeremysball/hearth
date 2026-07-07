@@ -102,7 +102,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("GET /api/me", requireAuth(db, handleMe(db)))
 	mux.HandleFunc("POST /api/auth/signout", requireAuth(db, handleSignout(db)))
 	mux.HandleFunc("GET /api/conflict/{pending}", handleConflictInfo(db))
-	mux.HandleFunc("POST /api/auth/resolve", handleResolve(db))
+	mux.HandleFunc("POST /api/auth/resolve", handleResolve(db, hub))
 	mux.Handle("/", http.FileServerFS(staticFS))
 	return logMiddleware(mux)
 }
