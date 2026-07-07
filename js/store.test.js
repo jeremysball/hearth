@@ -381,6 +381,43 @@ test('weightedMedian shifts toward the high-weight value', () => {
   assert.equal(weightedMedian(obs), 120);
 });
 
+test('weightedVariance returns null with fewer than 2 observations', () => {
+  const { weightedVariance } = _testHelpers;
+  assert.equal(weightedVariance([{ value: 90, weight: 1 }]), null);
+});
+
+test('weightedVariance is small for a tight cluster', () => {
+  const { weightedVariance } = _testHelpers;
+  const obs = [88, 90, 89, 91, 90].map((v) => ({ value: v, weight: 1 }));
+  assert.ok(weightedVariance(obs) < 2, `variance ${weightedVariance(obs)} should be small`);
+});
+
+test('weightedVariance is large for a scattered set', () => {
+  const { weightedVariance } = _testHelpers;
+  const obs = [40, 140, 60, 160, 90].map((v) => ({ value: v, weight: 1 }));
+  assert.ok(weightedVariance(obs) > 1000, `variance ${weightedVariance(obs)} should be large`);
+});
+
+test('shrinkageWeight gives a consistent series more trust than a scattered one at equal n', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const priorVariance = 400; // illustrative population spread
+  const tight = shrinkageWeight(4, 9, priorVariance);        // SD = 2 min
+  const scattered = shrinkageWeight(2500, 9, priorVariance); // SD = 50 min
+  assert.ok(tight > scattered, `tight-cluster weight ${tight} should exceed scattered weight ${scattered}`);
+});
+
+test('shrinkageWeight never exceeds the cap', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const w = shrinkageWeight(0.0001, 1000, 400);
+  assert.ok(w <= 0.9, `weight ${w} should be capped at 0.9`);
+});
+
+test('shrinkageWeight approaches 0 with huge personal variance', () => {
+  const { shrinkageWeight } = _testHelpers;
+  const w = shrinkageWeight(1e9, 9, 400);
+  assert.ok(w < 0.05, `weight ${w} should be near 0 with huge personal variance`);
+});
+
 test('derive.personalWakeWindow returns null with no data for that position', () => {
   // All prior sleeps in the test log are Jan 2026 (outside 21-day cutoff)
   // or have no end, so 'first' position should have zero observations.
@@ -388,15 +425,17 @@ test('derive.personalWakeWindow returns null with no data for that position', ()
   assert.equal(result, null);
 });
 
-test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep pairs', () => {
+test('derive.personalWakeWindow returns ~90-min median from 10 consecutive sleep pairs', () => {
   const now = Date.now();
   const DAY_MS = 86400000;
   const MIN_MS = 60000;
-  // Add 9 days of sleep pairs (days 10 to 2 ago). Each pair:
+  // Add 10 days of sleep pairs (days 10 to 1 ago). Each pair:
   //   Sleep A: ends at noon local (wakePosition = 'middle')
   //   Sleep B: starts 90 min later (noon + 90 min)
   // The algorithm pairs consecutive sleeps: (B_day, A_day) → 90-min wake window.
-  for (let d = 10; d >= 2; d--) {
+  // Stays clear of day 0 (an unrelated ongoing sleep from an earlier test
+  // lives near "now") and of the scattered fixture's days 11-20.
+  for (let d = 10; d >= 1; d--) {
     const base = new Date(now - d * DAY_MS);
     base.setHours(0, 0, 0, 0);
     const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);   // noon
@@ -407,11 +446,12 @@ test('derive.personalWakeWindow returns ~90-min median from 9 consecutive sleep 
     addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
   }
   const result = derive.personalWakeWindow('middle');
-  assert.ok(result !== null, 'should return data with 9 middle-position observations');
-  assert.ok(result.sampleSize >= 9, `sampleSize ${result.sampleSize} should be ≥ 9`);
+  assert.ok(result !== null, 'should return data with 10 middle-position observations');
+  assert.ok(result.sampleSize >= 10, `sampleSize ${result.sampleSize} should be ≥ 10`);
   assert.ok(result.median >= 85 && result.median <= 95, `median ${result.median} should be near 90`);
   assert.ok(result.p25 <= result.median, 'p25 ≤ median');
   assert.ok(result.median <= result.p75, 'median ≤ p75');
+  assert.ok(result.variance !== null && result.variance < 1e-6, `variance ${result.variance} should be ~0 for an exactly-repeating 90-min pattern`);
 });
 
 test('derive.wakeWindowPrediction returns population prior when position has no personal data', () => {
@@ -422,15 +462,61 @@ test('derive.wakeWindowPrediction returns population prior when position has no 
   assert.equal(pred.sampleSize, 0);
 });
 
-test('derive.wakeWindowPrediction blends when 7–29 personal observations exist', () => {
-  // Task 3 test added 9 'middle' observations at ~90 min. Source should be 'blend'.
+test('derive.wakeWindowPrediction reaches full personal trust for a perfectly consistent pattern', () => {
+  // The personalWakeWindow test added 11 'middle' observations at exactly 90
+  // min each (zero recorded variance) — dispersion-aware weighting reaches
+  // 0.9 faster than the old sample-count-only ramp (which needed ~30), but
+  // not instantly: a noise floor (js/store.js noiseFloorVariance) assumes
+  // some of that apparent zero variance could just be logging imprecision,
+  // so it still takes more than the bare 7-observation minimum.
   const pred = derive.wakeWindowPrediction('middle');
-  assert.equal(pred.source, 'blend');
+  assert.equal(pred.source, 'personal');
   const pop = wakeWindowRange('middle');
-  // blended midpoint must be between pop.low and pop.high (sanity clamp)
+  // midpoint must stay between pop.low and pop.high (sanity clamp)
   assert.ok(pred.midpoint >= pop.low && pred.midpoint <= pop.high,
     `midpoint ${pred.midpoint} should stay within population range`);
-  assert.ok(pred.label.includes("recent naps"), 'label should mention recent naps');
+  assert.ok(pred.label.includes("pattern"), 'label should mention her own pattern');
+});
+
+test('shrinkageWeight: noiseFloorVariance keeps a small sample of apparent zero variance from over-trusting', () => {
+  const { noiseFloorVariance, shrinkageWeight } = _testHelpers;
+  const priorVariance = 56.25; // ~5-7mo 'middle' bracket population spread
+  // 9 observations with zero recorded variance — the bare personalWakeWindow
+  // minimum. Logging imprecision means this shouldn't yet mean full trust.
+  const adjusted = noiseFloorVariance(0, 9);
+  const w = shrinkageWeight(adjusted, 9, priorVariance);
+  assert.ok(w < 0.9, `weight ${w} should stay below the cap at only 9 samples of apparent zero variance`);
+});
+
+test('derive.wakeWindowPrediction stays a blend for a scattered personal pattern', () => {
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // 10 days of 'last'-position wake windows (previous sleep always ends at
+  // 5pm, inside the 4pm-8pm bracket), but the gap to the next sleep swings
+  // widely day to day — a scattered, inconsistent pattern rather than a
+  // tight one. Uses days 11-20 ago so it doesn't overlap the 'middle'
+  // fixture's days 2-10 ago. This is the full disjoint band available
+  // inside the 21-day cutoff — don't shift it without re-checking overlap.
+  const wakeMinutesByDay = [40, 220, 60, 200, 50, 230, 45, 210, 55, 225];
+  for (let i = 0; i < wakeMinutesByDay.length; i++) {
+    const d = 20 - i;
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 17 * 60 * MIN_MS); // 5pm
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + wakeMinutesByDay[i] * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+  }
+  const personal = derive.personalWakeWindow('last');
+  assert.ok(personal !== null, 'should have enough observations');
+  assert.ok(personal.sampleSize >= 8, `sampleSize ${personal.sampleSize} should be close to 10`);
+  assert.ok(personal.variance > 3000, `variance ${personal.variance} should be large for a scattered pattern`);
+
+  const pred = derive.wakeWindowPrediction('last');
+  assert.equal(pred.source, 'blend', 'a scattered pattern should not reach full personal trust at this sample size');
 });
 
 test('derive.wakeWindowPrediction clamps personal median to 0.5×–2× population midpoint', () => {

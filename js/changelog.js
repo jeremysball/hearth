@@ -18,7 +18,8 @@ export const CHANGELOG = [
     fixes: [
       'Fixed a lag on the first tap of the day, on the spinner or a log save, by warming up audio ahead of time instead of on first use.',
       'Fixed the view refreshing behind an open sheet when a sync arrived mid-edit; it now waits until you close the sheet.',
-      'The sleep log\'s Woke field now defaults to today\'s date, so you only have to set the time.'
+      'The sleep log\'s Woke field now defaults to today\'s date, so you only have to set the time.',
+      'Sweet Spot now trusts your baby\'s own pattern faster when it\'s consistent, and holds back a little longer when naps are more unpredictable.'
     ]
   },
   {
