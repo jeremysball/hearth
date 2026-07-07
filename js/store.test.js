@@ -795,3 +795,28 @@ test('derive.insightWakeCalibration returns null when the gap from population is
   }
   assert.equal(derive.insightWakeCalibration('middle'), null);
 });
+
+test('betaShrinkage returns the prior when n is 0', () => {
+  const { betaShrinkage } = _testHelpers;
+  assert.equal(betaShrinkage(0, 0, 0.4, 6), 0.4);
+});
+
+test('betaShrinkage converges to the raw proportion as n grows large', () => {
+  const { betaShrinkage } = _testHelpers;
+  const shrunk = betaShrinkage(90, 100, 0.5, 6);
+  assert.ok(Math.abs(shrunk - 0.9) < 0.05, `shrunk ${shrunk} should be close to raw 0.9 at large n`);
+});
+
+test('betaShrinkage stays close to the prior at small n', () => {
+  const { betaShrinkage } = _testHelpers;
+  const shrunk = betaShrinkage(1, 2, 0.5, 6);
+  assert.ok(Math.abs(shrunk - 0.5) < 0.15, `shrunk ${shrunk} should stay near the 0.5 prior at n=2`);
+});
+
+test('isGoodQuality treats Good and Great as good, others as not', () => {
+  const { isGoodQuality } = _testHelpers;
+  assert.equal(isGoodQuality('Good'), true);
+  assert.equal(isGoodQuality('Great'), true);
+  assert.equal(isGoodQuality('Okay'), false);
+  assert.equal(isGoodQuality('Restless'), false);
+});

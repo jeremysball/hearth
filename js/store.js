@@ -180,7 +180,7 @@ export function undoAutoCloseSleep(closed) {
 }
 
 // Exported for unit tests only: do not use in application code.
-export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance };
+export const _testHelpers = { recencyWeight, weightedMedian, weightedPercentile, stdDev, weightedVariance, shrinkageWeight, noiseFloorVariance, betaShrinkage, isGoodQuality };
 
 // ---------- growth helpers ----------
 export function addMeasure(m) {
@@ -337,6 +337,23 @@ const NOISE_PSEUDO_N = 7;
 const LOGGING_NOISE_VARIANCE = 144;
 function noiseFloorVariance(observedVariance, n) {
   return (n * observedVariance + NOISE_PSEUDO_N * LOGGING_NOISE_VARIANCE) / (n + NOISE_PSEUDO_N);
+}
+
+// Ordinal sleep quality, worst to best. "Good or better" is the binary split
+// used by the Beta-Binomial insights (overtired-lag and method comparisons).
+function isGoodQuality(quality) {
+  return quality === 'Good' || quality === 'Great';
+}
+
+// Beta-Binomial shrinkage: shrinks an observed proportion (k good out of n)
+// toward a population prior proportion, weighted by how much data backs each
+// side. `priorStrength` is the prior's pseudo-sample-size — higher means the
+// prior resists being moved by a small personal sample. Short-circuits on
+// n=0 (no observations) so the prior is returned exactly, not via a
+// floating-point division of `priorP * priorStrength / priorStrength`.
+function betaShrinkage(k, n, priorP, priorStrength) {
+  if (n === 0) return priorP;
+  return (k + priorP * priorStrength) / (n + priorStrength);
 }
 
 // Age ranges for known developmental sleep regressions. onsetRange is [minMonths, maxMonths].
