@@ -8,6 +8,8 @@ export const CHANGELOG = [
       'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.'
     ],
     fixes: [
+      'Fixed entries sometimes failing to save when both caregivers logged at the same moment, which could leave one entry from reaching the other person.',
+      'A failed save on one device no longer stops that device from receiving the other caregiver\'s new entries.',
       'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
       'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',
       'The night sky\'s constellation now shows varying star sizes and renders a bit larger, so it no longer looks cramped.',
