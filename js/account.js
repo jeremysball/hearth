@@ -1,6 +1,7 @@
 // account.js: OAuth sign-in UI, signed-in state, and conflict resolution.
-import { state, save } from './store.js';
+import { state, save, reset } from './store.js';
 import { esc, sheet, toast } from './ui.js';
+import { getLastSyncFamilyId } from './sync.js';
 
 let cachedMe = { identity: null };
 export async function loadMe() {
@@ -28,9 +29,14 @@ export function accountSection() {
   return `<p class="empty-note">Sign in to back up and sync across devices. Optional: Hearth works without an account.</p>${signInButtons()}`;
 }
 
-export function beginSignIn(provider) {
+export function beginSignIn(provider, inviteToken) {
+  const params = new URLSearchParams();
+  const familyId = getLastSyncFamilyId();
+  if (familyId) params.set('device_family', familyId);
+  if (inviteToken) params.set('invite', inviteToken);
+  const qs = params.toString();
   // Full-page navigation so the provider redirect lands back on our callback.
-  window.location.href = '/api/auth/' + provider;
+  window.location.href = '/api/auth/' + provider + (qs ? '?' + qs : '');
 }
 
 export async function signOut(refresh) {
@@ -48,6 +54,7 @@ export async function handleAuthRedirect(refresh, onSignup) {
   const auth = params.get('auth');
   if (!auth) return;
   const pending = params.get('pending');
+  const provider = params.get('provider');
   history.replaceState(null, '', location.pathname);
   if (auth === 'ok') {
     await loadMe();
@@ -60,6 +67,8 @@ export async function handleAuthRedirect(refresh, onSignup) {
   }
   else if (auth === 'error') { toast('Sign-in failed, please try again'); }
   else if (auth === 'removed') { toast('You were removed from that family. Ask an admin for a new invite link.'); }
+  else if (auth === 'denied') { toast('This Hearth needs an invite link to sign in.'); }
+  else if (auth === 'mismatch') { openMismatchSheet(provider); }
   else if (auth === 'conflict' && pending) {
     try {
       const res = await fetch('/api/conflict/' + encodeURIComponent(pending), { credentials: 'include' });
@@ -78,6 +87,24 @@ function openConflictSheet(info, pending) {
     <button class="btn-ghost" data-action="auth:resolve" data-choice="switch" data-pending="${esc(pending)}">Switch to my account</button>
     <button class="btn-ghost" data-action="auth:resolve" data-choice="keep" data-pending="${esc(pending)}">Keep this device's data</button>`,
     { title: 'Choose your data' });
+}
+
+function openMismatchSheet(provider) {
+  sheet.open(`
+    <p class="empty-note">This device's local data and your account's family don't match. Nothing was changed or deleted yet.</p>
+    <button class="btn-primary" data-action="auth:mismatch-switch" data-provider="${esc(provider)}"><svg class="icon"><use href="#check"></use></svg> Switch to my account (wipes this device)</button>
+    <button class="btn-ghost" data-action="auth:mismatch-dismiss">Get a new invite instead</button>`,
+    { title: "Accounts don't match" });
+}
+
+// Wipes this device's local data (so it no longer claims a conflicting
+// family) and immediately retries the same sign-in with no device_family
+// hint, landing cleanly in the account's real family.
+export function mismatchSwitch(provider) {
+  sheet.close();
+  reset();
+  document.body.dataset.theme = 'girl';
+  beginSignIn(provider);
 }
 
 export async function resolveConflict(choice, pending, onDone) {
