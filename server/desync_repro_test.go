@@ -71,7 +71,7 @@ func TestInviteRejoinIdentityAfterRemoveAndReinvite(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/join/"+inviteToken, strings.NewReader(`{"caregiverName":"Her"}`))
 	req.SetPathValue("token", inviteToken)
 	rec := httptest.NewRecorder()
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("join failed: %d %s", rec.Code, rec.Body.String())
 	}
@@ -85,7 +85,7 @@ func TestInviteRejoinIdentityAfterRemoveAndReinvite(t *testing.T) {
 	// She taps "Continue with Google" on that same phone (live session for
 	// the NEW caregiver). Her identity row still points at the removed one.
 	cur := &SessionInfo{CaregiverID: newCare, FamilyID: "famA"}
-	res, err := reconcile(db, "google", "sub-her", "her@x.y", cur, "")
+	res, err := reconcile(db, newHub(), "google", "sub-her", "her@x.y", cur, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,13 +104,14 @@ func TestInviteRejoinIdentityAfterRemoveAndReinvite(t *testing.T) {
 	// The remaining sharp edge, still true on the tree: if her session dies
 	// BEFORE she signs in again, the answer is "removed" — a hard stop with a
 	// clear message (recoverable via a fresh invite), not a silent desync.
-	res2, err := reconcile(db, "google", "sub-her2", "her2@x.y", nil, "")
+	res2, err := reconcile(db, newHub(), "google", "sub-her2", "her2@x.y", nil, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res2.Kind != "signedup" {
-		// unrelated identity sanity check only
-		t.Fatalf("fresh identity should sign up, got %+v", res2)
+	if res2.Kind != "denied" {
+		// famA already exists on this instance; a fresh identity with no
+		// invite must be refused, not handed a brand-new private family.
+		t.Fatalf("expected denied for a stranger with no invite once a family exists, got %+v", res2)
 	}
 }
 
@@ -147,7 +148,7 @@ func TestOAuthRestoreAfterSessionLossSilentlySplitsFamilies(t *testing.T) {
 	// Her famA session is gone (silent-401 state): cookie no longer matches
 	// any session row, so handleAuthCallback passes cur == nil. The committed
 	// client sends no device_family hint, so it arrives as "".
-	res, err := reconcile(db, "google", "sub-her", "her@x.y", nil, "")
+	res, err := reconcile(db, newHub(), "google", "sub-her", "her@x.y", nil, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +190,7 @@ func TestOAuthRestoreAfterSessionLossSilentlySplitsFamilies(t *testing.T) {
 	// The draft server fix DOES catch this — but only once the client sends
 	// the device_family hint through the OAuth flow. Documented here so the
 	// fix isn't shipped server-side only and declared done.
-	resHint, err := reconcile(db, "google", "sub-her", "her@x.y", nil, "famA")
+	resHint, err := reconcile(db, newHub(), "google", "sub-her", "her@x.y", nil, "famA", "")
 	if err != nil {
 		t.Fatal(err)
 	}
