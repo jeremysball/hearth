@@ -50,6 +50,10 @@ func mergeLogEntries(tx *sql.Tx, from, to string) error {
 		}
 		moved = append(moved, e)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
 	rows.Close()
 
 	for _, e := range moved {
@@ -86,6 +90,10 @@ func mergeGrowthEntries(tx *sql.Tx, from, to string) error {
 			return err
 		}
 		moved = append(moved, e)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
 	}
 	rows.Close()
 

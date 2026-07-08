@@ -247,9 +247,21 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	}
 	db.Exec(`UPDATE families SET rev_counter = 3 WHERE id = 'famS'`)
 
+	// The partner has an open SSE connection at merge time; the merge must
+	// push a live update, not just leave it for the next poll.
+	hub := newHub()
+	sseCh, cancel := hub.Subscribe("famT")
+	defer cancel()
+
 	// She resolves the OAuth conflict with "Merge into my account".
-	if err := mergeFamilies(db, newHub(), "famS", "famT"); err != nil {
+	if err := mergeFamilies(db, hub, "famS", "famT"); err != nil {
 		t.Fatal(err)
+	}
+
+	select {
+	case <-sseCh:
+	default:
+		t.Fatal("expected mergeFamilies to broadcast to the target family's SSE subscribers")
 	}
 
 	// The rows are in famT now…
