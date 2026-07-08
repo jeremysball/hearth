@@ -66,7 +66,7 @@ func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 	req.SetPathValue("token", "inv1")
 	rec := httptest.NewRecorder()
 
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 
 	if rec.Code != 200 {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
@@ -94,7 +94,7 @@ func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
 	req.SetPathValue("token", "inv1")
 	rec := httptest.NewRecorder()
 
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 
 	if rec.Code != http.StatusGone {
 		t.Fatalf("status = %d, want 410", rec.Code)
@@ -111,7 +111,7 @@ func TestHandleJoinInviteRejectsExpiredToken(t *testing.T) {
 	req.SetPathValue("token", "inv1")
 	rec := httptest.NewRecorder()
 
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 
 	if rec.Code != http.StatusGone {
 		t.Fatalf("status = %d, want 410", rec.Code)
@@ -124,7 +124,7 @@ func TestHandleJoinInviteRejectsUnknownToken(t *testing.T) {
 	req.SetPathValue("token", "nope")
 	rec := httptest.NewRecorder()
 
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
