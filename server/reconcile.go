@@ -185,11 +185,14 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 		}
 		defer tx.Rollback()
 		inviteFamily, matchedHash, e := consumeInvite(tx, inviteToken)
-		if e == sql.ErrNoRows || e == errInviteInvalid || inviteFamily != familyID {
+		if e == sql.ErrNoRows || e == errInviteInvalid {
 			return ReconcileResult{Kind: "removed"}, nil
 		}
 		if e != nil {
 			return ReconcileResult{}, e
+		}
+		if inviteFamily != familyID {
+			return ReconcileResult{Kind: "removed"}, nil
 		}
 		now := nowISO()
 		rev, e := bumpRev(tx, familyID)
