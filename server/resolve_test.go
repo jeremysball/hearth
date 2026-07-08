@@ -15,7 +15,7 @@ func TestMergeFamiliesCopiesEntries(t *testing.T) {
 	// A has a1; B has b1, b2. All ids unique across the table (PK constraint).
 	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1','B','sleep','t','{}','cgB',?),('b2','B','bath','t','{}','cgB',?)`, now, now)
 	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('a1','A','feed','t','{}','cgA',?)`, now)
-	if err := mergeFamilies(db, "A", "B"); err != nil {
+	if err := mergeFamilies(db, newHub(), "A", "B"); err != nil {
 		t.Fatal(err)
 	}
 	var n int
@@ -39,7 +39,7 @@ func TestMergeFamiliesDedupesById(t *testing.T) {
 	// B has an entry with id x1. A tries to insert same id — dedup should keep B's.
 	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('x1','B','sleep','t','{}','cgB',?)`, now)
 	// Can't insert x1 into A (PK conflict). Merge is a no-op but should not error.
-	if err := mergeFamilies(db, "A", "B"); err != nil {
+	if err := mergeFamilies(db, newHub(), "A", "B"); err != nil {
 		t.Fatal(err)
 	}
 	var typ string
@@ -59,7 +59,7 @@ func TestResolveSwitchIssuesSessionForTarget(t *testing.T) {
 		hashForTest(t, "p"), now)
 	req := httptest.NewRequest("POST", "/api/auth/resolve", strings.NewReader(`{"pending":"p","choice":"switch"}`))
 	rec := httptest.NewRecorder()
-	handleResolve(db)(rec, req)
+	handleResolve(db, newHub())(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204", rec.Code)
 	}
