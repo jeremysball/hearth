@@ -583,18 +583,22 @@ const DRAFT_MAX_AGE_MS = 5 * 60 * 1000;
 
 function saveDraft() {
   const saveBtn = $('#scrim.show [data-action="log:save"]');
-  if (!saveBtn || saveBtn.dataset.id) return;
+  if (!saveBtn) return;
   try {
     const type = saveBtn.dataset.type;
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ type, savedAt: Date.now(), entry: gather(type) }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ type, id: saveBtn.dataset.id || null, savedAt: Date.now(), entry: gather(type) }));
   } catch (e) { /* private browsing / quota: draft persistence is best-effort */ }
 }
-function loadDraft(type) {
+// id is the entry being edited, or null when logging a new one — a draft only
+// applies to the same entry (or the same "new" context) it was saved for, so
+// reopening a *different* entry's edit sheet never pulls in someone else's
+// unsaved text.
+function loadDraft(type, id = null) {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed.type !== type || Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS) return null;
+    if (parsed.type !== type || (parsed.id || null) !== id || Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS) return null;
     return parsed.entry;
   } catch (e) { return null; }
 }
@@ -613,6 +617,8 @@ export function openLog(type, entry) {
   );
   if (editing) {
     prefill(type, entry);
+    const draft = loadDraft(type, entry.id);
+    if (draft) prefill(type, draft);
   } else {
     writeDT('f-time', new Date().toISOString());
     const draft = loadDraft(type);
