@@ -36,6 +36,16 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     // 8-month-old population window = [140, 170]) ----
     const page = await browser.newPage();
     await page.setViewportSize({ width: 360, height: 820 });
+    // seed() below writes the sleep log and birthdate straight into
+    // localStorage while the previous page is still live, then reloads. If
+    // the background syncOnce() from that still-live page (fired on load, or
+    // via the 15s interval) resolves in the gap before reload() navigates
+    // away, its save() serializes the whole in-memory _state over what
+    // seed() just wrote, clobbering the injected fixture with stale data —
+    // a flaky race, worse the faster the reload happens. This test only
+    // cares about client-rendered sky mode from the injected state, so
+    // blocking the pull entirely removes the race without touching prod code.
+    await page.route('**/api/sync*', (route) => route.abort());
     await page.clock.install({ time: at(13) });
     await page.goto(srv.base + '/');
     await onboard(page);
@@ -92,6 +102,7 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     const nightPage = await browser.newPage();
     await nightPage.context().addCookies(storageState.cookies);
     await nightPage.setViewportSize({ width: 360, height: 820 });
+    await nightPage.route('**/api/sync*', (route) => route.abort());
     await nightPage.clock.install({ time: at(3) });
     await nightPage.goto(srv.base + '/');
     await nightPage.evaluate((origins) => {
@@ -108,6 +119,7 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     // ---- reduced motion: fully static scene ----
     const rmCtx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 360, height: 820 }, storageState });
     const rmPage = await rmCtx.newPage();
+    await rmPage.route('**/api/sync*', (route) => route.abort());
     await rmPage.clock.install({ time: at(13) });
     await rmPage.goto(srv.base + '/');
     await onboard(rmPage);
