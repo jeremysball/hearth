@@ -76,9 +76,17 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
 	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
 	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db, hub))
-	mux.HandleFunc("GET /join/{token}", func(w http.ResponseWriter, r *http.Request) {
+	// index.html carries the <meta name="version"> that bump-version.sh
+	// updates on every release, and the service worker's network-first
+	// navigation handler only skips its own Cache Storage — it doesn't stop
+	// the browser's HTTP cache from silently satisfying that fetch with a
+	// stale copy. Same reasoning as the sw.js route below: force revalidation
+	// so a device can't get pinned to an old shell.
+	serveShell := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
 		http.ServeFileFS(w, r, staticFS, "index.html")
-	})
+	}
+	mux.HandleFunc("GET /join/{token}", serveShell)
 	// sw.js gates every frontend fix: browsers only learn a new one exists by
 	// re-fetching this file. Without an explicit header they may serve a
 	// stale HTTP-cached copy indefinitely (well, up to the 24h spec backstop),
@@ -103,6 +111,8 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/auth/signout", requireAuth(db, handleSignout(db)))
 	mux.HandleFunc("GET /api/conflict/{pending}", handleConflictInfo(db))
 	mux.HandleFunc("POST /api/auth/resolve", handleResolve(db, hub))
+	mux.HandleFunc("GET /{$}", serveShell)
+	mux.HandleFunc("GET /index.html", serveShell)
 	mux.Handle("/", http.FileServerFS(staticFS))
 	return logMiddleware(mux)
 }
