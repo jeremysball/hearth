@@ -2,7 +2,6 @@
 import { state, save, applySyncResponse } from './store.js';
 import { $, applyTheme, toast } from './ui.js';
 import { router } from './app.js';
-import { beginSignIn } from './account.js';
 
 export function joinView(token) {
   return `<div class="onboard">
