@@ -15,6 +15,8 @@ export function joinView(token) {
         <input id="join-name" placeholder="e.g. Dad" autocomplete="off" /></label>
     </div>
     <button class="btn-primary onb-go" data-action="join:finish" data-token="${token}"><svg class="icon"><use href="#heart"></use></svg> Join family</button>
+    <div class="onb-or">or</div>
+    <button class="signin-pill google" data-action="join:google" data-token="${token}"><svg class="icon"><use href="#circle-user"></use></svg> Continue with Google</button>
   </div>`;
 }
 

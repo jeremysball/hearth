@@ -48,9 +48,14 @@ function describeDeadLetter(op) {
   return op.method + ' ' + op.url;
 }
 
+function deadLetterReason(item) {
+  if (item.status === 'family-switch') return "Didn't save — this device switched accounts";
+  return `Couldn't save (error ${item.status})`;
+}
+
 function deadLetterRow(item) {
   return `<div class="set-row notif-row">
-    <span class="notif-txt"><b>${esc(describeDeadLetter(item.op))}</b><span class="fld-l">Couldn't save (error ${item.status}) · ${esc(fmt.rel(item.droppedAt))}</span></span>
+    <span class="notif-txt"><b>${esc(describeDeadLetter(item.op))}</b><span class="fld-l">${esc(deadLetterReason(item))} · ${esc(fmt.rel(item.droppedAt))}</span></span>
     <button class="btn-sm" data-action="deadletter:dismiss" data-id="${esc(item.id)}">Dismiss</button>
   </div>`;
 }

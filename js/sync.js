@@ -23,8 +23,59 @@ export function enqueue(op) {
 // with a leftover ISO-timestamp string) is sent as-is; the server treats
 // anything it can't parse as an integer as "since the beginning" and returns a
 // full resync.
-export function getLastSyncRev() { return localStorage.getItem(LAST_SYNC_REV_KEY) || ''; }
-export function setLastSyncRev(rev) { localStorage.setItem(LAST_SYNC_REV_KEY, String(rev)); }
+//
+// The cursor is stored alongside the family id it was earned under. A device
+// that switches families (OAuth restore into a stale identity's family,
+// conflict-resolution merge/switch, admin remove + re-invite) must not keep
+// pulling with the old family's watermark — rows in the new family with
+// rev <= that watermark would be silently skipped forever. applySyncFamily
+// detects the switch and resets the cursor so the next pull is a full resync.
+function loadCursor() {
+  const raw = localStorage.getItem(LAST_SYNC_REV_KEY);
+  if (!raw) return { familyId: '', rev: '' };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return { familyId: parsed.familyId || '', rev: parsed.rev != null ? String(parsed.rev) : '' };
+    }
+  } catch (e) { /* pre-upgrade client: raw was a bare rev/timestamp string, not JSON */ }
+  return { familyId: '', rev: raw };
+}
+function saveCursor(familyId, rev) {
+  localStorage.setItem(LAST_SYNC_REV_KEY, JSON.stringify({ familyId, rev: String(rev) }));
+}
+
+export function getLastSyncRev() { return loadCursor().rev; }
+export function setLastSyncRev(rev) { saveCursor(loadCursor().familyId, rev); }
+export function getLastSyncFamilyId() { return loadCursor().familyId; }
+
+// Called with the familyId a sync response came back for. If the device's
+// cursor already belongs to a different, non-empty family, this is a family
+// switch: the outbox is quarantined (dead-lettered, not drained cross-family)
+// and the cursor is reset so the caller re-pulls with since=-1. Returns true
+// when a switch was detected. A falsy familyId (should never happen for an
+// authenticated response, but is the safer default) is a no-op rather than
+// a guess either way.
+export function applySyncFamily(familyId) {
+  if (!familyId) return false;
+  const cur = loadCursor();
+  if (cur.familyId && cur.familyId !== familyId) {
+    quarantineOutbox();
+    saveCursor(familyId, '');
+    return true;
+  }
+  if (!cur.familyId) saveCursor(familyId, cur.rev);
+  return false;
+}
+
+// Clears all device-local sync state: outbox, cursor, and dead letters. Used
+// by store.reset() so "reset everything" actually starts clean instead of
+// leaving a stale cursor/outbox for the next family this device joins.
+export function clearSyncState() {
+  localStorage.removeItem(OUTBOX_KEY);
+  localStorage.removeItem(LAST_SYNC_REV_KEY);
+  localStorage.removeItem(DEAD_LETTER_KEY);
+}
 
 // Ops the server permanently rejected (see isPermanentFailure below) land
 // here instead of vanishing, so a caregiver can see what didn't save and
@@ -42,6 +93,22 @@ function pushDeadLetter(op, status) {
 }
 export function dismissDeadLetter(id) {
   saveDeadLetters(loadDeadLetters().filter((x) => x.id !== id));
+}
+
+// A family switch means the queued ops were written under the old family's
+// session; draining them now would push the old family's data into the new
+// one. Quarantine instead of dropping so the caregiver can see and re-enter
+// them, same as any other permanently-rejected op.
+function quarantineOutbox() {
+  const ops = loadOutbox();
+  if (!ops.length) return;
+  const items = loadDeadLetters();
+  const droppedAt = new Date().toISOString();
+  for (const op of ops) {
+    items.push({ id: 'dl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), op, status: 'family-switch', droppedAt });
+  }
+  saveDeadLetters(items);
+  saveOutbox([]);
 }
 
 // Drains the outbox to the server in order, stopping at the first failure so
