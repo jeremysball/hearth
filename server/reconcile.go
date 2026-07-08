@@ -25,13 +25,29 @@ func caregiverRemoved(db *sql.DB, caregiverID string) (bool, error) {
 	return removedAt != "", nil
 }
 
+// anyFamilyExists reports whether this instance has ever been provisioned.
+// handleCreateFamily (server/family.go) already refuses to create a second
+// family once one exists; the OAuth signedup path below must refuse the
+// same way, or a stranger clicking "Continue with Google" on an
+// already-provisioned instance silently gets their own private family in
+// the same database.
+func anyFamilyExists(db *sql.DB) (bool, error) {
+	var exists bool
+	err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists)
+	return exists, err
+}
+
 // reconcile decides what an OAuth sign-in means for this device.
 //
 // cur is the device's live session, if any. deviceFamily is the family id the
 // client last synced with (sent as a hint through the OAuth flow); it lets a
 // device whose session rows were lost prove which family its local data
 // belongs to, so a sign-in cannot silently restore into a different family.
-func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionInfo, deviceFamily string) (ReconcileResult, error) {
+// inviteToken, when set, lets a fresh identity (or a removed one) join the
+// one existing family on a provisioned instance; without it, reconcile
+// returns Kind="denied" so a stranger on an already-provisioned instance
+// can't spin up a second private family.
+func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur *SessionInfo, deviceFamily, inviteToken string) (ReconcileResult, error) {
 	// A stale session cookie for a caregiver an admin has since removed must
 	// not be treated as a live device to link or restore onto — that would
 	// hand the signed-in-again OAuth account a session that 401s on the very
@@ -63,25 +79,70 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 			}
 			return ReconcileResult{Kind: "linked", CaregiverID: cur.CaregiverID, FamilyID: cur.FamilyID}, nil
 		}
-		// Sign up: fresh family + caregiver + default settings, then identity.
-		newFamily, newBaby, newCare := newID(), newID(), newID()
-		now := nowISO()
+		exists, e := anyFamilyExists(db)
+		if e != nil {
+			return ReconcileResult{}, e
+		}
+		if !exists {
+			// Sign up: fresh family + caregiver + default settings, then identity.
+			newFamily, newBaby, newCare := newID(), newID(), newID()
+			now := nowISO()
+			tx, e := db.Begin()
+			if e != nil {
+				return ReconcileResult{}, e
+			}
+			defer tx.Rollback()
+			if _, e = tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, newFamily, now); e != nil {
+				return ReconcileResult{}, e
+			}
+			if _, e = tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, '', '', 'girl', ?)`, newBaby, newFamily, now); e != nil {
+				return ReconcileResult{}, e
+			}
+			if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, 'Parent', 'Parent', ?, ?)`, newCare, newFamily, now, now); e != nil {
+				return ReconcileResult{}, e
+			}
+			if _, e = tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
+				newFamily, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); e != nil {
+				return ReconcileResult{}, e
+			}
+			if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,
+				provider, providerUserID, newCare, email, now); e != nil {
+				return ReconcileResult{}, e
+			}
+			if e = tx.Commit(); e != nil {
+				return ReconcileResult{}, e
+			}
+			return ReconcileResult{Kind: "signedup", CaregiverID: newCare, FamilyID: newFamily}, nil
+		}
+
+		// The instance already has its one family. A stranger without a
+		// valid invite must not be handed a caregiver seat in it.
+		if inviteToken == "" {
+			return ReconcileResult{Kind: "denied"}, nil
+		}
 		tx, e := db.Begin()
 		if e != nil {
 			return ReconcileResult{}, e
 		}
 		defer tx.Rollback()
-		if _, e = tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, newFamily, now); e != nil {
+		inviteFamily, matchedHash, e := consumeInvite(tx, inviteToken)
+		if e == sql.ErrNoRows || e == errInviteInvalid {
+			return ReconcileResult{Kind: "denied"}, nil
+		}
+		if e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, '', '', 'girl', ?)`, newBaby, newFamily, now); e != nil {
+		newCare := newID()
+		now := nowISO()
+		rev, e := bumpRev(tx, inviteFamily)
+		if e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, 'Parent', 'Parent', ?, ?)`, newCare, newFamily, now, now); e != nil {
+		if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at, rev) VALUES (?, ?, 'Caregiver', 'Partner', ?, ?, ?)`,
+			newCare, inviteFamily, now, now, rev); e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
-			newFamily, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); e != nil {
+		if _, e = tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); e != nil {
 			return ReconcileResult{}, e
 		}
 		if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,
@@ -91,7 +152,8 @@ func reconcile(db *sql.DB, provider, providerUserID, email string, cur *SessionI
 		if e = tx.Commit(); e != nil {
 			return ReconcileResult{}, e
 		}
-		return ReconcileResult{Kind: "signedup", CaregiverID: newCare, FamilyID: newFamily}, nil
+		hub.Broadcast(inviteFamily)
+		return ReconcileResult{Kind: "linked", CaregiverID: newCare, FamilyID: inviteFamily}, nil
 	}
 	if err != nil {
 		return ReconcileResult{}, err

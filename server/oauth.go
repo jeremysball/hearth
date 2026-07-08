@@ -113,7 +113,7 @@ func lookupExistingSession(db *sql.DB, token string) *SessionInfo {
 	return &SessionInfo{FamilyID: familyID, CaregiverID: caregiverID}
 }
 
-func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
+func handleAuthCallback(db *sql.DB, hub *Hub, cfg Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("provider")
 		if !cfg.OAuthConfigured(name) {
@@ -173,7 +173,7 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		}
 		http.SetCookie(w, &http.Cookie{Name: oauthDeviceFamilyCookie, Path: "/", MaxAge: -1})
 
-		res, err := reconcile(db, name, gu.UserID, gu.Email, cur, deviceFamily)
+		res, err := reconcile(db, hub, name, gu.UserID, gu.Email, cur, deviceFamily, "")
 		if err != nil {
 			log.Printf("oauth: %s callback: reconcile failed for email=%q: %v", name, gu.Email, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
