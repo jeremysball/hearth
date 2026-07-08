@@ -115,8 +115,13 @@ func handleJoinInvite(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		if _, err := tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); err != nil {
+		res, err := tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ? AND used_at IS NULL`, now, matchedHash)
+		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "invite expired or already used", http.StatusGone)
 			return
 		}
 		if err := tx.Commit(); err != nil {

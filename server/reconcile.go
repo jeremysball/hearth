@@ -25,18 +25,6 @@ func caregiverRemoved(db *sql.DB, caregiverID string) (bool, error) {
 	return removedAt != "", nil
 }
 
-// anyFamilyExists reports whether this instance has ever been provisioned.
-// handleCreateFamily (server/family.go) already refuses to create a second
-// family once one exists; the OAuth signedup path below must refuse the
-// same way, or a stranger clicking "Continue with Google" on an
-// already-provisioned instance silently gets their own private family in
-// the same database.
-func anyFamilyExists(db *sql.DB) (bool, error) {
-	var exists bool
-	err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists)
-	return exists, err
-}
-
 // reconcile decides what an OAuth sign-in means for this device.
 //
 // cur is the device's live session, if any. deviceFamily is the family id the
@@ -79,19 +67,25 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			}
 			return ReconcileResult{Kind: "linked", CaregiverID: cur.CaregiverID, FamilyID: cur.FamilyID}, nil
 		}
-		exists, e := anyFamilyExists(db)
+		// The exists check and the branch it decides must run in the same
+		// transaction as any resulting insert — checking with a standalone
+		// query and only then opening a tx leaves a window where two
+		// concurrent first-ever signups could both see "no family" and both
+		// create one. family.go's handleCreateFamily avoids this the same
+		// way: SELECT EXISTS happens inside the tx that acts on it.
+		tx, e := db.Begin()
 		if e != nil {
+			return ReconcileResult{}, e
+		}
+		defer tx.Rollback()
+		var exists bool
+		if e = tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists); e != nil {
 			return ReconcileResult{}, e
 		}
 		if !exists {
 			// Sign up: fresh family + caregiver + default settings, then identity.
 			newFamily, newBaby, newCare := newID(), newID(), newID()
 			now := nowISO()
-			tx, e := db.Begin()
-			if e != nil {
-				return ReconcileResult{}, e
-			}
-			defer tx.Rollback()
 			if _, e = tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, newFamily, now); e != nil {
 				return ReconcileResult{}, e
 			}
@@ -120,11 +114,6 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 		if inviteToken == "" {
 			return ReconcileResult{Kind: "denied"}, nil
 		}
-		tx, e := db.Begin()
-		if e != nil {
-			return ReconcileResult{}, e
-		}
-		defer tx.Rollback()
 		inviteFamily, matchedHash, e := consumeInvite(tx, inviteToken)
 		if e == sql.ErrNoRows || e == errInviteInvalid {
 			return ReconcileResult{Kind: "denied"}, nil
@@ -142,8 +131,12 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			newCare, inviteFamily, now, now, rev); e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); e != nil {
+		res, e := tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ? AND used_at IS NULL`, now, matchedHash)
+		if e != nil {
 			return ReconcileResult{}, e
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ReconcileResult{Kind: "denied"}, nil
 		}
 		if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,
 			provider, providerUserID, newCare, email, now); e != nil {
@@ -203,8 +196,12 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			now, rev, caregiverID, familyID); e != nil {
 			return ReconcileResult{}, e
 		}
-		if _, e = tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); e != nil {
+		res, e := tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ? AND used_at IS NULL`, now, matchedHash)
+		if e != nil {
 			return ReconcileResult{}, e
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ReconcileResult{Kind: "removed"}, nil
 		}
 		if e = tx.Commit(); e != nil {
 			return ReconcileResult{}, e
