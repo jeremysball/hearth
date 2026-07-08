@@ -20,9 +20,17 @@ const oauthStateCookie = "hearth_oauth"
 // sign-in that would land the device in a different family than its data.
 const oauthDeviceFamilyCookie = "hearth_oauth_device_family"
 
-// validDeviceFamily accepts only newID-shaped values (hex, bounded length) so
-// an arbitrary client string never lands in a cookie or a log line.
-func validDeviceFamily(s string) bool {
+// oauthInviteCookie carries an invite token across the provider redirect,
+// the same way oauthDeviceFamilyCookie carries the device_family hint. It
+// lets a sign-in that would otherwise be denied (no known identity, or a
+// removed one) name the invite that grants it access.
+const oauthInviteCookie = "hearth_oauth_invite"
+
+// validTokenParam accepts only newID-shaped values (hex, bounded length) so
+// an arbitrary client string never lands in a cookie or a log line. Used for
+// both the device_family hint and the invite token carried through the
+// OAuth redirect — both are newID() output.
+func validTokenParam(s string) bool {
 	if len(s) == 0 || len(s) > 64 {
 		return false
 	}
@@ -84,10 +92,21 @@ func handleAuthBegin(cfg Config) http.HandlerFunc {
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int(10 * time.Minute / time.Second),
 		})
-		if df := r.URL.Query().Get("device_family"); validDeviceFamily(df) {
+		if df := r.URL.Query().Get("device_family"); validTokenParam(df) {
 			http.SetCookie(w, &http.Cookie{
 				Name:     oauthDeviceFamilyCookie,
 				Value:    df,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   true,
+				SameSite: http.SameSiteLaxMode,
+				MaxAge:   int(10 * time.Minute / time.Second),
+			})
+		}
+		if inv := r.URL.Query().Get("invite"); validTokenParam(inv) {
+			http.SetCookie(w, &http.Cookie{
+				Name:     oauthInviteCookie,
+				Value:    inv,
 				Path:     "/",
 				HttpOnly: true,
 				Secure:   true,
@@ -113,7 +132,7 @@ func lookupExistingSession(db *sql.DB, token string) *SessionInfo {
 	return &SessionInfo{FamilyID: familyID, CaregiverID: caregiverID}
 }
 
-func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
+func handleAuthCallback(db *sql.DB, hub *Hub, cfg Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("provider")
 		if !cfg.OAuthConfigured(name) {
@@ -168,12 +187,18 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		}
 
 		deviceFamily := ""
-		if dc, err := r.Cookie(oauthDeviceFamilyCookie); err == nil && validDeviceFamily(dc.Value) {
+		if dc, err := r.Cookie(oauthDeviceFamilyCookie); err == nil && validTokenParam(dc.Value) {
 			deviceFamily = dc.Value
 		}
 		http.SetCookie(w, &http.Cookie{Name: oauthDeviceFamilyCookie, Path: "/", MaxAge: -1})
 
-		res, err := reconcile(db, name, gu.UserID, gu.Email, cur, deviceFamily)
+		inviteToken := ""
+		if ic, err := r.Cookie(oauthInviteCookie); err == nil && validTokenParam(ic.Value) {
+			inviteToken = ic.Value
+		}
+		http.SetCookie(w, &http.Cookie{Name: oauthInviteCookie, Path: "/", MaxAge: -1})
+
+		res, err := reconcile(db, hub, name, gu.UserID, gu.Email, cur, deviceFamily, inviteToken)
 		if err != nil {
 			log.Printf("oauth: %s callback: reconcile failed for email=%q: %v", name, gu.Email, err)
 			http.Redirect(w, r, "/?auth=error", http.StatusFound)
@@ -193,6 +218,12 @@ func handleAuthCallback(db *sql.DB, cfg Config) http.HandlerFunc {
 		case "removed":
 			logAuthEvent(r, "oauth_removed", SessionInfo{})
 			http.Redirect(w, r, "/?auth=removed", http.StatusFound)
+		case "mismatch":
+			logAuthEvent(r, "oauth_mismatch", SessionInfo{})
+			http.Redirect(w, r, "/?auth=mismatch&provider="+name, http.StatusFound)
+		case "denied":
+			logAuthEvent(r, "oauth_denied", SessionInfo{})
+			http.Redirect(w, r, "/?auth=denied", http.StatusFound)
 		case "conflict":
 			pending := newID()
 			if _, e := db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,?,?,?,?,?,?,?)`,
