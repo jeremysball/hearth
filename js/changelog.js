@@ -17,7 +17,9 @@ export const CHANGELOG = [
       'Fixed overlapping stars in the night sky\'s constellations, and gave each star a size based on how many lines connect to it instead of a random size.',
       'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.',
       'Switching accounts no longer silently loses history: the app now notices when a device\'s data belongs to a different family and does a full resync instead of quietly skipping entries.',
-      'Merging two accounts together now reliably shares the merged history with the other caregiver, instead of it silently staying invisible to them.'
+      'Merging two accounts together now reliably shares the merged history with the other caregiver, instead of it silently staying invisible to them.',
+      'Fixed a sign-in that landed in the wrong family after losing a session; the app now catches the mismatch and offers to switch cleanly instead of silently splitting your data.',
+      'Signing in with Google on a Hearth that already has a family now requires an invite link, instead of silently creating a second, private family.'
     ]
   },
   {
