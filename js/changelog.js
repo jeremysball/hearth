@@ -5,7 +5,9 @@ export const CHANGELOG = [
     date: '2026-07-08',
     version: '2026-07-08',
     fixes: [
-      'Fixed an edit sometimes being silently undone right after saving, if it landed at the same moment as a routine background sync.'
+      'Fixed an edit sometimes being silently undone right after saving, if it landed at the same moment as a routine background sync.',
+      'Fixed unsaved changes to an existing entry sometimes vanishing if the app got reloaded mid-edit (e.g. the phone reclaiming memory in the background) — reopening that entry now restores what you\'d typed, the same way it already did for a brand-new entry.',
+      'Fixed the app force-reloading mid-keystroke when an update installed while you were typing in a plain field (like the baby\'s name or birthdate), which could discard what you\'d just typed.'
     ]
   },
   {
