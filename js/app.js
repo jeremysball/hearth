@@ -1,6 +1,6 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
-import { drainOutbox, getLastSyncRev, setLastSyncRev, syncChangeCount, dismissDeadLetter } from './sync.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
+import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
@@ -15,7 +15,7 @@ import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
-import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
+import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
 import { initSky } from './sky.js';
 
 let current = 'home';
@@ -301,6 +301,7 @@ document.addEventListener('click', (ev) => {
     'deadletter:dismiss': () => { dismissDeadLetter(d.id); router.refresh(); },
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
+    'join:google': () => beginSignIn('google', d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'cards:edit-done': () => { exitCardEditMode(); router.refresh(); },
     'theme:pick': () => {
@@ -319,6 +320,8 @@ document.addEventListener('click', (ev) => {
     'auth:signin': () => beginSignIn(d.provider),
     'auth:signout': () => signOut(() => router.refresh()),
     'auth:resolve': () => resolveConflict(d.choice, d.pending, () => { syncOnce(); router.go('home'); }),
+    'auth:mismatch-switch': () => mismatchSwitch(d.provider),
+    'auth:mismatch-dismiss': () => { sheet.close(); toast('Ask an admin for a new invite link'); },
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
 });
@@ -841,14 +844,40 @@ document.addEventListener('sheet:closed', () => {
 async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
-  const drained = await drainOutbox(fetch);
-  if (!drained) { log.warn('sync', 'outbox drain failed, aborting pull'); return; }
   try {
-    const res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
+    // Pull first, before draining the outbox. The session cookie already
+    // points at whatever family this pull answers for — if that's a switch
+    // from the family our cursor and outbox belong to (OAuth restore into a
+    // stale identity, a conflict-resolution merge/switch, remove +
+    // re-invite), draining now would push the old family's queued writes
+    // into the new family before we ever notice. Detecting the switch here,
+    // ahead of any drain, is what makes quarantining the outbox actually
+    // prevent the cross-family leak instead of reacting to it too late.
+    let res = await fetch('/api/sync?since=' + encodeURIComponent(getLastSyncRev()), { credentials: 'include' });
     if (!res.ok) { log.warn('sync', 'pull failed', res.status); return; }
-    const data = await res.json();
+    let data = await res.json();
+    if (applySyncFamily(data.familyId)) {
+      log.warn('sync', 'family switch detected before any outbox drain, forcing full resync');
+      res = await fetch('/api/sync?since=-1', { credentials: 'include' });
+      if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
+      data = await res.json();
+      if (data.familyId !== getLastSyncFamilyId()) { log.warn('sync', 'family changed again mid-resync, aborting'); return; }
+    }
+    // The pull above is read-only and merges by id, so it's safe to apply
+    // before draining: it never drops a local, not-yet-pushed entry. Only
+    // drain once we know the outbox targets the family this session is in —
+    // a write the server transiently rejected (e.g. SQLITE_BUSY when both
+    // caregivers log at once) just stays queued to retry.
+    // Snapshot what the outbox still owes a write for *before* draining.
+    // `data` was captured before the drain too, so it's already stale for
+    // any of that by the time it's applied below — the drain is about to
+    // push a newer version. Passing this snapshot into applySyncResponse
+    // keeps it from reverting the write the drain just sent.
+    const pending = pendingSyncState();
+    const drained = await drainOutbox(fetch);
+    if (!drained) log.warn('sync', 'outbox drain incomplete');
     const n = syncChangeCount(data);
-    applySyncResponse(data);
+    applySyncResponse(data, pending);
     setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) {
@@ -881,7 +910,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 setInterval(syncOnce, 15000);
-setSyncTrigger(() => { drainOutbox(fetch); syncOnce(); });
+setSyncTrigger(syncOnce);
 
 document.addEventListener('pointerdown', warmAudio, { once: true });
 document.addEventListener('DOMContentLoaded', init);

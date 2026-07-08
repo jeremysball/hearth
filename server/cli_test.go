@@ -24,7 +24,7 @@ func TestCreateInviteCLIProducesJoinableInvite(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/join/"+token, nil)
 	req.SetPathValue("token", token)
 	rec := httptest.NewRecorder()
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 	if rec.Code != 200 {
 		t.Fatalf("expected join to succeed, got %d: %s", rec.Code, rec.Body.String())
 	}

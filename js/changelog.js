@@ -2,18 +2,32 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-08',
+    version: '2026-07-08',
+    fixes: [
+      'Fixed an edit sometimes being silently undone right after saving, if it landed at the same moment as a routine background sync.'
+    ]
+  },
+  {
     date: '2026-07-07',
     version: '2026-07-07',
     features: [
-      'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.'
+      'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.',
+      'Added a "Continue with Google" option to invite links, so a re-invited caregiver can rejoin without retyping their name.'
     ],
     fixes: [
+      'Fixed entries sometimes failing to save when both caregivers logged at the same moment, which could leave one entry from reaching the other person.',
+      'A failed save on one device no longer stops that device from receiving the other caregiver\'s new entries.',
       'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
       'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',
       'The night sky\'s constellation now shows varying star sizes and renders a bit larger, so it no longer looks cramped.',
       'Thinned out Aquarius, Taurus, Gemini, Virgo, Scorpio, and Sagittarius, which were too dense and tangled compared to the rest of the zodiac constellations.',
       'Fixed overlapping stars in the night sky\'s constellations, and gave each star a size based on how many lines connect to it instead of a random size.',
-      'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.'
+      'Added a subtle twinkle to the brighter stars in the night sky\'s constellation.',
+      'Switching accounts no longer silently loses history: the app now notices when a device\'s data belongs to a different family and does a full resync instead of quietly skipping entries.',
+      'Merging two accounts together now reliably shares the merged history with the other caregiver, instead of it silently staying invisible to them.',
+      'Fixed a sign-in that landed in the wrong family after losing a session; the app now catches the mismatch and offers to switch cleanly instead of silently splitting your data.',
+      'Signing in with Google on a Hearth that already has a family now requires an invite link, instead of silently creating a second, private family.'
     ]
   },
   {
