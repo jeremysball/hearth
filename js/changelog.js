@@ -2,6 +2,13 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-08',
+    version: '2026-07-08',
+    fixes: [
+      'Fixed an edit sometimes being silently undone right after saving, if it landed at the same moment as a routine background sync.'
+    ]
+  },
+  {
     date: '2026-07-07',
     version: '2026-07-07',
     features: [

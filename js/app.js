@@ -1,5 +1,5 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, markSynced, setSyncTrigger, derive } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
@@ -868,10 +868,16 @@ async function syncOnce() {
     // drain once we know the outbox targets the family this session is in —
     // a write the server transiently rejected (e.g. SQLITE_BUSY when both
     // caregivers log at once) just stays queued to retry.
+    // Snapshot what the outbox still owes a write for *before* draining.
+    // `data` was captured before the drain too, so it's already stale for
+    // any of that by the time it's applied below — the drain is about to
+    // push a newer version. Passing this snapshot into applySyncResponse
+    // keeps it from reverting the write the drain just sent.
+    const pending = pendingSyncState();
     const drained = await drainOutbox(fetch);
     if (!drained) log.warn('sync', 'outbox drain incomplete');
     const n = syncChangeCount(data);
-    applySyncResponse(data);
+    applySyncResponse(data, pending);
     setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) {
