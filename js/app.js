@@ -798,6 +798,15 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   let refreshing = false;
   let hadController = !!navigator.serviceWorker.controller;
   let pendingReload = false;
+  // A reload is unsafe not just inside a modal sheet but any time a plain
+  // inline field (baby name, birthdate, quiet hours, etc. in profile.js) is
+  // focused: those save on `change` (blur/Enter), so a mid-keystroke reload
+  // discards the field's uncommitted text with no warning.
+  const editingInProgress = () => {
+    if ($('#scrim.show')) return true;
+    const el = document.activeElement;
+    return !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+  };
   const reloadNow = () => {
     if (refreshing) return;
     refreshing = true;
@@ -805,12 +814,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   };
   const reloadWhenSafe = () => {
     pendingReload = true;
-    if ($('#scrim.show')) return;
+    if (editingInProgress()) return;
     reloadNow();
   };
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadController) { hadController = true; return; }
-    if ($('#scrim.show')) {
+    if (editingInProgress()) {
       pendingReload = true;
       toast('Update ready', reloadWhenSafe, 'Refresh');
     } else if ($('#toast.show')) {
@@ -819,7 +828,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       reloadNow();
     }
   });
-  setInterval(() => { if (pendingReload && !$('#scrim.show') && !$('#toast.show')) reloadNow(); }, 3000);
+  setInterval(() => { if (pendingReload && !editingInProgress() && !$('#toast.show')) reloadNow(); }, 3000);
 }
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
