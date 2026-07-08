@@ -75,7 +75,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
 	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
-	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db))
+	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db, hub))
 	mux.HandleFunc("GET /join/{token}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticFS, "index.html")
 	})

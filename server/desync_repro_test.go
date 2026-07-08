@@ -71,7 +71,7 @@ func TestInviteRejoinIdentityAfterRemoveAndReinvite(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/join/"+inviteToken, strings.NewReader(`{"caregiverName":"Her"}`))
 	req.SetPathValue("token", inviteToken)
 	rec := httptest.NewRecorder()
-	handleJoinInvite(db)(rec, req)
+	handleJoinInvite(db, newHub())(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("join failed: %d %s", rec.Code, rec.Body.String())
 	}
