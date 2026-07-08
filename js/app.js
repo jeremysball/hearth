@@ -15,7 +15,7 @@ import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
-import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe } from './account.js';
+import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
 import { initSky } from './sky.js';
 
 let current = 'home';
@@ -301,6 +301,7 @@ document.addEventListener('click', (ev) => {
     'deadletter:dismiss': () => { dismissDeadLetter(d.id); router.refresh(); },
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
+    'join:google': () => beginSignIn('google', d.token),
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'cards:edit-done': () => { exitCardEditMode(); router.refresh(); },
     'theme:pick': () => {
@@ -319,6 +320,8 @@ document.addEventListener('click', (ev) => {
     'auth:signin': () => beginSignIn(d.provider),
     'auth:signout': () => signOut(() => router.refresh()),
     'auth:resolve': () => resolveConflict(d.choice, d.pending, () => { syncOnce(); router.go('home'); }),
+    'auth:mismatch-switch': () => mismatchSwitch(d.provider),
+    'auth:mismatch-dismiss': () => { sheet.close(); toast('Ask an admin for a new invite link'); },
   };
   if (map[a]) { ev.preventDefault(); map[a](); }
 });

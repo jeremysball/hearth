@@ -5,7 +5,8 @@ export const CHANGELOG = [
     date: '2026-07-07',
     version: '2026-07-07',
     features: [
-      'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.'
+      'Trends now surfaces Insights: short, plain-language patterns in her naps, only shown once there\'s enough consistent data to say something useful.',
+      'Added a "Continue with Google" option to invite links, so a re-invited caregiver can rejoin without retyping their name.'
     ],
     fixes: [
       'Fixed entries sometimes failing to save when both caregivers logged at the same moment, which could leave one entry from reaching the other person.',
