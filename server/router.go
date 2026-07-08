@@ -98,7 +98,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("PATCH /api/caregivers/{id}/role", requireAuth(db, handlePatchCaregiverRole(db, hub)))
 	mux.HandleFunc("DELETE /api/caregivers/{id}", requireAuth(db, handleRemoveCaregiver(db, hub)))
 	mux.HandleFunc("GET /api/auth/{provider}", handleAuthBegin(cfg))
-	mux.HandleFunc("GET /api/auth/{provider}/callback", handleAuthCallback(db, cfg))
+	mux.HandleFunc("GET /api/auth/{provider}/callback", handleAuthCallback(db, hub, cfg))
 	mux.HandleFunc("GET /api/me", requireAuth(db, handleMe(db)))
 	mux.HandleFunc("POST /api/auth/signout", requireAuth(db, handleSignout(db)))
 	mux.HandleFunc("GET /api/conflict/{pending}", handleConflictInfo(db))
