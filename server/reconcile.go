@@ -166,7 +166,9 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 		// identity to the live caregiver so Google sign-in works for the
 		// membership she actually has; no entries move. Without a live
 		// session, signing in must not resurrect the removed caregiver, nor
-		// silently spin up a fresh family as if this were a brand-new user.
+		// silently spin up a fresh family as if this were a brand-new user —
+		// unless the sign-in comes with a valid invite that names the same
+		// family, in which case we reactivate the same caregiver row in place.
 		if cur != nil {
 			if _, e := db.Exec(`UPDATE identities SET caregiver_id = ? WHERE provider = ? AND provider_user_id = ?`,
 				cur.CaregiverID, provider, providerUserID); e != nil {
@@ -174,7 +176,38 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			}
 			return ReconcileResult{Kind: "linked", CaregiverID: cur.CaregiverID, FamilyID: cur.FamilyID}, nil
 		}
-		return ReconcileResult{Kind: "removed"}, nil
+		if inviteToken == "" {
+			return ReconcileResult{Kind: "removed"}, nil
+		}
+		tx, e := db.Begin()
+		if e != nil {
+			return ReconcileResult{}, e
+		}
+		defer tx.Rollback()
+		inviteFamily, matchedHash, e := consumeInvite(tx, inviteToken)
+		if e == sql.ErrNoRows || e == errInviteInvalid || inviteFamily != familyID {
+			return ReconcileResult{Kind: "removed"}, nil
+		}
+		if e != nil {
+			return ReconcileResult{}, e
+		}
+		now := nowISO()
+		rev, e := bumpRev(tx, familyID)
+		if e != nil {
+			return ReconcileResult{}, e
+		}
+		if _, e = tx.Exec(`UPDATE caregivers SET removed_at = '', updated_at = ?, rev = ? WHERE id = ? AND family_id = ?`,
+			now, rev, caregiverID, familyID); e != nil {
+			return ReconcileResult{}, e
+		}
+		if _, e = tx.Exec(`UPDATE invites SET used_at = ? WHERE token_hash = ?`, now, matchedHash); e != nil {
+			return ReconcileResult{}, e
+		}
+		if e = tx.Commit(); e != nil {
+			return ReconcileResult{}, e
+		}
+		hub.Broadcast(familyID)
+		return ReconcileResult{Kind: "restored", CaregiverID: caregiverID, FamilyID: familyID}, nil
 	}
 
 	// Identity exists → family B (familyID).
