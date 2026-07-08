@@ -1,5 +1,5 @@
 // store.js: Hearth state, persistence, derived data, seeding.
-import { enqueue, mergeById } from './sync.js';
+import { enqueue, mergeById, clearSyncState, loadOutbox } from './sync.js';
 import { log } from './log.js';
 
 let _syncTrigger = null;
@@ -89,7 +89,7 @@ export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {}
 }
 export function markSynced() { _state.synced = true; save(); }
-export function reset() { _state = DEFAULT(); save(); }
+export function reset() { _state = DEFAULT(); save(); clearSyncState(); }
 
 export function state() { return _state; }
 
@@ -929,12 +929,34 @@ export function seed() {
   save();
 }
 
-export function applySyncResponse(resp) {
-  if (resp.baby) Object.assign(_state.baby, resp.baby);
-  if (resp.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
-  _state.log = mergeById(_state.log, resp.entries || []);
+// What this device still owed the server a write for at the moment a pull's
+// response was captured. syncOnce (js/app.js) pulls before draining (a
+// family-switch must be detected before any push, not after), then applies
+// that same pull response after the drain completes — so by the time it's
+// applied, the pull's copy of anything just drained is already stale
+// relative to what the drain just sent. Passing the pre-drain snapshot in
+// lets the caller protect those rows/fields; recomputing from the current
+// (post-drain, now-empty) outbox would miss them entirely.
+export function pendingSyncState() {
+  const ids = new Set();
+  let baby = false, settings = false;
+  for (const op of loadOutbox()) {
+    if (op.url === '/api/baby') baby = true;
+    else if (op.url === '/api/settings') settings = true;
+    else {
+      const m = /^\/api\/(?:entries|growth)\/([^/]+)$/.exec(op.url);
+      if (m) ids.add(m[1]);
+    }
+  }
+  return { ids, baby, settings };
+}
+
+export function applySyncResponse(resp, pending = pendingSyncState()) {
+  if (resp.baby && !pending.baby) Object.assign(_state.baby, resp.baby);
+  if (resp.settings && !pending.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
+  _state.log = mergeById(_state.log, (resp.entries || []).filter((e) => !pending.ids.has(e.id)));
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
-  _state.growth = mergeById(_state.growth, resp.growth || []);
+  _state.growth = mergeById(_state.growth, (resp.growth || []).filter((g) => !pending.ids.has(g.id)));
   if (resp.currentCaregiverId) _state.currentCaregiverId = resp.currentCaregiverId;
   _state.caregivers = mergeById(_state.caregivers || [], resp.caregivers || []);
   save();

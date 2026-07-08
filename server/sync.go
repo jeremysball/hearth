@@ -10,6 +10,7 @@ import (
 
 type syncResponse struct {
 	ServerRev          int64             `json:"serverRev"`
+	FamilyID           string            `json:"familyId"`
 	Baby               json.RawMessage   `json:"baby,omitempty"`
 	Settings           json.RawMessage   `json:"settings,omitempty"`
 	Entries            []json.RawMessage `json:"entries"`
@@ -37,7 +38,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 		session := sessionFrom(r)
 		since := sinceRev(r.URL.Query().Get("since"))
 
-		resp := syncResponse{Entries: []json.RawMessage{}, Growth: []json.RawMessage{}, Caregivers: []json.RawMessage{}, CurrentCaregiverID: session.CaregiverID}
+		resp := syncResponse{Entries: []json.RawMessage{}, Growth: []json.RawMessage{}, Caregivers: []json.RawMessage{}, CurrentCaregiverID: session.CaregiverID, FamilyID: session.FamilyID}
 
 		tx, err := db.BeginTx(r.Context(), &sql.TxOptions{ReadOnly: true})
 		if err != nil {

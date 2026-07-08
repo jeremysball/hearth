@@ -67,6 +67,13 @@ func allHashes(plaintext string) []string {
 	return out
 }
 
+// querier is satisfied by both *sql.DB and *sql.Tx, so lookupByToken can run
+// inside a transaction (needed when a token lookup must be atomic with the
+// write that follows it) or directly against the pool, unchanged either way.
+type querier interface {
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 // lookupByToken runs query (which must contain exactly one %s placeholder
 // for a `token_hash IN (...)` list, with token_hash as the first selected
 // column) against every hash of plaintext, and returns the specific hash
@@ -77,7 +84,7 @@ func allHashes(plaintext string) []string {
 // rotation window a row can be found via a fallback pepper's hash, and
 // recomputing with hashToken only ever produces the current pepper's hash,
 // which would not match that row.
-func lookupByToken(db *sql.DB, query string, plaintext string, dest ...any) (matchedHash string, err error) {
+func lookupByToken(db querier, query string, plaintext string, dest ...any) (matchedHash string, err error) {
 	hashes := allHashes(plaintext)
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(hashes)), ",")
 	args := make([]any, len(hashes))
