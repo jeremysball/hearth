@@ -2,6 +2,17 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-11',
+    version: '2026-07-11',
+    features: [
+      'The amount spinner now feels smoother and more iOS-like: a longer, more visible coast on a hard flick and a gentler settle with a hint of bounce.',
+      'Confetti now renders crisp on high-DPI screens and no longer stacks overlapping full-screen canvases when you quickly log several activities in a row, which used to cause a noticeable hitch.',
+    ],
+    fixes: [
+      'Fixed rapid activity saves stacking multiple confetti bursts that fought each other for paint time and stalled the page.',
+    ]
+  },
+  {
     date: '2026-07-08',
     version: '2026-07-08',
     fixes: [
