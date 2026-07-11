@@ -106,20 +106,45 @@ export function buzz(ms) {
   }
 }
 
+let confettiRaf = 0;
+let confettiCanvas = null;
+
 export function confetti() {
   if (reducedMotion) return;
+  // Singleton guard: if a burst is already running, cancel it before starting
+  // a new one. Previously, rapid saves stacked overlapping full-screen canvases
+  // whose parallel paint loops caused multi-hundred-ms frame stalls.
+  if (confettiRaf) {
+    cancelAnimationFrame(confettiRaf);
+    confettiRaf = 0;
+  }
+  if (confettiCanvas) {
+    confettiCanvas.remove();
+    confettiCanvas = null;
+  }
+
+  const cssW = window.innerWidth;
+  const cssH = window.innerHeight;
+  // Cap DPR at 2 so a 3× phone does not paint a 9-MP canvas 60 times a second.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;';
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
   document.body.appendChild(canvas);
+  confettiCanvas = canvas;
+
   const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
   const particles = [];
   const colors = ['#f4a261', '#e76f51', '#e9c46a', '#2a9d8f', '#264653', '#a8dadc'];
   for (let i = 0; i < 40; i++) {
     particles.push({
-      x: canvas.width / 2 + (Math.random() - 0.5) * 60,
-      y: canvas.height / 2,
+      x: cssW / 2 + (Math.random() - 0.5) * 60,
+      y: cssH / 2,
       vx: (Math.random() - 0.5) * 12,
       vy: (Math.random() - 1) * 8 - 6,
       size: 4 + Math.random() * 6,
@@ -129,28 +154,41 @@ export function confetti() {
     });
   }
   let start = performance.now();
+  let lastT = start;
+  const DURATION = 1.5;          // seconds, wall-clock lifetime
+  const MAX_FRAME_SEC = 1 / 60;   // clamp dt so 120 Hz panels do not double-step
+  const GRAVITY = 0.2;            // px per frame at 60 fps
+  const life = () => Math.max(0, 1 - (performance.now() - start) / 1000 / DURATION);
 
-  function draw() {
-    const elapsed = (performance.now() - start) / 1000;
-    if (elapsed > 1.5) { canvas.remove(); return; }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const life = Math.max(0, 1 - elapsed / 1.5);
-    particles.forEach((p) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.2;
-      p.rotation += p.rotSpeed;
+  function draw(now) {
+    const elapsed = (now - start) / 1000;
+    if (elapsed > DURATION) {
+      canvas.remove();
+      confettiCanvas = null;
+      confettiRaf = 0;
+      return;
+    }
+    const dt = Math.min((now - lastT) / 1000, MAX_FRAME_SEC) * 60; // normalise to 60fps reference frame
+    lastT = now;
+    const alpha = life();
+    ctx.globalAlpha = alpha;
+    ctx.clearRect(0, 0, cssW, cssH);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += GRAVITY * dt;
+      p.rotation += p.rotSpeed * dt;
       ctx.save();
-      ctx.globalAlpha = life;
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rotation);
       ctx.fillStyle = p.color;
       ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
       ctx.restore();
-    });
-    requestAnimationFrame(draw);
+    }
+    confettiRaf = requestAnimationFrame(draw);
   }
-  requestAnimationFrame(draw);
+  confettiRaf = requestAnimationFrame(draw);
 }
 
 export function animateGrow(el, keyframes, delayMs = 0, easing = 'cubic-bezier(0.34, 1.56, 0.64, 1)') {
