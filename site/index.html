@@ -530,6 +530,19 @@
 
   .sweetspot-detail { padding: 24px 0 108px; }
 
+  /* The page background gradient passes through a mid-lightness zone here, too dark
+     for day-ink and too light for night-ink to read well against. A paper plate keeps
+     the text on a fixed, legible surface no matter where the gradient sits. */
+  .sweetspot-card {
+    background: oklch(0.965 0.028 55 / 0.88);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--hair-day);
+    border-radius: 28px;
+    padding: 36px 40px;
+    box-shadow: 0 20px 50px oklch(0.3 0.04 42 / 0.18);
+  }
+
   .pull-quote {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
@@ -905,9 +918,11 @@
 
   <section class="sweetspot-detail" data-time="15:00" aria-label="How SweetSpot works">
     <div class="wrap">
-      <p class="pull-quote">A window instead of a single number, because sleep isn't that precise.</p>
-      <div class="wake-window" aria-hidden="true"><span></span></div>
-      <p class="body">Babies build sleep pressure while they're awake, the same mechanism that makes adults drag by 9pm. Miss the window and they won't settle. Push past it and you get overtired: cortisol spikes, and the next nap gets worse instead of better. Wake windows also stretch fast as they grow. A newborn taps out in under an hour; an 18-month-old can go five. SweetSpot blends the population average for your baby's age with your baby's own naps from the last few days, weighting recent naps more heavily, and gives you a window instead of a single number, because sleep isn't that precise.</p>
+      <div class="sweetspot-card">
+        <p class="pull-quote">A window instead of a single number, because sleep isn't that precise.</p>
+        <div class="wake-window" aria-hidden="true"><span></span></div>
+        <p class="body">Babies build sleep pressure while they're awake, the same mechanism that makes adults drag by 9pm. Miss the window and they won't settle. Push past it and you get overtired: cortisol spikes, and the next nap gets worse instead of better. Wake windows also stretch fast as they grow. A newborn taps out in under an hour; an 18-month-old can go five. SweetSpot blends the population average for your baby's age with your baby's own naps from the last few days, weighting recent naps more heavily, and gives you a window instead of a single number, because sleep isn't that precise.</p>
+      </div>
     </div>
   </section>
 
