@@ -17,6 +17,15 @@ function seg(group, opts, sel) {
     `</div>`;
 }
 
+// Most recent bottle amount, converted to the display unit; falls back to the settings default.
+function lastBottleAmount() {
+  const last = state().log.filter((e) => e.type === 'bottle').sort((a, b) => new Date(b.start) - new Date(a.start))[0];
+  if (!last) return state().settings.bottleAmountDefault;
+  let a = Number(last.amount) || 0;
+  if (state().settings.units.volume === 'oz') a = Math.round((a / 29.5735) * 10) / 10;
+  return a;
+}
+
 // Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
 // "Small" option is rendered as "Little" in the UI. Keep this in sync with
 // `sizeLabel` in home.js.
@@ -500,7 +509,7 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   bottle: () => `
     ${field('Contents', seg('contents', ['Formula', 'Breast milk', 'Water'], 'Formula'))}
-    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, state().settings.bottleAmountDefault)}
+    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, lastBottleAmount())}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}

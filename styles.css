@@ -16,6 +16,22 @@ body {
 #app { width: 100%; max-width: 432px; height: 100dvh; display: flex; flex-direction: column; }
 @media (min-width: 520px) { #app { max-width: 560px; } }
 
+/* ---- rotate lock: touch phones/tablets only, never desktop ---- */
+.rotate-lock { display: none; }
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+  .rotate-lock {
+    display: flex; position: fixed; inset: 0; z-index: 9999;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: var(--page); color: var(--ink); text-align: center; padding: 32px;
+  }
+  .rotate-lock svg { width: 48px; height: 48px; animation: rotate-lock-spin 1.8s ease-in-out infinite; }
+  #app { display: none; }
+}
+@keyframes rotate-lock-spin {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
 /* ---- themes ---- */
 :root, [data-theme="girl"] {
   --page:    oklch(0.828 0.125 40); --page-glow: oklch(0.78 0.17 42 / .75);
