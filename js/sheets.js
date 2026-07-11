@@ -53,6 +53,12 @@ export function openSpinner(id) {
   const ANGLE_PER_ITEM = 20;
   const CYLINDER_R = 120;
   const PERSPECTIVE = 800;
+  const DEG2RAD = Math.PI / 180;
+  // Pre-computed per-item angles (i * ANGLE_PER_ITEM * DEG2RAD): the only thing
+  // that changes frame-to-frame inside updateDrum is drumAngle, so we lift the
+  // fixed part out of the hot loop and store it in a typed array.
+  const itemAngles = new Float64Array(OFF * 2 + 1);
+  for (let k = 0; k < itemAngles.length; k++) itemAngles[k] = (k - OFF) * ANGLE_PER_ITEM * DEG2RAD;
   const fmtVal = (v) => String(step % 1 !== 0 ? v.toFixed(1) : v);
   // These closures always reference the current `val`: callers must not cache
   // the result across a commit() call that changes val.
@@ -152,18 +158,20 @@ export function openSpinner(id) {
   // Positions items on a virtual cylinder using 2D transforms computed from 3D geometry.
   // drumAngle (degrees): rotation of the cylinder; positive = top toward viewer.
   function updateDrum(drumAngle) {
+    const drumRad = drumAngle * DEG2RAD;
     for (let idx = 0; idx < itemEls.length; idx++) {
-      const i = idx - OFF;
-      const effRad = (i * ANGLE_PER_ITEM - drumAngle) * Math.PI / 180;
+      const effRad = itemAngles[idx] - drumRad;
       const cosA = Math.cos(effRad);
       const sinA = Math.sin(effRad);
       const z = CYLINDER_R * cosA;
-      const y = CYLINDER_R * sinA;
       const ps = PERSPECTIVE / (PERSPECTIVE - z);
-      const vy = y * ps;
-      const sY = Math.max(0, cosA * ps);
-      itemEls[idx].style.transform = `translate3d(0,${vy.toFixed(2)}px,0) scaleY(${sY.toFixed(4)})`;
-      itemEls[idx].style.opacity = Math.max(0, cosA).toFixed(3);
+      const vy = CYLINDER_R * sinA * ps;
+      const el = itemEls[idx];
+      // Always update transform even when cosA≤0; leaving a stale transform on
+      // back-half items lets them intercept clicks they should not (visible ·on
+      // item's input/check button gets occluded during tap-to-type mode).
+      el.style.transform = 'translate3d(0,' + vy + 'px,0) scaleY(' + (cosA > 0 ? cosA * ps : 0) + ')';
+      el.style.opacity = cosA > 0 ? cosA : 0;
     }
   }
 
@@ -278,25 +286,23 @@ export function openSpinner(id) {
     return Math.max(-4.2, Math.min(4.2, v));
   }
 
-  // Project the landing using the exponential decay integral (d = v0·τ), snap to
-  // the nearest step with a critically-damped spring seeded with the release
-  // velocity. This avoids simulating hundreds of near-zero frames: the integral
-  // gives the exact total coast distance in O(1), and the spring commits within
-  // ~250 ms regardless of fling speed.
-  // Frame-by-frame exponential decay: v(t) = v0·e^(-t/τ). Cap at 300ms so
-  // the residual handed to startSnap is always <½ step: spring settles in
-  // <50ms rather than the 500ms+ a full-amplitude spring would need.
+  // Frame-by-frame exponential decay: v(t) = v0·e^(-t/τ). The longer τ range
+  // (450–700 ms, was 300–480 ms) gives a more iOS-feeling coast — a heavy
+  // fling keeps spinning visibly before the spring takes over. The phase cap
+  // (600 ms, slightly above τ_max) bounds the worst case so the snap spring
+  // always gets to finish well inside the 700 ms wait the e2e tests allow.
   function startMomentum(v0) {
-    const tau = (0.30 + Math.min(Math.abs(v0) / 9, 0.18)) * 1000; // ms
+    const tau = (0.45 + Math.min(Math.abs(v0) / 9, 0.25)) * 1000; // ms
     const tStart = performance.now();
     let lastT = tStart;
+    const phaseMaxMs = 600;
     function tick(now) {
       if (overlay._closed) return;
       const dt = Math.min(now - lastT, 32); lastT = now; // ms
       v0 *= Math.exp(-dt / tau);
       offsetY = softClamp(offsetY + v0 * dt);
       render(offsetY);
-      if (now - tStart < 300 && Math.abs(v0) > 0.02) {
+      if (now - tStart < phaseMaxMs && Math.abs(v0) > 0.02) {
         rafId = requestAnimationFrame(tick);
       } else {
         curVel = 0;
@@ -306,9 +312,11 @@ export function openSpinner(id) {
     rafId = requestAnimationFrame(tick);
   }
 
-  // Critically-damped spring onto targetVal (defaults to nearest step from
-  // current offsetY). initVelMs carries the release velocity so the spring
-  // continues smoothly from any preceding momentum phase.
+  // Spring onto targetVal (defaults to nearest step from current offsetY).
+  // initVelMs carries the release velocity so the spring continues smoothly
+  // from any preceding momentum phase. k=300 (was 360) and a damping ratio of
+  // 0.86 (was 0.92) give a slower settle (~150 ms) with a subtle bounce —
+  // closer to the iOS picker feel than the previous "snap hard, no bounce".
   function startSnap(initVelMs = 0, targetVal = null) {
     if (overlay._closed) return;
     if (targetVal === null) {
@@ -318,7 +326,7 @@ export function openSpinner(id) {
 
     let pos = offsetY;
     let vel = initVelMs * 1000; // px/ms → px/s; spring math uses seconds
-    const k = 360, c = 2 * Math.sqrt(k) * 0.92; // slightly under-critical for subtle bounce
+    const k = 300, c = 2 * Math.sqrt(k) * 0.86; // under-critical for a gentle bounce
     let lastT = performance.now();
 
     function frame(now) {
