@@ -7,9 +7,11 @@ export const CHANGELOG = [
     features: [
       'The amount spinner now feels smoother and more iOS-like: a longer, more visible coast on a hard flick and a gentler settle with a hint of bounce.',
       'Confetti now renders crisp on high-DPI screens and no longer stacks overlapping full-screen canvases when you quickly log several activities in a row, which used to cause a noticeable hitch.',
+      'The app now asks you to rotate back to portrait if your phone or tablet turns sideways.',
     ],
     fixes: [
       'Fixed rapid activity saves stacking multiple confetti bursts that fought each other for paint time and stalled the page.',
+      'Logging a bottle now starts from the amount you last gave, instead of always resetting to the default.',
     ]
   },
   {
