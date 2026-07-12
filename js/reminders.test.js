@@ -73,11 +73,12 @@ globalThis.fetch = async (url, opts = {}) => {
 };
 
 // ---------- navigator ----------
+const notifyCalls = [];
 Object.defineProperty(globalThis, 'navigator', {
   value: {
     serviceWorker: {
       ready: Promise.resolve({
-        showNotification: () => Promise.resolve(),
+        showNotification: (title, opts) => { notifyCalls.push({ title, body: opts?.body }); return Promise.resolve(); },
         pushManager: {
           subscribe: async () => ({
             endpoint: 'https://push.example/sub',
@@ -218,6 +219,94 @@ test('New bottle re-arms when due time changes', () => {
   const call = timeoutForBottle();
   assert.ok(call, 'setTimeout should be called for the new due time');
   assert.ok(call.delay <= 0, `delay should be <= 0, got ${call.delay}`);
+});
+
+test('Bottle reminder honors lead time and reads as a heads-up', () => {
+  // Feed 1h ago, bottleIntervalH=3 → due in 2h. With a 20min lead the
+  // reminder should fire 20min before that, not at the due moment itself.
+  state().settings.reminders = { naps: false, bottle: true, meds: false, lead: 20, quietStart: '00:00', quietEnd: '00:00' };
+  state().log = [{ id: 'f2', type: 'feed', start: new Date(NOW - 1 * HR).toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+
+  scheduleReminders();
+
+  const call = timeoutCalls.find((c) => c.delay > 0);
+  assert.ok(call, 'setTimeout should be called for the lead-adjusted bottle reminder');
+  // due = now + 2h; notify = due - 20min = now + 100min
+  const expectedDelay = 100 * 60000;
+  assert.ok(Math.abs(call.delay - expectedDelay) < 5000, `delay should be ~${expectedDelay}ms, got ${call.delay}`);
+});
+
+// notify() resolves via navigator.serviceWorker.ready (a real Promise), so
+// its showNotification call lands on the microtask queue, not synchronously
+// with call.fn() -- flush pending microtasks before asserting on notifyCalls.
+async function flushMicrotasks() {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+test('Medicine reminder honors lead time with "coming up" copy', async () => {
+  // everyH=1, last dose 40min ago → due in 20min; lead=20 → notify now.
+  state().settings.reminders = { naps: false, bottle: false, meds: true, lead: 20, quietStart: '00:00', quietEnd: '00:00' };
+  state().settings.meds = [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 1 }];
+  state().log = [{ id: 'med1', type: 'medicine', medId: 'm1', start: new Date(NOW - 40 * 60000).toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+  notifyCalls.length = 0;
+
+  scheduleReminders();
+
+  const call = timeoutCalls.find((c) => c.delay <= 0);
+  assert.ok(call, 'setTimeout should be called for the lead-adjusted medicine reminder');
+  call.fn();
+  await flushMicrotasks();
+  const n = notifyCalls.find((c) => c.title === 'Vitamin D coming up');
+  assert.ok(n, 'should notify with "coming up" copy, not "due"');
+});
+
+// A lead-adjusted reminder can fire after its real due moment has already
+// passed (e.g. quiet hours held it back). At fire time it must swap to the
+// due-phrased copy rather than reading a stale "in N min" heads-up.
+test('Overdue lead-adjusted reminder fires with due copy, not stale "coming up" copy', async () => {
+  state().settings.reminders = { naps: false, bottle: true, meds: false, lead: 20, quietStart: '00:00', quietEnd: '00:00' };
+  // Feed 3h20min ago, bottleIntervalH=3 → due 20min ago (already overdue).
+  // With a 20min lead, notifyAt = due - 20min = 40min ago: also past, so the
+  // reminder fires immediately but the real due moment has already passed.
+  state().log = [{ id: 'f3', type: 'feed', start: new Date(NOW - 3.33 * HR).toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+  notifyCalls.length = 0;
+
+  scheduleReminders();
+
+  const call = timeoutCalls.find((c) => c.delay <= 0);
+  assert.ok(call, 'setTimeout should be called for the overdue bottle reminder');
+  call.fn();
+  await flushMicrotasks();
+  const n = notifyCalls.find((c) => c.title === 'Bottle due');
+  assert.ok(n, 'should notify with the due-phrased title once the due moment has passed, not "Feed coming up"');
+});
+
+test('Changing lead time mid-cycle does not re-fire an already-notified reminder', () => {
+  state().settings.reminders = { naps: false, bottle: true, meds: false, lead: 20, quietStart: '00:00', quietEnd: '00:00' };
+  state().log = [{ id: 'f4', type: 'feed', start: new Date(NOW - 1 * HR).toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+
+  // First schedule + fire under lead=20, marking dueAt as notified.
+  scheduleReminders();
+  const first = timeoutCalls.find((c) => c.delay > 0);
+  assert.ok(first, 'initial lead-adjusted reminder should be scheduled');
+  first.fn();
+
+  // Bump the lead to 30 without the due time changing; the dedup key is
+  // keyed on dueAt, so this must not schedule a second notification.
+  state().settings.reminders.lead = 30;
+  resetTimeouts();
+  scheduleReminders();
+
+  const second = timeoutCalls.find((c) => c.delay > 0);
+  assert.equal(second, undefined, 'should not re-schedule for the same due moment after only the lead changed');
 });
 
 test('Medicine reminders schedule during quiet hours', async () => {

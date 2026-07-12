@@ -715,6 +715,36 @@ test('todayStats sums bottle and pump amounts into feedVol', () => {
   assert.equal(stats.feedVol, 210);
 });
 
+test('lastBottleAmount returns null with no prior bottle', () => {
+  reset();
+  state().log = [{ id: 'f1', type: 'feed', start: new Date().toISOString() }];
+  assert.equal(derive.lastBottleAmount(), null);
+});
+
+test('lastBottleAmount picks the newest bottle, not just the first amount in the log', () => {
+  reset();
+  const now = Date.now();
+  state().log = [
+    { id: 'b2', type: 'bottle', start: new Date(now).toISOString(), amount: 90 },
+    { id: 'b1', type: 'bottle', start: new Date(now - 3600000).toISOString(), amount: 150 },
+  ];
+  assert.equal(derive.lastBottleAmount(), 90);
+});
+
+test('lastBottleAmount treats a genuinely logged 0ml bottle as 0, not "no bottle"', () => {
+  reset();
+  state().log = [{ id: 'b1', type: 'bottle', start: new Date().toISOString(), amount: 0 }];
+  assert.equal(derive.lastBottleAmount(), 0);
+});
+
+test('lastBottleAmount returns null for a malformed (missing/NaN) amount', () => {
+  reset();
+  state().log = [{ id: 'b1', type: 'bottle', start: new Date().toISOString() }];
+  assert.equal(derive.lastBottleAmount(), null);
+  state().log = [{ id: 'b1', type: 'bottle', start: new Date().toISOString(), amount: 'oops' }];
+  assert.equal(derive.lastBottleAmount(), null);
+});
+
 test('nextHygiene computes per-item due dates like nextMeds', () => {
   reset();
   state().settings.hygiene = [{ id: 'h1', name: 'Nail trim', everyH: 168 }];
