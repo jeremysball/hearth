@@ -6,8 +6,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-mkdir -p site/screenshots
+mkdir -p site/screenshots site/videos
 cp icons/icon-512.png site/icon.png
 cp screenshots/readme-hero-light.png site/screenshots/readme-hero-light.png
 cp screenshots/readme-hero-dark.png site/screenshots/readme-hero-dark.png
-echo "Staged icon.png and screenshots/ into site/"
+cp videos/showcase-day.webm site/videos/showcase-day.webm
+cp videos/showcase-day.mp4 site/videos/showcase-day.mp4
+cp videos/showcase-night.webm site/videos/showcase-night.webm
+cp videos/showcase-night.mp4 site/videos/showcase-night.mp4
+echo "Staged icon.png, screenshots/, and videos/ into site/"
