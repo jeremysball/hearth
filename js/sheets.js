@@ -475,8 +475,9 @@ const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); r
 // fixed settings default, since actual intake tracks the baby's current
 // appetite far better than a one-time-configured number.
 function defaultBottleAmount() {
-  const ml = derive.lastBottleAmount() ?? state().settings.bottleAmountDefault;
-  return state().settings.units.volume === 'oz' ? Math.round((ml / 29.5735) * 10) / 10 : ml;
+  const lastMl = derive.lastBottleAmount();
+  if (lastMl == null) return state().settings.bottleAmountDefault; // already stored in display units
+  return state().settings.units.volume === 'oz' ? Math.round((lastMl / 29.5735) * 10) / 10 : lastMl;
 }
 
 const FORMS = {
