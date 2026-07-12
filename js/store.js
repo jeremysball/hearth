@@ -533,6 +533,12 @@ export const derive = {
     const due = new Date(last.getTime() + _state.settings.bottleIntervalH * HR);
     return { last, due };
   },
+  // Most recent bottle's amount in ml, or null with no prior bottle logged.
+  // Log is sorted newest-first by start, so the first match is the last one.
+  lastBottleAmount() {
+    const last = _state.log.find((e) => e.type === 'bottle');
+    return last ? Number(last.amount) || null : null;
+  },
   // Generic timer-card prediction for an arbitrary activity type. Predicts the
   // next occurrence from the most recent entry of that type plus an interval:
   // anchored on the entry's end when it has one (e.g. last wake for sleep) and
@@ -865,10 +871,24 @@ export const derive = {
   },
   reminders() {
     const r = _state.settings.reminders, out = [];
+    const leadMs = (Number(r.lead) || 0) * MIN;
+    // With a lead time set, fire before the due moment and phrase the
+    // notification as a heads-up ("coming up") rather than "due", since it
+    // isn't due yet. Nap reminders already fire ahead of the window and read
+    // as a heads-up, so they're left as-is.
     if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at: sp.from.getTime() }); }
-    if (r.bottle) { const nb = derive.nextBottle(); out.push({ key: 'bottle', title: 'Bottle due', body: 'Time for the next feed.', at: nb.due.getTime() }); }
-    if (r.meds) { derive.nextMeds().forEach((m) => { if (m.due) out.push({ key: 'med-' + m.med.id, title: m.med.name + ' due', body: m.med.dose + (m.med.unit || '') + ' scheduled now.', at: m.due.getTime() }); }); }
-    if (r.hygiene) { derive.nextHygiene().forEach((h) => { if (h.due) out.push({ key: 'hyg-' + h.item.id, title: h.item.name + ' due', body: h.item.name + ' is due now.', at: h.due.getTime() }); }); }
+    if (r.bottle) {
+      const nb = derive.nextBottle();
+      out.push(leadMs
+        ? { key: 'bottle', title: 'Feed coming up', body: `Next feed in about ${r.lead} min.`, at: nb.due.getTime() - leadMs }
+        : { key: 'bottle', title: 'Bottle due', body: 'Time for the next feed.', at: nb.due.getTime() });
+    }
+    if (r.meds) { derive.nextMeds().forEach((m) => { if (m.due) out.push(leadMs
+      ? { key: 'med-' + m.med.id, title: m.med.name + ' coming up', body: `${m.med.dose}${m.med.unit || ''} in about ${r.lead} min.`, at: m.due.getTime() - leadMs }
+      : { key: 'med-' + m.med.id, title: m.med.name + ' due', body: m.med.dose + (m.med.unit || '') + ' scheduled now.', at: m.due.getTime() }); }); }
+    if (r.hygiene) { derive.nextHygiene().forEach((h) => { if (h.due) out.push(leadMs
+      ? { key: 'hyg-' + h.item.id, title: h.item.name + ' coming up', body: `${h.item.name} in about ${r.lead} min.`, at: h.due.getTime() - leadMs }
+      : { key: 'hyg-' + h.item.id, title: h.item.name + ' due', body: h.item.name + ' is due now.', at: h.due.getTime() }); }); }
     return out.sort((a, b) => a.at - b.at);
   }
 };

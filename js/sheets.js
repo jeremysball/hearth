@@ -1,5 +1,5 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
-import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep } from './store.js';
+import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep, derive } from './store.js';
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
@@ -471,6 +471,14 @@ const timeRow = () => field('Time', dtPair('f-time', nowLocalDT()));
 const noteRow = () => field('Note', `<textarea id="f-note" rows="2" placeholder="Optional…"></textarea>`);
 const segVal = (group) => { const el = $(`[data-seg="${group}"] .seg-opt.on`); return el ? el.dataset.val : null; };
 
+// Prefills a new bottle log with the last bottle's amount rather than the
+// fixed settings default, since actual intake tracks the baby's current
+// appetite far better than a one-time-configured number.
+function defaultBottleAmount() {
+  const ml = derive.lastBottleAmount() ?? state().settings.bottleAmountDefault;
+  return state().settings.units.volume === 'oz' ? Math.round((ml / 29.5735) * 10) / 10 : ml;
+}
+
 const FORMS = {
   sleep: () => `
     ${field('Fell asleep', dtPair('f-time', nowLocalDT()))}
@@ -500,7 +508,7 @@ const FORMS = {
     ${timeRow()} ${noteRow()}`,
   bottle: () => `
     ${field('Contents', seg('contents', ['Formula', 'Breast milk', 'Water'], 'Formula'))}
-    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, state().settings.bottleAmountDefault)}
+    ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, defaultBottleAmount())}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
     ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}

@@ -220,6 +220,23 @@ test('New bottle re-arms when due time changes', () => {
   assert.ok(call.delay <= 0, `delay should be <= 0, got ${call.delay}`);
 });
 
+test('Bottle reminder honors lead time and reads as a heads-up', () => {
+  // Feed 1h ago, bottleIntervalH=3 → due in 2h. With a 20min lead the
+  // reminder should fire 20min before that, not at the due moment itself.
+  state().settings.reminders = { naps: false, bottle: true, meds: false, lead: 20, quietStart: '00:00', quietEnd: '00:00' };
+  state().log = [{ id: 'f2', type: 'feed', start: new Date(NOW - 1 * HR).toISOString() }];
+  localStorage.removeItem('hearth.notified.v1');
+  resetTimeouts();
+
+  scheduleReminders();
+
+  const call = timeoutCalls.find((c) => c.delay > 0);
+  assert.ok(call, 'setTimeout should be called for the lead-adjusted bottle reminder');
+  // due = now + 2h; notify = due - 20min = now + 100min
+  const expectedDelay = 100 * 60000;
+  assert.ok(Math.abs(call.delay - expectedDelay) < 5000, `delay should be ~${expectedDelay}ms, got ${call.delay}`);
+});
+
 test('Medicine reminders schedule during quiet hours', async () => {
   state().settings.reminders = { naps: false, bottle: false, meds: true, lead: 0, quietStart: '00:00', quietEnd: '23:59' };
   state().settings.meds = [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 0 }];
