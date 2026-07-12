@@ -49,30 +49,32 @@ async function captureStorageState(browser) {
   return statePath;
 }
 
-// Same as captureStorageState, but also switches to dark mode and seeds an
-// awake elapsed time of 260 minutes (twilight-leaning sky per
-// scripts/sky-phases.js's elapsedMin>=260 boundary) so the night clip shows
-// a dark-themed hero card with a live nap-window prediction.
-async function captureNightStorageState(browser) {
-  const context = await browser.newContext({ viewport: VIEWPORT, ignoreHTTPSErrors: true });
-  const p = await context.newPage();
-  await onboard(p);
-  await p.evaluate(() => {
-    const raw = JSON.parse(localStorage.getItem('hearth.state.v1'));
-    raw.settings.darkMode = 'dark';
-    const now = Date.now();
-    raw.log = raw.log.filter((e) => e.type !== 'sleep');
-    raw.log.unshift({
-      id: 'seed-sleep-showcase',
-      type: 'sleep',
-      start: new Date(now - 260 * 60000 - 90 * 60000).toISOString(),
-      end: new Date(now - 260 * 60000).toISOString(),
-    });
-    localStorage.setItem('hearth.state.v1', JSON.stringify(raw));
+// Derives the night clip's storage state from the already-onboarded day
+// state, instead of onboarding a second time. The app's /api/status check
+// (server/family.go) reports "provisioned" for ANY visitor once one family
+// exists in the DB — it isn't scoped per-session — so a second onboard()
+// call against the same server would hit the post-onboarding sign-in screen
+// instead of the onboarding form and hang. Cloning the day state's
+// localStorage and patching it in plain Node avoids touching the server (or
+// a browser context) a second time entirely.
+function deriveNightStorageState(dayStatePath) {
+  const raw = JSON.parse(fs.readFileSync(dayStatePath, 'utf8'));
+  const origin = raw.origins.find((o) => o.origin === BASE_URL.replace(/^https?/, 'https'))
+    || raw.origins[0];
+  const entry = origin.localStorage.find((kv) => kv.name === 'hearth.state.v1');
+  const state = JSON.parse(entry.value);
+  state.settings.darkMode = 'dark';
+  const now = Date.now();
+  state.log = state.log.filter((e) => e.type !== 'sleep');
+  state.log.unshift({
+    id: 'seed-sleep-showcase',
+    type: 'sleep',
+    start: new Date(now - 260 * 60000 - 90 * 60000).toISOString(),
+    end: new Date(now - 260 * 60000).toISOString(),
   });
+  entry.value = JSON.stringify(state);
   const statePath = path.join(OUT_DIR, `storage-state-night-${Date.now()}.json`);
-  await context.storageState({ path: statePath });
-  await context.close();
+  fs.writeFileSync(statePath, JSON.stringify(raw));
   return statePath;
 }
 
@@ -115,7 +117,7 @@ async function recordClip(browser, { name, storageStatePath, run }) {
 
   // Night clip: dark theme, baby awake ~4h20m, no interaction — just let
   // the hero timer tick and the sky's ambient particles animate.
-  const nightState = await captureNightStorageState(browser);
+  const nightState = deriveNightStorageState(dayState);
   await recordClip(browser, {
     name: 'night',
     storageStatePath: nightState,
