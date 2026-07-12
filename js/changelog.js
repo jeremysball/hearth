@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-12',
+    version: '2026-07-12',
+    features: [
+      'Feed reminders can now fire ahead of time, so you get a heads-up instead of a same-moment ping (Profile → Reminders & notifications → Remind me before).',
+      'The bottle log now defaults the amount to whatever you last logged, instead of a fixed setting.',
+    ]
+  },
+  {
     date: '2026-07-11',
     version: '2026-07-11',
     features: [

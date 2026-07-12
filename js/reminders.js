@@ -169,16 +169,24 @@ export function scheduleReminders() {
   const quietEnd = timeToMs(r.quietEnd || '07:00');
   const notified = loadNotified();
   reminders.forEach((rem) => {
-    const notifiedKey = rem.key + ':' + rem.at;
+    // Dedup on dueAt (the stable due moment), not the lead-adjusted `at` --
+    // otherwise changing the lead-time setting mid-cycle mints a new key and
+    // re-fires a reminder that already fired under the old lead.
+    const notifiedKey = rem.key + ':' + (rem.dueAt ?? rem.at);
     if (notified.has(notifiedKey)) return;
     const delay = rem.at - now;
     if (delay > 12 * 3600000) return;  // keep the 12h future cap
     if (!rem.key.startsWith('med-') && isQuiet(rem.at, quietStart, quietEnd)) return;
     _scheduled[rem.key] = setTimeout(() => {
-      notify(rem.title, rem.body);
+      // A lead-adjusted notification can fire late (e.g. quiet hours held it
+      // back until just after the real due moment) -- if the due moment has
+      // already passed by the time this actually runs, use the due-phrased
+      // copy instead of a now-stale "in N min" heads-up.
+      const overdue = rem.dueAt != null && Date.now() >= rem.dueAt;
+      notify(overdue ? (rem.dueTitle || rem.title) : rem.title, overdue ? (rem.dueBody || rem.body) : rem.body);
       delete _scheduled[rem.key];
       const n = loadNotified();
-      n.set(notifiedKey, rem.at);
+      n.set(notifiedKey, rem.dueAt ?? rem.at);
       saveNotified(n);
     }, Math.max(0, delay));  // clamp: fires immediately if past-due
   });
