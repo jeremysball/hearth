@@ -67,6 +67,7 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
   if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
+  if (s.reminders && s.reminders.lead == null) s.reminders.lead = 0;
   return s;
 }
 
@@ -533,11 +534,15 @@ export const derive = {
     const due = new Date(last.getTime() + _state.settings.bottleIntervalH * HR);
     return { last, due };
   },
-  // Most recent bottle's amount in ml, or null with no prior bottle logged.
-  // Log is sorted newest-first by start, so the first match is the last one.
+  // Most recent bottle's amount in ml, or null with no prior bottle logged
+  // (or a malformed amount). Log is sorted newest-first by start, so the
+  // first match is the last one. Uses != null rather than || so a
+  // legitimately logged 0ml bottle isn't mistaken for "no bottle".
   lastBottleAmount() {
     const last = _state.log.find((e) => e.type === 'bottle');
-    return last ? Number(last.amount) || null : null;
+    if (!last || last.amount == null) return null;
+    const n = Number(last.amount);
+    return Number.isFinite(n) ? n : null;
   },
   // Generic timer-card prediction for an arbitrary activity type. Predicts the
   // next occurrence from the most recent entry of that type plus an interval:
@@ -875,20 +880,38 @@ export const derive = {
     // With a lead time set, fire before the due moment and phrase the
     // notification as a heads-up ("coming up") rather than "due", since it
     // isn't due yet. Nap reminders already fire ahead of the window and read
-    // as a heads-up, so they're left as-is.
-    if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at: sp.from.getTime() }); }
+    // as a heads-up, so they're left as-is. Every entry also carries dueAt
+    // plus due-phrased title/body: if a lead-adjusted notification actually
+    // fires at or after the real due moment (e.g. quiet hours suppressed it
+    // until just after due), reminders.js swaps to the due copy at fire time
+    // rather than reading a stale "in N min" once the moment has passed.
+    // dueAt (not the lead-adjusted at) also anchors the notified-dedup key,
+    // so changing the lead setting mid-cycle doesn't re-fire a reminder that
+    // already fired under the old lead.
+    if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) { const at = sp.from.getTime(); out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at, dueAt: at, dueTitle: 'Nap time soon', dueBody: 'SweetSpot nap window is approaching.' }); } }
     if (r.bottle) {
-      const nb = derive.nextBottle();
+      const nb = derive.nextBottle(), dueAt = nb.due.getTime();
+      const dueTitle = 'Bottle due', dueBody = 'Time for the next feed.';
       out.push(leadMs
-        ? { key: 'bottle', title: 'Feed coming up', body: `Next feed in about ${r.lead} min.`, at: nb.due.getTime() - leadMs }
-        : { key: 'bottle', title: 'Bottle due', body: 'Time for the next feed.', at: nb.due.getTime() });
+        ? { key: 'bottle', title: 'Feed coming up', body: `Next feed in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
+        : { key: 'bottle', title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
     }
-    if (r.meds) { derive.nextMeds().forEach((m) => { if (m.due) out.push(leadMs
-      ? { key: 'med-' + m.med.id, title: m.med.name + ' coming up', body: `${m.med.dose}${m.med.unit || ''} in about ${r.lead} min.`, at: m.due.getTime() - leadMs }
-      : { key: 'med-' + m.med.id, title: m.med.name + ' due', body: m.med.dose + (m.med.unit || '') + ' scheduled now.', at: m.due.getTime() }); }); }
-    if (r.hygiene) { derive.nextHygiene().forEach((h) => { if (h.due) out.push(leadMs
-      ? { key: 'hyg-' + h.item.id, title: h.item.name + ' coming up', body: `${h.item.name} in about ${r.lead} min.`, at: h.due.getTime() - leadMs }
-      : { key: 'hyg-' + h.item.id, title: h.item.name + ' due', body: h.item.name + ' is due now.', at: h.due.getTime() }); }); }
+    if (r.meds) { derive.nextMeds().forEach((m) => {
+      if (!m.due) return;
+      const dueAt = m.due.getTime();
+      const dueTitle = m.med.name + ' due', dueBody = m.med.dose + (m.med.unit || '') + ' scheduled now.';
+      out.push(leadMs
+        ? { key: 'med-' + m.med.id, title: m.med.name + ' coming up', body: `${m.med.dose}${m.med.unit || ''} in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
+        : { key: 'med-' + m.med.id, title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
+    }); }
+    if (r.hygiene) { derive.nextHygiene().forEach((h) => {
+      if (!h.due) return;
+      const dueAt = h.due.getTime();
+      const dueTitle = h.item.name + ' due', dueBody = h.item.name + ' is due now.';
+      out.push(leadMs
+        ? { key: 'hyg-' + h.item.id, title: h.item.name + ' coming up', body: `${h.item.name} in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
+        : { key: 'hyg-' + h.item.id, title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
+    }); }
     return out.sort((a, b) => a.at - b.at);
   }
 };
