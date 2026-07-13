@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
+	"net/http"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -67,6 +69,49 @@ func bumpRev(tx *sql.Tx, familyID string) (int64, error) {
 	var rev int64
 	err := tx.QueryRow(`UPDATE families SET rev_counter = rev_counter + 1 WHERE id = ? RETURNING rev_counter`, familyID).Scan(&rev)
 	return rev, err
+}
+
+// handleSoftDelete builds a delete handler for a sync-visible table (one of
+// log_entries, growth_entries): bump the family rev, stamp deleted_at, commit,
+// and broadcast. table is always a package-internal constant, never request
+// input, so building the UPDATE with Sprintf carries no injection risk.
+func handleSoftDelete(db *sql.DB, hub *Hub, table string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := sessionFrom(r)
+		id := r.PathValue("id")
+		now := nowISO()
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		rev, err := bumpRev(tx, session.FamilyID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		res, err := tx.Exec(fmt.Sprintf(`UPDATE %s SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ?`, table),
+			now, now, rev, id, session.FamilyID)
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		hub.Broadcast(session.FamilyID)
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 func nowISO() string {

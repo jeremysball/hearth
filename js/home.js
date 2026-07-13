@@ -5,10 +5,14 @@ import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './sleep.js';
 import { heroSky, emberGlow } from './sky.js';
 
-// Diaper size label map. Stored values stay "Small"/"Medium"/"Large" but the
-// "Small" option is rendered as "Little" in the UI. Keep this in sync with
-// `SIZE_OPTS` in sheets.js.
-const SIZE_LABELS = { Small: 'Little', Medium: 'Medium', Large: 'Large' };
+// Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
+// "Small" option is rendered as "Little" in the UI.
+export const SIZE_OPTS = [
+  { val: 'Small', label: 'Little' },
+  { val: 'Medium', label: 'Medium' },
+  { val: 'Large', label: 'Large' },
+];
+const SIZE_LABELS = Object.fromEntries(SIZE_OPTS.map((o) => [o.val, o.label]));
 function sizeLabel(s) { return SIZE_LABELS[s] || s; }
 
 export function summary(e) {

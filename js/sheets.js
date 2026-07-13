@@ -3,7 +3,7 @@ import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSet
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
-import { addableCardTypes } from './home.js';
+import { addableCardTypes, SIZE_OPTS } from './home.js';
 
 // segmented control
 function seg(group, opts, sel) {
@@ -17,14 +17,6 @@ function seg(group, opts, sel) {
     `</div>`;
 }
 
-// Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
-// "Small" option is rendered as "Little" in the UI. Keep this in sync with
-// `sizeLabel` in home.js.
-const SIZE_OPTS = [
-  { val: 'Small', label: 'Little' },
-  { val: 'Medium', label: 'Medium' },
-  { val: 'Large', label: 'Large' },
-];
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +

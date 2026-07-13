@@ -84,6 +84,14 @@ function shell() {
   </main>`;
 }
 
+function updateProfileTabBadge() {
+  $$('.tab[data-tab="profile"]').forEach((t) => {
+    const badge = t.querySelector('.tab-badge');
+    if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
+    else if (!hasUnseenChangelog() && badge) badge.remove();
+  });
+}
+
 export const router = {
   boot() {
     $('#app').innerHTML = shell();
@@ -99,11 +107,7 @@ export const router = {
     if (view === 'timeline') initTimelineFilters();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
-    $$('.tab[data-tab="profile"]').forEach((t) => {
-      const badge = t.querySelector('.tab-badge');
-      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
-      else if (!hasUnseenChangelog() && badge) badge.remove();
-    });
+    updateProfileTabBadge();
     if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
@@ -111,11 +115,7 @@ export const router = {
   refresh() {
     if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); initSky(); if (current === 'timeline') initTimelineFilters(); }
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
-    $$('.tab[data-tab="profile"]').forEach((t) => {
-      const badge = t.querySelector('.tab-badge');
-      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
-      else if (!hasUnseenChangelog() && badge) badge.remove();
-    });
+    updateProfileTabBadge();
   }
 };
 

@@ -2,7 +2,7 @@
 import { state, derive } from './store.js';
 import { fmt, esc } from './ui.js';
 
-function barChart(data, key, unit, fmtFn, tone) {
+function barChart(data, key, fmtFn, tone) {
   const max = Math.max(1, ...data.map((d) => d[key]));
   return `<div class="chart">
     ${data.map((d, i) => {
@@ -68,22 +68,22 @@ export function trends() {
 
     <div class="card chart-card">
       <div class="chart-hd"><h2>Sleep</h2><span class="chart-note">hours per day</span></div>
-      ${barChart(week, 'sleepMin', 'h', (v) => (v / 60).toFixed(1), 'sleep')}
+      ${barChart(week, 'sleepMin', (v) => (v / 60).toFixed(1), 'sleep')}
     </div>
     <div class="card chart-card">
       <div class="chart-hd"><h2>Feeds</h2><span class="chart-note">count per day</span></div>
-      ${barChart(week, 'feeds', '', null, 'feed')}
+      ${barChart(week, 'feeds', null, 'feed')}
     </div>
     <div class="card chart-card">
       <div class="chart-hd"><h2>Diapers</h2><span class="chart-note">count per day</span></div>
-      ${barChart(week, 'diapers', '', null, 'diaper')}
+      ${barChart(week, 'diapers', null, 'diaper')}
     </div>
     <div class="card chart-card">
       <div class="chart-hd"><h2>Bottle volume</h2><span class="chart-note">volume per day</span></div>
-      ${barChart(week, 'bottleVol', 'ml', (v) => fmt.vol(v), 'feed')}
+      ${barChart(week, 'bottleVol', (v) => fmt.vol(v), 'feed')}
     </div>
     <div class="card chart-card">
       <div class="chart-hd"><h2>Feed volume</h2><span class="chart-note">bottle plus pump</span></div>
-      ${barChart(week, 'feedVol', 'ml', (v) => fmt.vol(v), 'feed')}
+      ${barChart(week, 'feedVol', (v) => fmt.vol(v), 'feed')}
     </div>`;
 }
