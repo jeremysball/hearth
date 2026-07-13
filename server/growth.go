@@ -69,40 +69,5 @@ func handleUpsertGrowth(db *sql.DB, hub *Hub) http.HandlerFunc {
 }
 
 func handleDeleteGrowth(db *sql.DB, hub *Hub) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session := sessionFrom(r)
-		id := r.PathValue("id")
-		now := nowISO()
-		tx, err := db.Begin()
-		if err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		defer tx.Rollback()
-		rev, err := bumpRev(tx, session.FamilyID)
-		if err == sql.ErrNoRows {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		res, err := tx.Exec(`UPDATE growth_entries SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ? AND family_id = ?`,
-			now, now, rev, id, session.FamilyID)
-		if err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		if n, _ := res.RowsAffected(); n == 0 {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		if err := tx.Commit(); err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		hub.Broadcast(session.FamilyID)
-		w.WriteHeader(http.StatusNoContent)
-	}
+	return handleSoftDelete(db, hub, "growth_entries")
 }

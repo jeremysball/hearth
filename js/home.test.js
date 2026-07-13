@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { MemoryStorage, withMockedNow } from './test-helpers.js';
 
 // Minimal DOM + storage so home.js's imports resolve under Node.
-class MemoryStorage { constructor(){this.s={};} getItem(k){return Object.prototype.hasOwnProperty.call(this.s,k)?this.s[k]:null;} setItem(k,v){this.s[k]=String(v);} removeItem(k){delete this.s[k];} }
 globalThis.localStorage = new MemoryStorage();
 globalThis.window = globalThis;
 globalThis.document = {
@@ -16,18 +16,6 @@ const { bathDaysSinceLabel, home } = await import('./home.js');
 const { reset } = await import('./store.js');
 
 const atDaysAgo = (n) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - n); return d.toISOString(); };
-
-function withMockedNow(iso, fn) {
-  const OrigDate = global.Date;
-  const nowMs = new OrigDate(iso).getTime();
-  class MockDate extends OrigDate {
-    constructor(...args) { super(...(args.length ? args : [nowMs])); }
-    static now() { return nowMs; }
-  }
-  global.Date = MockDate;
-  try { return fn(); }
-  finally { global.Date = OrigDate; }
-}
 
 test('bathDaysSinceLabel returns Never for no entry', () => {
   assert.equal(bathDaysSinceLabel(null), 'Never');

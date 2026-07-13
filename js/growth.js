@@ -16,7 +16,7 @@ function localDate(ymd) {
   return new Date(y, mo - 1, d);
 }
 
-function delta(cur, prev, fmt, unit) {
+function delta(cur, prev, fmt) {
   if (cur == null || prev == null) return '';
   const d = cur - prev;
   const s = d >= 0 ? '+' : '−';
@@ -47,7 +47,7 @@ function measureRow(m, prev) {
     <span class="row-ic tone-med"><svg class="icon"><use href="#ruler"></use></svg></span>
     <span class="row-txt"><span class="what">${dispW(m.weightKg)}</span>
     <span class="when">${localDate(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${dispL(m.heightCm)}</span></span>
-    ${prev ? `<span class="meta">${delta(m.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ''), '')}</span>` : ''}
+    ${prev ? `<span class="meta">${delta(m.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ''))}</span>` : ''}
   </div>`;
 }
 
@@ -61,8 +61,8 @@ export function growth() {
     </div>
 
     <div class="stat-grid growth-stats">
-      <div class="card stat"><div class="stat-k">Weight</div><div class="stat-v">${latest ? dispW(latest.weightKg) : '—'}</div>${latest && prev ? delta(latest.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ' '), '') : ''}</div>
-      <div class="card stat"><div class="stat-k">Height</div><div class="stat-v">${latest ? dispL(latest.heightCm) : '—'}</div>${latest && prev ? delta(latest.heightCm, prev.heightCm, (v) => dispL(v).replace(/ (cm|in)/, ' '), '') : ''}</div>
+      <div class="card stat"><div class="stat-k">Weight</div><div class="stat-v">${latest ? dispW(latest.weightKg) : '—'}</div>${latest && prev ? delta(latest.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ' ')) : ''}</div>
+      <div class="card stat"><div class="stat-k">Height</div><div class="stat-v">${latest ? dispL(latest.heightCm) : '—'}</div>${latest && prev ? delta(latest.heightCm, prev.heightCm, (v) => dispL(v).replace(/ (cm|in)/, ' ')) : ''}</div>
       <div class="card stat"><div class="stat-k">Head</div><div class="stat-v">${latest && latest.headCm ? dispL(latest.headCm) : '—'}</div></div>
       <div class="card stat"><div class="stat-k">Measurements</div><div class="stat-v">${g.length}</div></div>
     </div>

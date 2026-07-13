@@ -1,18 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { MemoryStorage } from './test-helpers.js';
 
-class MemoryStorage {
-  constructor() { this.store = {}; }
-  getItem(k) { return Object.prototype.hasOwnProperty.call(this.store, k) ? this.store[k] : null; }
-  setItem(k, v) { this.store[k] = String(v); }
-  removeItem(k) { delete this.store[k]; }
-}
 globalThis.localStorage = new MemoryStorage();
 globalThis.window = globalThis;
 globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { state, derive, addEntry, updateEntry, removeEntry, autoCloseOngoingSleep } = await import('./store.js');
+const { state, derive, addEntry, removeEntry, autoCloseOngoingSleep } = await import('./store.js');
 
 // Remove all sleep entries so tests don't bleed into each other
 function closeAllSleeps() {
