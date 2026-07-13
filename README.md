@@ -110,7 +110,7 @@ Settings come from environment variables or a `.env` file in the working directo
 
 | Variable              | Default     | Description |
 | --------------------- | ----------- | ----------- |
-| `HOST`                | `0.0.0.0`   | Listen address |
+| `HOST`                | `0.0.0.0`   | Listen address. `0.0.0.0` binds every interface the host has, not just your tailnet — if the host also has a LAN/Wi-Fi interface, anything on that network can reach Hearth too. Set this to your Tailscale IP (`tailscale ip -4`) instead to scope it to tailnet-only. |
 | `PORT`                | `8443`      | Listen port |
 | `CERT_FILE`           | *(empty)*   | TLS certificate path |
 | `KEY_FILE`            | *(empty)*   | TLS private key path |
