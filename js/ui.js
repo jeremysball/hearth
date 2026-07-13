@@ -177,6 +177,13 @@ export function resolveMode() {
   if (m === 'auto') return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   return m;
 }
+export const THEME_COLORS = {
+  girl:          { light: '#f3eee0', dark: '#211f17' },
+  boy:           { light: '#eef0e4', dark: '#1c1f1b' },
+  'dayjob-girl': { light: '#f3ead9', dark: '#221d17' },
+  'dayjob-boy':  { light: '#f3ead9', dark: '#221d17' },
+  dayjob:        { light: '#f3ead9', dark: '#221d17' }
+};
 export function applyTheme() {
   const st = state();
   const t = st.settings.theme || st.baby.theme || 'girl';
@@ -185,14 +192,7 @@ export function applyTheme() {
   document.body.dataset.mode = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const colors = {
-      girl:          { light: '#f3eee0', dark: '#211f17' },
-      boy:           { light: '#eef0e4', dark: '#1c1f1b' },
-      'dayjob-girl': { light: '#f3ead9', dark: '#221d17' },
-      'dayjob-boy':  { light: '#f3ead9', dark: '#221d17' },
-      dayjob:        { light: '#f3ead9', dark: '#221d17' }
-    };
-    const c = colors[t] || colors.girl;
+    const c = THEME_COLORS[t] || THEME_COLORS.girl;
     meta.content = mode === 'dark' ? c.dark : c.light;
   }
   log.event('theme', 'apply', t, mode);

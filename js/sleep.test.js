@@ -1,12 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-class MemoryStorage {
-  constructor() { this.store = {}; }
-  getItem(k) { return Object.prototype.hasOwnProperty.call(this.store, k) ? this.store[k] : null; }
-  setItem(k, v) { this.store[k] = String(v); }
-  removeItem(k) { delete this.store[k]; }
-}
+import { MemoryStorage, withMockedNow } from './test-helpers.js';
 
 globalThis.localStorage = new MemoryStorage();
 globalThis.window = globalThis;
@@ -15,18 +9,6 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 
 const { addEntry, derive, reset, state } = await import('./store.js');
 const { sleep, predictionSourceInfo } = await import('./sleep.js');
-
-function withMockedNow(iso, fn) {
-  const OrigDate = global.Date;
-  const nowMs = new OrigDate(iso).getTime();
-  class MockDate extends OrigDate {
-    constructor(...args) { super(...(args.length ? args : [nowMs])); }
-    static now() { return nowMs; }
-  }
-  global.Date = MockDate;
-  try { return fn(); }
-  finally { global.Date = OrigDate; }
-}
 
 test('sleep schedule omits projected SweetSpot windows after today', () => {
   reset();
