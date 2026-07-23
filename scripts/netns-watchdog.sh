@@ -7,6 +7,14 @@
 # namespace and app is left bound to the old, orphaned one — silently unreachable
 # even though both containers report "running". Restarting app re-joins whatever
 # namespace tailscale currently has.
+#
+# We watch for `start` rather than `restart`: Docker only emits a `restart`-typed
+# event for an explicit `docker restart` command. A restart-policy-triggered
+# relaunch (crash, OOM, or the plain `restart: always` policy after a clean
+# exit) shows up as a `die` followed by a `start` — confirmed via `journalctl -u
+# docker` logging `"restarting container" manualRestart=false` for exactly this
+# case. `event=restart` alone misses that path entirely, which is how this
+# watchdog failed to fire the one time it mattered.
 set -eu
 
 # PROJECT must be pinned (via the PROJECT_NAME env var) rather than discovered
@@ -18,7 +26,7 @@ PROJECT="$PROJECT_NAME"
 
 echo "netns-watchdog: watching for tailscale restarts (project=$PROJECT)"
 
-docker events --filter 'event=restart' \
+docker events --filter 'event=start' \
   --filter "label=com.docker.compose.service=tailscale" \
   --filter "label=com.docker.compose.project=$PROJECT" \
   --format '{{.Actor.Attributes.name}}' |
