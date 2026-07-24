@@ -12,16 +12,19 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    restart: unless-stopped
+    restart: always
 
   app:
     image: ghcr.io/jeremysball/hearth:latest
     pull_policy: always
     labels:
       - "com.centurylinklabs.watchtower.scope=hearth"
-    # Share tailscale's network namespace so app's port 8443 is actually
-    # reachable at https://hearth.<tailnet>.ts.net:8443 — a plain bridge
-    # network alone doesn't expose a sibling container over the tailnet.
+    # Share tailscale's network namespace so app's port 443 is actually
+    # reachable at https://hearth.<tailnet>.ts.net — a plain bridge network
+    # alone doesn't expose a sibling container over the tailnet. This join
+    # only happens at app's own startup, so if tailscale restarts on its
+    # own, app is orphaned in the old namespace until it too restarts —
+    # see the netns-watchdog service below.
     network_mode: "service:tailscale"
     depends_on:
       - tailscale
@@ -29,7 +32,7 @@ services:
       - .env
     volumes:
       - hearth-data:/app/data
-      - ./certs:/app/certs:ro
+      - certs:/app/certs:ro
     restart: unless-stopped
 
   watchtower:
@@ -43,6 +46,27 @@ services:
       - WATCHTOWER_SCOPE=hearth
     restart: unless-stopped
 
+  netns-watchdog:
+    image: docker:cli
+    environment:
+      - PROJECT_NAME=${COMPOSE_PROJECT_NAME:-hearth-prod}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/netns-watchdog.sh:/netns-watchdog.sh:ro
+    entrypoint: ["/bin/sh", "/netns-watchdog.sh"]
+    restart: unless-stopped
+
 volumes:
+  certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/certs
   tailscale-state:
   hearth-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/hearth-data
