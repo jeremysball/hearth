@@ -348,9 +348,13 @@ func (s *pushScheduler) ScheduleAll() {
 	for rows.Next() {
 		var familyID string
 		if err := rows.Scan(&familyID); err != nil {
+			log.Printf("push: ScheduleAll scan family failed: %v", err)
 			continue
 		}
 		familyIDs = append(familyIDs, familyID)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("push: ScheduleAll rows iteration failed: %v", err)
 	}
 	rows.Close()
 	for _, familyID := range familyIDs {
@@ -368,12 +372,18 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 	reminders := []pushReminder{}
 	if settings.Bottle {
 		var lastBottle string
-		if err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle); err == nil {
+		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("push: familyReminders family=%s bottle: read last feed failed: %v", familyID, err)
+		}
+		if err == nil {
 			if t, err := time.Parse(time.RFC3339Nano, lastBottle); err == nil {
 				at := t.Add(time.Duration(bottleInterval * float64(time.Hour)))
 				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
 					reminders = append(reminders, pushReminder{Key: "bottle", Title: "Bottle due", Body: "Time for the next feed.", At: at})
 				}
+			} else {
+				log.Printf("push: familyReminders family=%s bottle: parse start time failed: %v", familyID, err)
 			}
 		}
 	}
@@ -389,11 +399,16 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		for _, med := range meds {
 			var lastMed string
 			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'medicine' AND json_extract(payload_json, '$.medId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, med.ID).Scan(&lastMed)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("push: familyReminders family=%s med=%s: read last dose failed: %v", familyID, med.ID, err)
+			}
 			if err != nil {
 				continue
 			}
 			if t, err := time.Parse(time.RFC3339Nano, lastMed); err == nil {
 				reminders = append(reminders, pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: t.Add(time.Duration(med.EveryH * float64(time.Hour)))})
+			} else {
+				log.Printf("push: familyReminders family=%s med=%s: parse start time failed: %v", familyID, med.ID, err)
 			}
 		}
 	}
@@ -407,6 +422,9 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		for _, it := range items {
 			var last string
 			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'hygiene' AND json_extract(payload_json, '$.itemId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, it.ID).Scan(&last)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("push: familyReminders family=%s item=%s: read last hygiene failed: %v", familyID, it.ID, err)
+			}
 			if err != nil {
 				continue
 			}
@@ -415,6 +433,8 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
 					reminders = append(reminders, pushReminder{Key: "hyg-" + it.ID, Title: it.Name + " due", Body: it.Name + " is due now.", At: at})
 				}
+			} else {
+				log.Printf("push: familyReminders family=%s item=%s: parse start time failed: %v", familyID, it.ID, err)
 			}
 		}
 	}
@@ -437,11 +457,15 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		}
 		var lastStart string
 		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, cardType).Scan(&lastStart)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("push: familyReminders family=%s card=%s: read last entry failed: %v", familyID, cardType, err)
+		}
 		if err != nil {
 			continue
 		}
 		t, err := time.Parse(time.RFC3339Nano, lastStart)
 		if err != nil {
+			log.Printf("push: familyReminders family=%s card=%s: parse start time failed: %v", familyID, cardType, err)
 			continue
 		}
 		at := t.Add(time.Duration(intervalH * float64(time.Hour)))
