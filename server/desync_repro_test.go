@@ -243,8 +243,9 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgHer','famS','Her','Parent',?)`, now)
 	for i := 1; i <= 3; i++ {
 		id := fmt.Sprintf("s%d", i)
+		start := fmt.Sprintf("2026-07-07T0%d:00:00Z", i)
 		db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at, rev) VALUES (?,?,?,?,?,?,?,?)`,
-			id, "famS", "feed", "t", fmt.Sprintf(`{"id":%q}`, id), "cgHer", now, i)
+			id, "famS", "feed", start, fmt.Sprintf(`{"id":%q,"start":%q}`, id, start), "cgHer", now, i)
 	}
 	db.Exec(`UPDATE families SET rev_counter = 3 WHERE id = 'famS'`)
 
@@ -265,20 +266,23 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 		t.Fatal("expected mergeFamilies to broadcast to the target family's SSE subscribers")
 	}
 
-	// The rows are in famT now…
+	// The rows are in famT now, under fresh ids (log_entries.id is a single
+	// global primary key, not per-family, so famS's original s1/s2/s3 ids
+	// can't be reused directly — see TestMergeFamiliesCopiesEntriesUnderNewIds).
 	var moved int
-	db.QueryRow(`SELECT COUNT(*) FROM log_entries WHERE family_id='famT' AND id LIKE 's%'`).Scan(&moved)
-	if moved != 3 {
-		t.Fatalf("expected 3 moved rows, got %d", moved)
+	db.QueryRow(`SELECT COUNT(*) FROM log_entries WHERE family_id='famT' AND type='feed' AND deleted_at IS NULL`).Scan(&moved)
+	if moved != 8 { // 5 seeded + 3 merged
+		t.Fatalf("expected 8 live entries in famT, got %d", moved)
 	}
 
 	// mergeFamilies now re-revs every moved row from famT's own counter, so
-	// the partner's incremental pull at cursor 5 DOES deliver them, and
-	// serverRev advances past 5.
-	got := pullEntryIDs(t, "cgPartner", "famT", partnerCursor)
-	for _, id := range []string{"s1", "s2", "s3"} {
-		if !got[id] {
-			t.Fatalf("partner's incremental pull did not deliver merged row %s", id)
+	// the partner's incremental pull at cursor 5 DOES deliver the 3 merged
+	// rows, and serverRev advances past 5.
+	gotStarts := pullEntryStarts(t, "cgPartner", "famT", partnerCursor)
+	wantStarts := []string{"2026-07-07T01:00:00Z", "2026-07-07T02:00:00Z", "2026-07-07T03:00:00Z"}
+	for _, s := range wantStarts {
+		if !gotStarts[s] {
+			t.Fatalf("partner's incremental pull did not deliver a merged row with start=%s", s)
 		}
 	}
 	if rev := pullServerRev(t, "cgPartner", "famT", partnerCursor); rev <= 5 {
@@ -286,13 +290,31 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	}
 
 	// A full resync (since=-1) still delivers them too.
-	full := pullEntryIDs(t, "cgPartner", "famT", -1)
-	for _, id := range []string{"s1", "s2", "s3"} {
-		if !full[id] {
-			t.Fatalf("full resync missing %s: merge lost the row entirely", id)
+	fullStarts := pullEntryStarts(t, "cgPartner", "famT", -1)
+	for _, s := range wantStarts {
+		if !fullStarts[s] {
+			t.Fatalf("full resync missing start=%s: merge lost the row entirely", s)
 		}
 	}
 	t.Logf("PROVEN: merged rows are re-revved from the target family's counter, so the partner's incremental pull delivers them")
+}
+
+// pullEntryStarts is like pullEntryIDs but keys by the entry's `start` field
+// instead of id — merged rows get fresh ids (see mergeLogEntries), so tests
+// that need to recognize a specific seeded entry after a merge match on its
+// content instead.
+func pullEntryStarts(t *testing.T, caregiverID, familyID string, since int64) map[string]bool {
+	t.Helper()
+	resp := doPull(t, caregiverID, familyID, since)
+	starts := map[string]bool{}
+	for _, raw := range resp.Entries {
+		var e struct {
+			Start string `json:"start"`
+		}
+		json.Unmarshal(raw, &e)
+		starts[e.Start] = true
+	}
+	return starts
 }
 
 // pullServerRev runs a real handleSync pull and returns the serverRev the
