@@ -71,6 +71,7 @@ func listFamiliesCLI(db *sql.DB) {
 		var familyID, name string
 		var caregivers, entries int
 		if err := rows.Scan(&familyID, &name, &caregivers, &entries); err != nil {
+			fmt.Println("scan error:", err)
 			continue
 		}
 		if name == "" {

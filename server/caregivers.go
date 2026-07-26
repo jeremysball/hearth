@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -48,6 +49,7 @@ func handleListCaregivers(db *sql.DB) http.HandlerFunc {
 		for rows.Next() {
 			var c caregiverInfo
 			if err := rows.Scan(&c.ID, &c.DisplayName, &c.Role, &c.Photo, &c.RemovedAt); err != nil {
+				log.Printf("caregivers: scan family=%s: %v", session.FamilyID, err)
 				continue
 			}
 			if !adminMarked && c.RemovedAt == "" {
