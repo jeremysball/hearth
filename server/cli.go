@@ -79,6 +79,9 @@ func listFamiliesCLI(db *sql.DB) {
 		}
 		fmt.Printf("%-38s %-20s %-11d %d\n", familyID, name, caregivers, entries)
 	}
+	if err := rows.Err(); err != nil {
+		fmt.Println("rows error:", err)
+	}
 }
 
 // createInviteCLI mints an invite for familyID and returns the raw token
