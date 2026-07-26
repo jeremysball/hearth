@@ -250,10 +250,14 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	db.Exec(`UPDATE families SET rev_counter = 3 WHERE id = 'famS'`)
 
 	// The partner has an open SSE connection at merge time; the merge must
-	// push a live update, not just leave it for the next poll.
+	// push a live update, not just leave it for the next poll. A device
+	// still on famS needs the same: its entries just got tombstoned, and
+	// without a broadcast it wouldn't hear about that until its next poll.
 	hub := newHub()
-	sseCh, cancel := hub.Subscribe("famT")
-	defer cancel()
+	sseChT, cancelT := hub.Subscribe("famT")
+	defer cancelT()
+	sseChS, cancelS := hub.Subscribe("famS")
+	defer cancelS()
 
 	// She resolves the OAuth conflict with "Merge into my account".
 	if err := mergeFamilies(db, hub, "famS", "famT"); err != nil {
@@ -261,9 +265,14 @@ func TestMergeFamiliesMovesRowsBelowPartnersCursor(t *testing.T) {
 	}
 
 	select {
-	case <-sseCh:
+	case <-sseChT:
 	default:
 		t.Fatal("expected mergeFamilies to broadcast to the target family's SSE subscribers")
+	}
+	select {
+	case <-sseChS:
+	default:
+		t.Fatal("expected mergeFamilies to also broadcast to the source family's SSE subscribers")
 	}
 
 	// The rows are in famT now, under fresh ids (log_entries.id is a single
