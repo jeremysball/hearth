@@ -44,16 +44,24 @@ func handleUpsertEntry(db *sql.DB, hub *Hub, pushes *pushScheduler) http.Handler
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec(`
+		res, err := tx.Exec(`
 			INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at, rev)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
 				type = excluded.type, start = excluded.start, payload_json = excluded.payload_json,
-				updated_at = excluded.updated_at, rev = excluded.rev, deleted_at = NULL
-			WHERE log_entries.family_id = excluded.family_id`,
+				updated_at = excluded.updated_at, rev = excluded.rev
+			WHERE log_entries.family_id = excluded.family_id AND log_entries.deleted_at IS NULL`,
 			id, session.FamilyID, meta.Type, meta.Start, string(bodyBytes), session.CaregiverID, now, rev)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		// A 0-row result means the ON CONFLICT branch fired but its WHERE
+		// guard blocked it: the id belongs to another family, or the entry
+		// was soft-deleted. Either way the row was left untouched, so the
+		// caller must not be told this succeeded.
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "entry not found or was deleted", http.StatusConflict)
 			return
 		}
 		if err := tx.Commit(); err != nil {

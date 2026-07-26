@@ -118,7 +118,13 @@ export async function resolveConflict(choice, pending, onDone) {
   } catch (e) { toast('Could not reach the server'); return; }
   sheet.close();
   if (choice === 'switch' || choice === 'merge') {
-    // The session now points at the account's family; pull it down on next load.
+    // The session now points at the account's family; pull it down on next
+    // load. Not calling reset() here (contrast mismatchSwitch): that would
+    // also wipe setup/onboarding state, which switch/merge must keep. The
+    // next syncOnce detects the family change via applySyncFamily and clears
+    // just the family-scoped entries (log/growth/caregivers) before merging
+    // in the full resync, so this device's old family's data doesn't end up
+    // sitting alongside the new family's on the timeline.
     state().setup = true; save();
     toast(choice === 'merge' ? 'Merged into your account' : 'Switched to your account');
   } else {

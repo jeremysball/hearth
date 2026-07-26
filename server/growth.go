@@ -47,16 +47,20 @@ func handleUpsertGrowth(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec(`
+		res, err := tx.Exec(`
 			INSERT INTO growth_entries (id, family_id, date, weight_kg, height_cm, head_cm, note, updated_at, rev)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
 				date = excluded.date, weight_kg = excluded.weight_kg, height_cm = excluded.height_cm,
-				head_cm = excluded.head_cm, note = excluded.note, updated_at = excluded.updated_at, rev = excluded.rev, deleted_at = NULL
-			WHERE growth_entries.family_id = excluded.family_id`,
+				head_cm = excluded.head_cm, note = excluded.note, updated_at = excluded.updated_at, rev = excluded.rev
+			WHERE growth_entries.family_id = excluded.family_id AND growth_entries.deleted_at IS NULL`,
 			id, session.FamilyID, meta.Date, meta.WeightKg, meta.HeightCm, meta.HeadCm, meta.Note, now, rev)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			http.Error(w, "entry not found or was deleted", http.StatusConflict)
 			return
 		}
 		if err := tx.Commit(); err != nil {
