@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -13,6 +14,9 @@ import (
 // choice instead calls mergeFamiliesTx directly inside its own transaction,
 // so the merge and the new session commit or fail together.
 func mergeFamilies(db *sql.DB, hub *Hub, from, to string) error {
+	if from == to {
+		return nil
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -29,7 +33,15 @@ func mergeFamilies(db *sql.DB, hub *Hub, from, to string) error {
 	return nil
 }
 
+// mergeFamiliesTx does the actual row-moving, inside a transaction the
+// caller manages: begin/commit/rollback and the post-commit broadcast are
+// all the caller's responsibility, not this function's. handleResolve uses
+// this directly (not mergeFamilies) so the merge, the new session, and
+// consuming pending_auth share one transaction.
 func mergeFamiliesTx(tx *sql.Tx, from, to string) error {
+	if from == to {
+		return nil
+	}
 	if err := mergeLogEntries(tx, from, to); err != nil {
 		return err
 	}
@@ -109,15 +121,21 @@ func mergeLogEntries(tx *sql.Tx, from, to string) error {
 // rewritePayloadID sets payload's top-level "id" field to newRowID. Falls
 // back to the original payload if it's not a JSON object (shouldn't happen —
 // handleUpsertEntry always stores the validated request body — but a
-// malformed row must not abort the whole merge).
+// malformed row must not abort the whole merge). The fallback leaves the
+// copied row's payload id out of sync with its actual DB id, so any later
+// edit to it from the client will 409 against the cross-family guard in
+// handleUpsertEntry — logged so a malformed row doesn't produce a silently
+// uneditable entry with nothing pointing at why.
 func rewritePayloadID(payload, newRowID string) string {
 	var obj map[string]any
 	if err := json.Unmarshal([]byte(payload), &obj); err != nil {
+		log.Printf("mergeLogEntries: payload for new id %s is not a JSON object, keeping it as-is: %v", newRowID, err)
 		return payload
 	}
 	obj["id"] = newRowID
 	b, err := json.Marshal(obj)
 	if err != nil {
+		log.Printf("mergeLogEntries: re-marshaling payload for new id %s failed, keeping original: %v", newRowID, err)
 		return payload
 	}
 	return string(b)

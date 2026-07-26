@@ -165,3 +165,45 @@ func TestResolveSwitchIssuesSessionForTarget(t *testing.T) {
 		t.Fatalf("pending row not cleared")
 	}
 }
+
+// "keep" is the one choice not folded into the merge/switch atomic
+// transaction (it moves no data and creates no session) — this pins that
+// it still does its one job (clear pending_auth) and, unlike merge/switch,
+// issues no session and touches no family data.
+func TestResolveKeepClearsPendingAuthWithoutIssuingSessionOrMovingData(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('A', ?), ('B', ?)`, now, now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cgA','A','A','Parent',?),('cgB','B','B','Parent',?)`, now, now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('a1','A','feed','t','{"id":"a1"}','cgA',?)`, now)
+	db.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES ('google','sub','cgB','e',?)`, now)
+	db.Exec(`INSERT INTO pending_auth (token_hash, provider, provider_user_id, email, target_family_id, current_family_id, current_caregiver_id, created_at) VALUES (?,'google','sub','e','B','A','cgA',?)`,
+		hashForTest(t, "p"), now)
+
+	req := httptest.NewRequest("POST", "/api/auth/resolve", strings.NewReader(`{"pending":"p","choice":"keep"}`))
+	rec := httptest.NewRecorder()
+	handleResolve(db, newHub())(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM pending_auth WHERE token_hash = ?`, hashForTest(t, "p")).Scan(&n)
+	if n != 0 {
+		t.Fatal("expected pending_auth row to be cleared")
+	}
+	db.QueryRow(`SELECT COUNT(*) FROM sessions`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("expected no session to be created for 'keep', got %d", n)
+	}
+	var familyID string
+	if err := db.QueryRow(`SELECT family_id FROM log_entries WHERE id='a1'`).Scan(&familyID); err != nil {
+		t.Fatal(err)
+	}
+	if familyID != "A" {
+		t.Fatalf("expected a1 to remain in A untouched, got family_id=%q", familyID)
+	}
+	if len(rec.Result().Cookies()) != 0 {
+		t.Fatalf("expected no session cookie to be set, got %v", rec.Result().Cookies())
+	}
+}
