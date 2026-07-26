@@ -109,13 +109,16 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		if err := tx.Commit(); err != nil {
+		// createSession runs in the same transaction as provisioning, not
+		// after a separate commit: if it fails, the whole signup rolls back
+		// instead of leaving a fully provisioned family with no session and
+		// no way to retry (the second-family guard above would block it).
+		token, err := createSession(tx, caregiverID, familyID)
+		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-
-		token, err := createSession(db, caregiverID, familyID)
-		if err != nil {
+		if err := tx.Commit(); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}

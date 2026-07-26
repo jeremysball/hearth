@@ -1,5 +1,5 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, clearFamilyScopedEntries, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
@@ -871,6 +871,11 @@ async function syncOnce() {
       if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
       data = await res.json();
       if (data.familyId !== getLastSyncFamilyId()) { log.warn('sync', 'family changed again mid-resync, aborting'); return; }
+      // log/growth/caregivers merge by id (see mergeById below), so without
+      // this the previous family's rows would just sit alongside the new
+      // family's — never removed, since none of their ids match anything
+      // in this full resync.
+      clearFamilyScopedEntries();
     }
     // The pull above is read-only and merges by id, so it's safe to apply
     // before draining: it never drops a local, not-yet-pushed entry. Only

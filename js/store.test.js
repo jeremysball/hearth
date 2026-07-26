@@ -16,7 +16,7 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
-  wakePosition, wakeWindowRange, _testHelpers } = await import('./store.js');
+  wakePosition, wakeWindowRange, clearFamilyScopedEntries, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -114,6 +114,48 @@ test('applySyncResponse upserts and tombstones log entries by id', () => {
 
   applySyncResponse({ baby: null, settings: null, entries: [{ id: 'sync-e1', deletedAt: '2026-01-02T00:00:00Z' }], growth: [] });
   assert.equal(state().log.find((e) => e.id === 'sync-e1'), undefined);
+});
+
+test('clearFamilyScopedEntries wipes log/growth/caregivers but leaves baby, settings, and setup alone', () => {
+  applySyncResponse({
+    baby: { name: 'Olive', theme: 'boy' },
+    settings: { bottleIntervalH: 4 },
+    entries: [{ id: 'fam-switch-e1', type: 'sleep', start: '2026-01-01T00:00:00Z' }],
+    growth: [{ id: 'fam-switch-g1', date: '2026-01-01' }],
+    caregivers: [{ id: 'fam-switch-cg1', displayName: 'Her' }],
+  });
+  state().setup = true;
+  assert.ok(state().log.find((e) => e.id === 'fam-switch-e1'));
+  assert.ok(state().growth.find((g) => g.id === 'fam-switch-g1'));
+  assert.ok(state().caregivers.find((c) => c.id === 'fam-switch-cg1'));
+
+  clearFamilyScopedEntries();
+
+  assert.deepEqual(state().log, []);
+  assert.deepEqual(state().growth, []);
+  assert.deepEqual(state().caregivers, []);
+  assert.equal(state().baby.name, 'Olive');
+  assert.equal(state().settings.bottleIntervalH, 4);
+  assert.equal(state().setup, true);
+  reset();
+});
+
+test('a family switch full resync does not leave the previous family\'s entries mixed in', () => {
+  // Simulates syncOnce's family-switch path: a normal pull merges in
+  // entries for the OLD family, applySyncFamily detects the switch, then
+  // (after this fix) clearFamilyScopedEntries runs before the full resync
+  // for the NEW family is merged in.
+  applySyncResponse({ baby: null, settings: null, entries: [{ id: 'old-fam-e1', type: 'feed', start: '2026-01-01T00:00:00Z' }], growth: [] });
+  assert.ok(state().log.find((e) => e.id === 'old-fam-e1'));
+
+  clearFamilyScopedEntries();
+  applySyncResponse({ baby: null, settings: null, entries: [{ id: 'new-fam-e1', type: 'sleep', start: '2026-01-02T00:00:00Z' }], growth: [] });
+
+  assert.equal(state().log.find((e) => e.id === 'old-fam-e1'), undefined,
+    'the old family\'s entry must not linger alongside the new family\'s data');
+  assert.ok(state().log.find((e) => e.id === 'new-fam-e1'));
+  assert.equal(state().log.length, 1);
+  reset();
 });
 
 test('maybeInterruptSleep splits an ongoing sleep and resumes after the gap, during quiet hours', () => {

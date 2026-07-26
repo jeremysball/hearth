@@ -73,12 +73,49 @@ func TestHandleUpsertEntryIgnoresCrossFamilyCollision(t *testing.T) {
 	reqB := httptest.NewRequest("PUT", "/api/entries/shared", bytes.NewBufferString(`{"type":"feed","start":"2026-06-23T12:00:00Z"}`))
 	reqB.SetPathValue("id", "shared")
 	reqB = withSession(reqB, SessionInfo{CaregiverID: "cgB", FamilyID: "famB"})
-	handleUpsertEntry(db, hub, nil)(httptest.NewRecorder(), reqB)
+	recB := httptest.NewRecorder()
+	handleUpsertEntry(db, hub, nil)(recB, reqB)
 
+	if recB.Code != http.StatusConflict {
+		t.Errorf("status = %d, want 409 (silently accepting a write that performed no update is worse than an error)", recB.Code)
+	}
 	var familyID string
 	db.QueryRow(`SELECT family_id FROM log_entries WHERE id = 'shared'`).Scan(&familyID)
 	if familyID != "famA" {
 		t.Errorf("family_id = %q, want famA (famB's write must be ignored, not overwrite famA's row)", familyID)
+	}
+}
+
+func TestHandleUpsertEntryRejectsResurrectingADeletedEntry(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	hub := newHub()
+
+	req1 := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"type":"sleep","start":"2026-06-23T10:00:00Z"}`))
+	req1.SetPathValue("id", "e1")
+	req1 = withSession(req1, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	handleUpsertEntry(db, hub, nil)(httptest.NewRecorder(), req1)
+
+	del := httptest.NewRequest("DELETE", "/api/entries/e1", nil)
+	del.SetPathValue("id", "e1")
+	del = withSession(del, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	handleDeleteEntry(db, hub)(httptest.NewRecorder(), del)
+
+	// A different device's queued edit, drained after the delete, must not
+	// silently resurrect the entry — the delete stays authoritative.
+	req2 := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(`{"type":"sleep","start":"2026-06-23T10:00:00Z","end":"2026-06-23T11:00:00Z"}`))
+	req2.SetPathValue("id", "e1")
+	req2 = withSession(req2, SessionInfo{CaregiverID: "cg2", FamilyID: "fam1"})
+	rec2 := httptest.NewRecorder()
+	handleUpsertEntry(db, hub, nil)(rec2, req2)
+
+	if rec2.Code != http.StatusConflict {
+		t.Errorf("status = %d, want 409", rec2.Code)
+	}
+	var deletedAt sql.NullString
+	db.QueryRow(`SELECT deleted_at FROM log_entries WHERE id = 'e1'`).Scan(&deletedAt)
+	if !deletedAt.Valid || deletedAt.String == "" {
+		t.Error("expected deleted_at to remain set; the stale edit must not resurrect the entry")
 	}
 }
 
