@@ -38,6 +38,36 @@ func TestHandleCreateFamily(t *testing.T) {
 	}
 }
 
+// If session creation fails after the family/baby/caregiver/settings rows
+// already committed, signup is stuck: the DB shows a fully provisioned
+// family but the browser never gets a session cookie, and the second-family
+// guard now blocks ever retrying. createSession must run in the same
+// transaction as provisioning.
+func TestHandleCreateFamilyRollsBackIfSessionCreationFails(t *testing.T) {
+	db := newParallelTestDB(t)
+
+	if _, err := db.Exec(`DROP TABLE sessions`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		db.Exec(`CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, caregiver_id TEXT NOT NULL REFERENCES caregivers(id), family_id TEXT NOT NULL REFERENCES families(id), created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL)`)
+	})
+
+	req := httptest.NewRequest("POST", "/api/family", bytes.NewBufferString(`{"babyName":"Mira","birthdate":"2026-01-01","theme":"girl","caregiverName":"Maya"}`))
+	rec := httptest.NewRecorder()
+
+	handleCreateFamily(db)(rec, req)
+
+	if rec.Code == 200 {
+		t.Fatalf("expected create-family to fail when session creation fails, got 200")
+	}
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM families`).Scan(&count)
+	if count != 0 {
+		t.Fatalf("expected no family to be committed when session creation failed, got %d (provisioned with no way to sign in)", count)
+	}
+}
+
 func TestHandleCreateFamilyRejectsMissingBabyName(t *testing.T) {
 	db := newParallelTestDB(t)
 	req := httptest.NewRequest("POST", "/api/family", bytes.NewBufferString(`{}`))

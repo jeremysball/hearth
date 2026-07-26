@@ -92,6 +92,23 @@ export function save() {
 export function markSynced() { _state.synced = true; save(); }
 export function reset() { _state = DEFAULT(); save(); clearSyncState(); }
 
+// applySyncResponse's log/growth/caregivers merges are add-or-update by id,
+// never a wholesale replace (see mergeById) — fine for a normal incremental
+// pull, but on a detected family switch (OAuth restore, admin remove +
+// re-invite, conflict-resolution merge/switch) the device's previous
+// family's rows never match any id in the new family's full resync, so they
+// linger forever, indistinguishable from the new family's own data. Call
+// this once, right before merging in the post-switch full resync, so the
+// merge starts from a clean slate instead of mixing two families' entries.
+// Baby/settings need no equivalent: applySyncResponse always Object.assigns
+// every field a full resync sends, so they're never partially stale.
+export function clearFamilyScopedEntries() {
+  _state.log = [];
+  _state.growth = [];
+  _state.caregivers = [];
+  save();
+}
+
 export function state() { return _state; }
 
 // ---------- log helpers ----------

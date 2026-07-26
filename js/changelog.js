@@ -2,6 +2,16 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-26',
+    version: '2026-07-26',
+    fixes: [
+      'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
+      'Fixed switching or merging accounts sometimes leaving old entries from your previous account mixed in on the timeline.',
+      'Fixed joining a family or setting up for the first time occasionally leaving you unable to sign in if something interrupted the process partway through.',
+      'Fixed a delete sometimes getting silently undone by an older edit from another device that was still catching up.',
+    ]
+  },
+  {
     date: '2026-07-12',
     version: '2026-07-12',
     features: [
