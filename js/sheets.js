@@ -528,6 +528,7 @@ const FORMS = {
     const types = state().settings.playTypes;
     return `${types.length ? field('Type', `<select id="f-playtype">${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>`) : ''}
     <button type="button" class="btn-ghost" data-action="playtypes:open"><svg class="icon"><use href="#pencil"></use></svg> Manage play types</button>
+    ${stepperField('Duration (min)', 'f-dur', 0, 240, 1, 15)}
     ${timeRow()} ${noteRow()}`;
   },
   bath: () => `${timeRow()} ${noteRow()}`,
@@ -582,6 +583,7 @@ function gather(type) {
     // <select> then has no matching <option>, so the browser leaves it
     // unselected) — either way that's "no type", not the empty string.
     base.playType = ($('#f-playtype') ? $('#f-playtype').value : '') || null;
+    base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'hygiene') {
     const id = $('#f-hyg').value;
     const it = state().settings.hygiene.find((x) => x.id === id);
@@ -677,7 +679,10 @@ function prefill(type, e) {
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
-  else if (type === 'play') { if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType; }
+  else if (type === 'play') {
+    if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType;
+    const pdur = $('#f-dur'); if (pdur) { pdur.dataset.value = e.duration || 0; pdur.textContent = e.duration || 0; }
+  }
   else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
 }
 
