@@ -836,7 +836,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 // no-op everywhere else (iOS Safari has no Screen Orientation API, and the
 // call throws outside a fullscreen top-level browsing context). The CSS
 // `.rotate-lock` overlay is what actually covers those cases.
-if (screen.orientation && screen.orientation.lock) {
+if (typeof screen !== 'undefined' && screen.orientation && screen.orientation.lock) {
   screen.orientation.lock('portrait').catch(() => {});
 }
 let deferredPrompt = null;
