@@ -732,6 +732,8 @@ body[data-mode="dark"] {
 
 /* growth */
 .growth-stats { grid-template-columns: repeat(2, 1fr); }
+.growth-stats .stat[data-action="growth:showstat"] { cursor: pointer; transition: box-shadow .15s ease; }
+.growth-stats .stat[data-action="growth:showstat"].stat-active { box-shadow: inset 0 0 0 2px var(--accent); }
 .growth-svg { width: 100%; height: auto; aspect-ratio: 320 / 150; overflow: visible; display: block; }
 .growth-svg .growth-x { font-size: 11px; font-family: var(--font-sans); font-weight: 700; fill: var(--muted); }
 .growth-svg circle { transform-box: fill-box; transform-origin: center; }
