@@ -539,6 +539,10 @@ const FORMS = {
     ${field('Item', `<select id="f-hyg">${items.map((it) => `<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select>`)}
     ${timeRow()} ${noteRow()}`;
   },
+  away: () => `
+    ${field('Away since', dtPair('f-time', nowLocalDT()))}
+    ${field('Back (leave blank if still away)', dtPair('f-end', nowLocalDT().slice(0, 10)))}
+    ${noteRow()}`,
 };
 
 function gather(type) {
@@ -589,6 +593,9 @@ function gather(type) {
     const it = state().settings.hygiene.find((x) => x.id === id);
     if (!it) return base;
     base.itemId = id; base.name = it.name;
+  } else if (type === 'away') {
+    const endLocal = readDT('f-end');
+    base.end = endLocal ? dtToISO(endLocal) : null;
   }
   return base;
 }
@@ -684,6 +691,7 @@ function prefill(type, e) {
     const pdur = $('#f-dur'); if (pdur) { pdur.dataset.value = e.duration || 0; pdur.textContent = e.duration || 0; }
   }
   else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
+  else if (type === 'away') { if (e.end) writeDT('f-end', e.end); }
 }
 
 export function saveLog(type, id) {
@@ -707,7 +715,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];

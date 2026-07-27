@@ -87,7 +87,7 @@ export function emberGlow(heat) {
 // ---------- scene state ----------
 // Maps hero status to a scene descriptor. All inputs are plain values so the
 // mapping is unit-testable without the store.
-export function sceneSpec({ asleep, night, newborn, elapsedMin, lowMin, highMin, hour, date }) {
+export function sceneSpec({ asleep, night, newborn, away, elapsedMin, lowMin, highMin, hour, date }) {
   const deep = hour < 6; // circadian deep night: midnight-6am
   if (asleep || night) {
     return {
@@ -104,6 +104,48 @@ export function sceneSpec({ asleep, night, newborn, elapsedMin, lowMin, highMin,
       elevation: 0.55, stars: false, fireflies: false,
     };
   }
+  if (away) {
+    // During an away block the wake-window prediction is meaningless (no
+    // logging expected, no sleep pressure curve), so the wake-window arc
+    // would render a 'twilight' scene the moment the away block has been
+    // running for more than 0 minutes — a 2pm away block with highMin=0
+    // would resolve to twilight, not a normal daytime sky. Pick a scene
+    // purely from the clock hour instead, reusing the same hour<6 deep-
+    // night threshold the asleep/night path already uses and mapping the
+    // rest of the day onto the existing scene modes. The mapping covers
+    // every hour of a 24h day, so a 2pm away block lands in 'day' and a
+    // 11pm away block lands in 'night' — never an unexpected twilight.
+    if (hour < 6) {
+      return {
+        mode: 'deep-night',
+        sun: null, moon: moonPhase(date),
+        elevation: -0.6,
+        stars: true, fireflies: false,
+      };
+    }
+    if (hour < 9) {
+      const sun = sunPositionFromHour(hour);
+      return { mode: 'morning', sun, moon: null, elevation: sun.elevation, stars: false, fireflies: false };
+    }
+    if (hour < 17) {
+      const sun = sunPositionFromHour(hour);
+      return { mode: 'day', sun, moon: null, elevation: sun.elevation, stars: false, fireflies: false };
+    }
+    if (hour < 20) {
+      const sun = sunPositionFromHour(hour);
+      return { mode: 'golden', sun, moon: null, elevation: sun.elevation, stars: false, fireflies: true };
+    }
+    if (hour < 22) {
+      const sun = sunPositionFromHour(hour);
+      return { mode: 'twilight', sun, moon: null, elevation: sun.elevation, stars: true, fireflies: false };
+    }
+    return {
+      mode: 'night',
+      sun: null, moon: moonPhase(date),
+      elevation: -0.45,
+      stars: true, fireflies: false,
+    };
+  }
   const sun = sunPosition(elapsedMin, highMin);
   let mode;
   if (elapsedMin > highMin) mode = 'twilight';
@@ -113,6 +155,25 @@ export function sceneSpec({ asleep, night, newborn, elapsedMin, lowMin, highMin,
   return {
     mode, sun, moon: null, elevation: sun.elevation,
     stars: mode === 'twilight', fireflies: mode === 'golden',
+  };
+}
+
+// Clock-hour-driven sun position for the away scene. Mirrors the shape of
+// sunPosition(elapsedMin, highMin=120) — frac in 0..1, x = 0.92-0.84*frac,
+// elevation = sin(frac * π) — but drives frac from the wall clock instead
+// of wake-window elapsed time: frac=0 at 6am (sun on the eastern horizon),
+// frac=1 at 6pm (sun on the western horizon), with the sun below the
+// horizon (elevation -0.1) outside that range so the scene builder hides
+// the sun disc outside of dawn-to-dusk hours.
+function sunPositionFromHour(hour) {
+  const t = (hour - 6) / 12; // 0 at 6am, 1 at 6pm
+  if (t < 0 || t > 1) {
+    return { frac: 0, x: 0.5, elevation: -0.1 };
+  }
+  return {
+    frac: t,
+    x: 0.92 - 0.84 * t,
+    elevation: Math.sin(t * Math.PI),
   };
 }
 
@@ -406,6 +467,7 @@ export function heroSky(st, sp, now = new Date()) {
     asleep: st.state === 'asleep',
     night: Boolean(sp.night),
     newborn: Boolean(sp.newborn),
+    away: Boolean(sp.away),
     elapsedMin,
     lowMin: sp.prediction ? sp.prediction.low : 0,
     highMin: sp.prediction ? sp.prediction.high : 0,
