@@ -24,6 +24,7 @@ const DEFAULT = () => ({
     reminders: { naps: true, bottle: true, meds: true, hygiene: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
+    celebrateCaregiverLogs: true,
     clock24: '12h',
     darkMode: 'auto',
     seenChangelog: ''
@@ -64,6 +65,7 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
+  if (typeof s.celebrateCaregiverLogs !== 'boolean') s.celebrateCaregiverLogs = true;
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
   if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
@@ -1024,6 +1026,16 @@ export function applySyncResponse(resp, pending = pendingSyncState()) {
   if (resp.currentCaregiverId) _state.currentCaregiverId = resp.currentCaregiverId;
   _state.caregivers = mergeById(_state.caregivers || [], resp.caregivers || []);
   save();
+}
+
+// Used to decide whether a sync response is worth a confetti celebration
+// (js/app.js): true only for an entry this device didn't already know about
+// and that some other caregiver logged, never an edit to an existing entry
+// or one this device wrote itself. Call with the set of entry ids this
+// device already had *before* the response was merged in — mergeById would
+// otherwise make every entry "already known".
+export function hasNewEntryFromOtherCaregiver(entries, knownIds, myCaregiverId) {
+  return (entries || []).some((e) => e.caregiverId && e.caregiverId !== myCaregiverId && !knownIds.has(e.id));
 }
 
 export function enqueueBabySync() {
