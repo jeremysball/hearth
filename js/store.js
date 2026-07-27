@@ -713,6 +713,7 @@ export const derive = {
     const direction = gapMin > 0 ? 'later' : 'earlier';
     return {
       text: `Naps tend to land ${direction} than the age guide, around ${Math.round(Math.abs(gapMin))} min.`,
+      why: `Based on ${prediction.sampleSize} of her own recent naps, blended with the standard age-based guide.`,
       direction, gapMin: Math.round(gapMin), w_p: prediction.w_p, sampleSize: prediction.sampleSize,
     };
   },
@@ -748,6 +749,7 @@ export const derive = {
     if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_QUALITY_GAP) return null;
     return {
       text: 'A late wake window often means a rougher next nap.',
+      why: `Comparing next-nap quality across ${pairs.length} nap transitions from the last 3 weeks, grouped by whether the wake window before them ran long or stayed on time.`,
       onTimeGoodP, overshotGoodP, sampleSize: pairs.length,
     };
   },
@@ -791,6 +793,7 @@ export const derive = {
     const direction = deltaMin > 0 ? 'longer' : 'shorter';
     return {
       text: `Nap lengths are trending ${direction} over the last few weeks.`,
+      why: `Comparing the last ${recent.length} naps to the ${older.length} before that, weighted toward more recent and more consistent data.`,
       deltaMin: Math.round(deltaMin), recentShrunk: Math.round(recentShrunk), olderShrunk: Math.round(olderShrunk),
     };
   },
@@ -810,6 +813,7 @@ export const derive = {
     const better = gap > 0 ? 'Self-settled' : 'Assisted';
     return {
       text: `${better} naps tend to run higher quality than the other kind.`,
+      why: `Based on ${naps.length} naps from the last 3 weeks where both a settling method and a quality rating were logged.`,
       selfP, assistedP, sampleSize: naps.length,
     };
   },

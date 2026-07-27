@@ -9,6 +9,7 @@ export const CHANGELOG = [
       'The growth tab now shows a change-since-last-measurement indicator on head circumference, matching weight and height.',
       'A medicine\'s dosing interval is now optional, so you can add an as-needed medicine without it forcing a recurring reminder.',
       'Play entries now have a duration field, same as sleep and feed.',
+      'Insight cards on the Trends tab now explain roughly how each one is calculated, not just the headline stat.',
     ],
     fixes: [
       'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
