@@ -800,6 +800,18 @@ test('nextHygiene computes per-item due dates like nextMeds', () => {
   assert.equal(after[0].due.getTime() - after[0].last.getTime(), 168 * 60 * 60 * 1000);
 });
 
+test('nextMeds never predicts a due date for an as-needed medicine (no everyH)', () => {
+  reset();
+  state().settings.meds = [{ id: 'm1', name: 'Ibuprofen', dose: '5', unit: 'ml', everyH: null }];
+  const before = derive.nextMeds();
+  assert.equal(before[0].last, null);
+  assert.equal(before[0].due, null);
+  addEntry({ type: 'medicine', start: new Date().toISOString(), medId: 'm1', name: 'Ibuprofen' });
+  const after = derive.nextMeds();
+  assert.ok(after[0].last instanceof Date);
+  assert.equal(after[0].due, null);
+});
+
 test('derive.insightWakeCalibration returns null with no personal data', () => {
   reset();
   assert.equal(derive.insightWakeCalibration('middle'), null);

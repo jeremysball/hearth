@@ -397,6 +397,9 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		}
 		json.Unmarshal([]byte(medsJSON), &meds)
 		for _, med := range meds {
+			if med.EveryH <= 0 { // as-needed medicine: no recurring dose to remind about
+				continue
+			}
 			var lastMed string
 			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'medicine' AND json_extract(payload_json, '$.medId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, med.ID).Scan(&lastMed)
 			if err != nil && err != sql.ErrNoRows {

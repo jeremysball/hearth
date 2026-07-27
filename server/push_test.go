@@ -200,6 +200,33 @@ func TestFamilyRemindersIncludesMedDuringQuietHours(t *testing.T) {
 	}
 }
 
+func TestFamilyRemindersSkipsAsNeededMedicine(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	// everyH omitted entirely, matching what a client sends for an as-needed
+	// medicine (no recurring interval), not just zeroed out.
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, ?, '{}', ?, '{}', ?)`,
+		"fam1",
+		`[{"id":"m1","name":"Ibuprofen","dose":"5","unit":"ml"}]`,
+		`{"bottle":false,"meds":true,"quietStart":"00:00","quietEnd":"23:59"}`,
+		now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('med1', 'fam1', 'medicine', ?, '{"medId":"m1"}', 'cg1', ?)`,
+		time.Now().UTC().Format(time.RFC3339Nano), now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	for _, r := range reminders {
+		if strings.HasPrefix(r.Key, "med-") {
+			t.Fatalf("as-needed medicine should not schedule a reminder, got %+v", r)
+		}
+	}
+}
+
 func TestFamilyRemindersIncludesHygieneOutsideQuietHours(t *testing.T) {
 	db := newParallelTestDB(t)
 	now := nowISO()
