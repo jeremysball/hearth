@@ -1357,3 +1357,11 @@ test('derive.insightOvertiredLag excludes a wake gap that overlaps an away block
   assert.ok(result !== null, 'the remaining 11 clean triples should still clear every threshold');
   assert.equal(result.sampleSize, 11, `sampleSize ${result.sampleSize} should drop by exactly 1 (the away-overlapping day)`);
 });
+
+test('derive.reminders() no longer schedules bottle/meds/hygiene locally (server push covers them)', () => {
+  reset();
+  const keys = derive.reminders().map((r) => r.key);
+  assert.ok(!keys.includes('bottle'), 'bottle should not be locally scheduled: server push already delivers it');
+  assert.ok(!keys.some((k) => k.startsWith('med-')), 'medicine reminders should not be locally scheduled: server push already delivers them');
+  assert.ok(!keys.some((k) => k.startsWith('hyg-')), 'hygiene reminders should not be locally scheduled: server push already delivers them');
+});

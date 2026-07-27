@@ -176,7 +176,7 @@ export function scheduleReminders() {
     if (notified.has(notifiedKey)) return;
     const delay = rem.at - now;
     if (delay > 12 * 3600000) return;  // keep the 12h future cap
-    if (!rem.key.startsWith('med-') && isQuiet(rem.at, quietStart, quietEnd)) return;
+    if (isQuiet(rem.at, quietStart, quietEnd)) return;
     _scheduled[rem.key] = setTimeout(() => {
       // A lead-adjusted notification can fire late (e.g. quiet hours held it
       // back until just after the real due moment) -- if the due moment has
