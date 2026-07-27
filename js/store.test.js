@@ -16,7 +16,7 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
-  wakePosition, wakeWindowRange, clearFamilyScopedEntries, _testHelpers } = await import('./store.js');
+  wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -158,6 +158,43 @@ test('a family switch full resync does not leave the previous family\'s entries 
   reset();
 });
 
+test('hasNewEntryFromOtherCaregiver is true only for a not-yet-known entry logged by someone else', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    true
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores an edit to an already-known entry', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'known-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores a new entry logged by this device itself', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-me' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores entries with no caregiverId', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver handles an empty or missing entries list', () => {
+  assert.equal(hasNewEntryFromOtherCaregiver([], new Set(), 'cg-me'), false);
+  assert.equal(hasNewEntryFromOtherCaregiver(undefined, new Set(), 'cg-me'), false);
+});
+
 test('maybeInterruptSleep splits an ongoing sleep and resumes after the gap, during quiet hours', () => {
   const nap = addEntry({ type: 'sleep', start: '2026-01-01T01:00:00' }); // 1am local, ongoing
   const before = state().log.filter((e) => e.type === 'sleep').length;
@@ -195,6 +232,7 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
   // exact condition the naive "ongoing = !e.end" check gets wrong.
   const r = state().settings.reminders;
   const savedStart = r.quietStart, savedEnd = r.quietEnd;
+  let ongoing;
   try {
     // Close any stale ongoing sleeps from other tests
     state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: e.start }); });
@@ -204,7 +242,7 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
     r.quietStart = hhmm(new Date(now.getTime() - 60 * 60000));
     r.quietEnd = hhmm(new Date(now.getTime() + 60 * 60000));
 
-    addEntry({ type: 'sleep', start: new Date(now.getTime() - 30 * 60000).toISOString() });
+    ongoing = addEntry({ type: 'sleep', start: new Date(now.getTime() - 30 * 60000).toISOString() });
     const atISO = now.toISOString();
     maybeInterruptSleep('bottle', atISO);
 
@@ -213,6 +251,13 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
     assert.equal(st.since.getTime(), new Date(atISO).getTime());
   } finally {
     r.quietStart = savedStart; r.quietEnd = savedEnd;
+    // Remove the ongoing sleep this test added rather than leaving it for a
+    // later test's stale-sleep sweep to close near "now": once closed, it
+    // sits at the very front of derive.personalWakeWindow's sleep list and,
+    // depending on what wall-clock time the suite happens to run at, can
+    // land inside its 10-360-min sanity window and pollute that test's
+    // otherwise-exact-90-min wake-gap fixture.
+    if (ongoing) removeEntry(ongoing.id);
   }
 });
 
