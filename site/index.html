@@ -360,7 +360,7 @@
     transition-delay: 120ms;
   }
 
-  .plate img {
+  .plate img, .plate video {
     width: 100%;
     border-radius: 16px;
     display: block;
@@ -872,11 +872,21 @@
       <p class="eyebrow-mono">Day / night · same log</p>
       <div class="plates">
         <figure class="plate plate-day">
-          <img src="screenshots/readme-hero-light.png" alt="Hearth's hero card in daylight, showing an awake timer and nap window prediction">
+          <video class="plate-video" width="390" height="844" muted loop playsinline
+                 poster="screenshots/readme-hero-light.png"
+                 aria-label="Hearth's hero card in daylight: logging a bottle in two taps">
+            <source src="videos/showcase-day.webm" type="video/webm">
+            <source src="videos/showcase-day.mp4" type="video/mp4">
+          </video>
           <figcaption><b>Day</b> awake timer · nap window</figcaption>
         </figure>
         <figure class="plate plate-night">
-          <img src="screenshots/readme-hero-dark.png" alt="Hearth's hero card at night, showing an awake timer and nap window prediction">
+          <video class="plate-video" width="390" height="844" muted loop playsinline
+                 poster="screenshots/readme-hero-dark.png"
+                 aria-label="Hearth's hero card at night, showing an awake timer and nap window prediction">
+            <source src="videos/showcase-night.webm" type="video/webm">
+            <source src="videos/showcase-night.mp4" type="video/mp4">
+          </video>
           <figcaption><b>Night</b> offline log</figcaption>
         </figure>
       </div>
@@ -950,6 +960,9 @@
   <script>
     (function () {
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduceMotion) {
+        document.querySelectorAll('.plate-video').forEach(function (v) { v.play().catch(function () {}); });
+      }
       var rail = document.querySelector('.timerail');
       var marker = document.querySelector('.rail-marker');
 

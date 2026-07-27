@@ -3,7 +3,7 @@ import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSet
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
 import { router } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
-import { addableCardTypes } from './home.js';
+import { addableCardTypes, SIZE_OPTS } from './home.js';
 
 // segmented control
 function seg(group, opts, sel) {
@@ -17,14 +17,6 @@ function seg(group, opts, sel) {
     `</div>`;
 }
 
-// Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
-// "Small" option is rendered as "Little" in the UI. Keep this in sync with
-// `sizeLabel` in home.js.
-const SIZE_OPTS = [
-  { val: 'Small', label: 'Little' },
-  { val: 'Medium', label: 'Medium' },
-  { val: 'Large', label: 'Large' },
-];
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
@@ -534,8 +526,9 @@ const FORMS = {
   note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`,
   play: () => {
     const types = state().settings.playTypes;
-    return `${types.length ? field('Type', seg('playType', types, types[0])) : ''}
+    return `${types.length ? field('Type', `<select id="f-playtype">${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>`) : ''}
     <button type="button" class="btn-ghost" data-action="playtypes:open"><svg class="icon"><use href="#pencil"></use></svg> Manage play types</button>
+    ${stepperField('Duration (min)', 'f-dur', 0, 240, 1, 15)}
     ${timeRow()} ${noteRow()}`;
   },
   bath: () => `${timeRow()} ${noteRow()}`,
@@ -546,6 +539,10 @@ const FORMS = {
     ${field('Item', `<select id="f-hyg">${items.map((it) => `<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select>`)}
     ${timeRow()} ${noteRow()}`;
   },
+  away: () => `
+    ${field('Away since', dtPair('f-time', nowLocalDT()))}
+    ${field('Back (leave blank if still away)', dtPair('f-end', nowLocalDT().slice(0, 10)))}
+    ${noteRow()}`,
 };
 
 function gather(type) {
@@ -585,12 +582,20 @@ function gather(type) {
     if (!m) return base;
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
-    base.playType = segVal('playType') || null;
+    // An empty value means either no play types are configured, or the
+    // entry being edited had its saved type removed from settings (the
+    // <select> then has no matching <option>, so the browser leaves it
+    // unselected) — either way that's "no type", not the empty string.
+    base.playType = ($('#f-playtype') ? $('#f-playtype').value : '') || null;
+    base.duration = Number($('#f-dur').dataset.value) || 0;
   } else if (type === 'hygiene') {
     const id = $('#f-hyg').value;
     const it = state().settings.hygiene.find((x) => x.id === id);
     if (!it) return base;
     base.itemId = id; base.name = it.name;
+  } else if (type === 'away') {
+    const endLocal = readDT('f-end');
+    base.end = endLocal ? dtToISO(endLocal) : null;
   }
   return base;
 }
@@ -681,8 +686,12 @@ function prefill(type, e) {
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
-  else if (type === 'play') { setSeg('playType', e.playType); }
+  else if (type === 'play') {
+    if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType;
+    const pdur = $('#f-dur'); if (pdur) { pdur.dataset.value = e.duration || 0; pdur.textContent = e.duration || 0; }
+  }
   else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
+  else if (type === 'away') { if (e.end) writeDT('f-end', e.end); }
 }
 
 export function saveLog(type, id) {
@@ -706,7 +715,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];
@@ -881,7 +890,7 @@ export function medRow(m) {
       <input class="med-dose" placeholder="Dose" value="${esc(m.dose)}" />
       <input class="med-unit" placeholder="unit" value="${esc(m.unit)}" />
       <span class="med-every">every</span>
-      <input class="med-eh" type="number" min="1" max="48" value="${m.everyH}" /><span class="med-every">h</span>
+      <input class="med-eh" type="number" min="1" max="48" placeholder="as needed" value="${m.everyH != null ? m.everyH : ''}" /><span class="med-every">h</span>
       <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>
   </div>`;
@@ -937,6 +946,15 @@ export function saveBottle() {
   state().settings.bottleAmountDefault = Number($('#c-amt').dataset.value) || 120;
   save(); enqueueSettingsSync(); sheet.close(); toast('Bottle reminder updated'); router.refresh();
 }
+// A blank interval means "as needed" (no recurring reminder); anything
+// non-blank but not a valid positive number falls back to the old default
+// instead of silently dropping the medicine's schedule.
+function parseEveryH(raw) {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const n = Number(trimmed);
+  return n > 0 ? n : 24;
+}
 export function saveMeds() {
   const rows = $$('#med-list .med-edit');
   state().settings.meds = rows.map((r) => ({
@@ -944,7 +962,7 @@ export function saveMeds() {
     name: $('.med-name', r).value.trim() || 'Medicine',
     dose: $('.med-dose', r).value.trim() || '1',
     unit: $('.med-unit', r).value.trim() || '',
-    everyH: Number($('.med-eh', r).value) || 24
+    everyH: parseEveryH($('.med-eh', r).value)
   }));
   save(); enqueueSettingsSync(); sheet.close(); toast('Medicines updated'); router.refresh();
 }

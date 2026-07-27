@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,11 +53,12 @@ func vapidSubscriber(subject string) string {
 }
 
 type reminderSettings struct {
-	Bottle     bool   `json:"bottle"`
-	Meds       bool   `json:"meds"`
-	Hygiene    bool   `json:"hygiene"`
-	QuietStart string `json:"quietStart"`
-	QuietEnd   string `json:"quietEnd"`
+	Bottle     bool    `json:"bottle"`
+	Meds       bool    `json:"meds"`
+	Hygiene    bool    `json:"hygiene"`
+	Lead       float64 `json:"lead"`
+	QuietStart string  `json:"quietStart"`
+	QuietEnd   string  `json:"quietEnd"`
 }
 
 func defaultReminderSettings() reminderSettings {
@@ -69,6 +71,26 @@ func parseReminderSettings(raw string) reminderSettings {
 		return r
 	}
 	json.Unmarshal([]byte(raw), &r)
+	// Defense in depth: an older cached client state or a future client may
+	// serialize settings.reminders.lead as a numeric JSON string ("lead":"30")
+	// rather than a JSON number. The main unmarshal above silently drops a
+	// string value because the field is a float64 (the type-mismatch error
+	// is discarded), so re-extract the raw value and coerce a valid numeric
+	// string to its float equivalent. A genuinely unparseable value (e.g.
+	// "abc", or a non-numeric string) is left at the default 0 (no lead) —
+	// falling back to the safe default is fine, but valid numeric strings
+	// must be honored.
+	var rawMap map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &rawMap); err == nil {
+		if v, ok := rawMap["lead"]; ok {
+			var leadStr string
+			if json.Unmarshal(v, &leadStr) == nil {
+				if parsed, perr := strconv.ParseFloat(leadStr, 64); perr == nil {
+					r.Lead = parsed
+				}
+			}
+		}
+	}
 	if r.QuietStart == "" {
 		r.QuietStart = "20:00"
 	}
@@ -180,21 +202,25 @@ func deletePushSubscription(db *sql.DB, endpoint string) error {
 }
 
 type pushReminder struct {
-	Key   string
-	Title string
-	Body  string
-	At    time.Time // actual fire time — may be delayed past DueAt by backoff
-	DueAt time.Time // the reminder's true due time; the dedupe key for backoff state
+	Key       string
+	Title     string
+	Body      string
+	LeadTitle string // shown instead of Title when firing early, via Lead
+	LeadBody  string
+	At        time.Time // actual fire time — may be delayed past DueAt by backoff, or moved earlier by lead
+	DueAt     time.Time // the reminder's true due time; the dedupe key for backoff state
 }
 
 // backoffFireAt returns when a reminder at stage should next fire, given its
-// due time. Stage 0 = never sent (fire at due), 1 = sent once (fire at
-// due+15m), 2 = sent twice (fire at due+75m, i.e. 1h after the +15m send).
+// due time. Stage 0 = never sent (fire at due-lead, to honor the "remind me
+// before" setting), 1 = sent once (fire at due+15m), 2 = sent twice (fire at
+// due+75m, i.e. 1h after the +15m send). Backoff retries (stages 1+) ignore
+// lead — the user's heads-up already fired, and the retry is now overdue.
 // Stage 3+ means it already fired 3 times; ok=false means don't reschedule.
-func backoffFireAt(due time.Time, stage int) (time.Time, bool) {
+func backoffFireAt(due time.Time, stage int, lead time.Duration) (time.Time, bool) {
 	switch stage {
 	case 0:
-		return due, true
+		return due.Add(-lead), true
 	case 1:
 		return due.Add(15 * time.Minute), true
 	case 2:
@@ -202,6 +228,21 @@ func backoffFireAt(due time.Time, stage int) (time.Time, bool) {
 	default:
 		return time.Time{}, false
 	}
+}
+
+// reminderLead returns the lead duration that should apply to r. Only
+// reminders with lead copy (LeadTitle set, populated by familyReminders for
+// bottle/meds/hygiene) get the configured lead; a generic card reminder —
+// the "X due" catch-alls that familyReminders builds for non-excluded
+// card types without any "coming up" copy — must fire at its exact due
+// time regardless of the user's "remind me before" setting, otherwise the
+// "X due" copy is mislabeled (the user is being told X is due when
+// actually they're being told it's due soon and it's not).
+func reminderLead(r pushReminder, configured time.Duration) time.Duration {
+	if r.LeadTitle == "" {
+		return 0
+	}
+	return configured
 }
 
 // resolveScheduled takes familyReminders()'s raw per-key due times and
@@ -213,6 +254,7 @@ func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []
 	var remindersJSON string
 	s.db.QueryRow(`SELECT reminders_json FROM settings WHERE family_id = ?`, familyID).Scan(&remindersJSON)
 	settings := parseReminderSettings(remindersJSON)
+	lead := time.Duration(settings.Lead * float64(time.Minute))
 	out := make([]pushReminder, 0, len(raw))
 	for _, r := range raw {
 		dueISO := r.At.UTC().Format(time.RFC3339Nano)
@@ -231,7 +273,7 @@ func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []
 				continue
 			}
 		}
-		fireAt, ok := backoffFireAt(r.At, stage)
+		fireAt, ok := backoffFireAt(r.At, stage, reminderLead(r, lead))
 		if !ok {
 			continue
 		}
@@ -243,7 +285,7 @@ func (s *pushScheduler) resolveScheduled(familyID string, raw []pushReminder) []
 		if isQuietAt(fireAt, settings.QuietStart, settings.QuietEnd) {
 			continue
 		}
-		out = append(out, pushReminder{Key: r.Key, Title: r.Title, Body: r.Body, At: fireAt, DueAt: r.At})
+		out = append(out, pushReminder{Key: r.Key, Title: r.Title, Body: r.Body, LeadTitle: r.LeadTitle, LeadBody: r.LeadBody, At: fireAt, DueAt: r.At})
 	}
 	return out
 }
@@ -317,7 +359,17 @@ func (s *pushScheduler) scheduleLocked(familyID, key string, rem pushReminder, d
 		// fire — sees the new stage immediately instead of re-arming a
 		// duplicate send at the same stage while this one is in flight.
 		s.advanceStage(familyID, reminder)
-		s.sendFamily(familyID, reminder)
+		final := reminder
+		// Pick lead phrasing at fire time (not earlier): a lead-scheduled fire
+		// can still land at or after DueAt in practice (a delayed tick, a
+		// resumed process) — in that case the user is being reminded because
+		// the activity is now overdue, so the "due" copy is the honest one.
+		// If no lead phrasing was configured (LeadTitle empty), the default
+		// Title/Body carry through unchanged.
+		if final.LeadTitle != "" && time.Now().Before(final.DueAt) {
+			final.Title, final.Body = final.LeadTitle, final.LeadBody
+		}
+		s.sendFamily(familyID, final)
 		s.mu.Lock()
 		delete(s.pending, key)
 		delete(s.byFamily[familyID], key)
@@ -348,9 +400,13 @@ func (s *pushScheduler) ScheduleAll() {
 	for rows.Next() {
 		var familyID string
 		if err := rows.Scan(&familyID); err != nil {
+			log.Printf("push: ScheduleAll scan family failed: %v", err)
 			continue
 		}
 		familyIDs = append(familyIDs, familyID)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("push: ScheduleAll rows iteration failed: %v", err)
 	}
 	rows.Close()
 	for _, familyID := range familyIDs {
@@ -366,14 +422,34 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 	}
 	settings := parseReminderSettings(remindersJSON)
 	reminders := []pushReminder{}
+	var ongoingAwayID string
+	err := s.db.QueryRow(`SELECT id FROM log_entries WHERE family_id = ? AND type = 'away' AND deleted_at IS NULL AND json_extract(payload_json, '$.end') IS NULL AND start <= ? ORDER BY start DESC LIMIT 1`,
+		familyID, time.Now().UTC().Format(time.RFC3339Nano)).Scan(&ongoingAwayID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("push: familyReminders family=%s away: read ongoing away failed: %v", familyID, err)
+	}
+	if err == nil {
+		return reminders, nil // ongoing away block: nothing expected to be logged
+	}
 	if settings.Bottle {
 		var lastBottle string
-		if err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle); err == nil {
+		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("push: familyReminders family=%s bottle: read last feed failed: %v", familyID, err)
+		}
+		if err == nil {
 			if t, err := time.Parse(time.RFC3339Nano, lastBottle); err == nil {
 				at := t.Add(time.Duration(bottleInterval * float64(time.Hour)))
 				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
-					reminders = append(reminders, pushReminder{Key: "bottle", Title: "Bottle due", Body: "Time for the next feed.", At: at})
+					rem := pushReminder{Key: "bottle", Title: "Bottle due", Body: "Time for the next feed.", At: at}
+					if settings.Lead > 0 {
+						rem.LeadTitle = "Feed coming up"
+						rem.LeadBody = fmt.Sprintf("Next feed in about %d min.", int(settings.Lead))
+					}
+					reminders = append(reminders, rem)
 				}
+			} else {
+				log.Printf("push: familyReminders family=%s bottle: parse start time failed: %v", familyID, err)
 			}
 		}
 	}
@@ -387,13 +463,27 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		}
 		json.Unmarshal([]byte(medsJSON), &meds)
 		for _, med := range meds {
+			if med.EveryH <= 0 { // as-needed medicine: no recurring dose to remind about
+				continue
+			}
 			var lastMed string
 			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'medicine' AND json_extract(payload_json, '$.medId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, med.ID).Scan(&lastMed)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("push: familyReminders family=%s med=%s: read last dose failed: %v", familyID, med.ID, err)
+			}
 			if err != nil {
 				continue
 			}
 			if t, err := time.Parse(time.RFC3339Nano, lastMed); err == nil {
-				reminders = append(reminders, pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: t.Add(time.Duration(med.EveryH * float64(time.Hour)))})
+				at := t.Add(time.Duration(med.EveryH * float64(time.Hour)))
+				rem := pushReminder{Key: "med-" + med.ID, Title: med.Name + " due", Body: med.Dose + med.Unit + " scheduled now.", At: at}
+				if settings.Lead > 0 {
+					rem.LeadTitle = med.Name + " coming up"
+					rem.LeadBody = fmt.Sprintf("%s%s in about %d min.", med.Dose, med.Unit, int(settings.Lead))
+				}
+				reminders = append(reminders, rem)
+			} else {
+				log.Printf("push: familyReminders family=%s med=%s: parse start time failed: %v", familyID, med.ID, err)
 			}
 		}
 	}
@@ -407,14 +497,24 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		for _, it := range items {
 			var last string
 			err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'hygiene' AND json_extract(payload_json, '$.itemId') = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, it.ID).Scan(&last)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("push: familyReminders family=%s item=%s: read last hygiene failed: %v", familyID, it.ID, err)
+			}
 			if err != nil {
 				continue
 			}
 			if t, err := time.Parse(time.RFC3339Nano, last); err == nil {
 				at := t.Add(time.Duration(it.EveryH * float64(time.Hour)))
 				if !isQuietAt(at, settings.QuietStart, settings.QuietEnd) {
-					reminders = append(reminders, pushReminder{Key: "hyg-" + it.ID, Title: it.Name + " due", Body: it.Name + " is due now.", At: at})
+					rem := pushReminder{Key: "hyg-" + it.ID, Title: it.Name + " due", Body: it.Name + " is due now.", At: at}
+					if settings.Lead > 0 {
+						rem.LeadTitle = it.Name + " coming up"
+						rem.LeadBody = fmt.Sprintf("%s in about %d min.", it.Name, int(settings.Lead))
+					}
+					reminders = append(reminders, rem)
 				}
+			} else {
+				log.Printf("push: familyReminders family=%s item=%s: parse start time failed: %v", familyID, it.ID, err)
 			}
 		}
 	}
@@ -437,11 +537,15 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 		}
 		var lastStart string
 		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = ? AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID, cardType).Scan(&lastStart)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("push: familyReminders family=%s card=%s: read last entry failed: %v", familyID, cardType, err)
+		}
 		if err != nil {
 			continue
 		}
 		t, err := time.Parse(time.RFC3339Nano, lastStart)
 		if err != nil {
+			log.Printf("push: familyReminders family=%s card=%s: parse start time failed: %v", familyID, cardType, err)
 			continue
 		}
 		at := t.Add(time.Duration(intervalH * float64(time.Hour)))

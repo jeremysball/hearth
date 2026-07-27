@@ -84,6 +84,44 @@ func TestHandleJoinInviteCreatesCaregiverAndSession(t *testing.T) {
 	}
 }
 
+// If session creation fails after the caregiver row and invite consumption
+// already committed, the join is stuck: data says the caregiver joined, but
+// they have no session cookie and the invite can't be reused to retry.
+// createSession must run in the same transaction as the rest of the join.
+func TestHandleJoinInviteRollsBackIfSessionCreationFails(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO invites (token_hash, family_id, created_by, expires_at) VALUES (?, 'fam1', 'cg0', ?)`,
+		hashForTest(t, "inv1"), "2099-01-01T00:00:00Z")
+
+	if _, err := db.Exec(`DROP TABLE sessions`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		db.Exec(`CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, caregiver_id TEXT NOT NULL REFERENCES caregivers(id), family_id TEXT NOT NULL REFERENCES families(id), created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL)`)
+	})
+
+	req := httptest.NewRequest("POST", "/api/join/inv1", bytes.NewBufferString(`{"caregiverName":"Maya"}`))
+	req.SetPathValue("token", "inv1")
+	rec := httptest.NewRecorder()
+
+	handleJoinInvite(db, newHub())(rec, req)
+
+	if rec.Code == http.StatusOK {
+		t.Fatalf("expected the join to fail when session creation fails, got 200")
+	}
+	var count int
+	db.QueryRow(`SELECT count(*) FROM caregivers WHERE family_id = 'fam1'`).Scan(&count)
+	if count != 0 {
+		t.Fatalf("expected no caregiver to be committed when session creation failed, got %d (caregiver joined with no way to sign in)", count)
+	}
+	var usedAt sql.NullString
+	db.QueryRow(`SELECT used_at FROM invites WHERE token_hash = ?`, hashForTest(t, "inv1")).Scan(&usedAt)
+	if usedAt.Valid && usedAt.String != "" {
+		t.Fatalf("expected the invite to remain unused so the caregiver can retry, got used_at=%q", usedAt.String)
+	}
+}
+
 func TestHandleJoinInviteRejectsUsedToken(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())

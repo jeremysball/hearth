@@ -16,7 +16,7 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
-  wakePosition, wakeWindowRange, _testHelpers } = await import('./store.js');
+  wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -116,6 +116,85 @@ test('applySyncResponse upserts and tombstones log entries by id', () => {
   assert.equal(state().log.find((e) => e.id === 'sync-e1'), undefined);
 });
 
+test('clearFamilyScopedEntries wipes log/growth/caregivers but leaves baby, settings, and setup alone', () => {
+  applySyncResponse({
+    baby: { name: 'Olive', theme: 'boy' },
+    settings: { bottleIntervalH: 4 },
+    entries: [{ id: 'fam-switch-e1', type: 'sleep', start: '2026-01-01T00:00:00Z' }],
+    growth: [{ id: 'fam-switch-g1', date: '2026-01-01' }],
+    caregivers: [{ id: 'fam-switch-cg1', displayName: 'Her' }],
+  });
+  state().setup = true;
+  assert.ok(state().log.find((e) => e.id === 'fam-switch-e1'));
+  assert.ok(state().growth.find((g) => g.id === 'fam-switch-g1'));
+  assert.ok(state().caregivers.find((c) => c.id === 'fam-switch-cg1'));
+
+  clearFamilyScopedEntries();
+
+  assert.deepEqual(state().log, []);
+  assert.deepEqual(state().growth, []);
+  assert.deepEqual(state().caregivers, []);
+  assert.equal(state().baby.name, 'Olive');
+  assert.equal(state().settings.bottleIntervalH, 4);
+  assert.equal(state().setup, true);
+  reset();
+});
+
+test('a family switch full resync does not leave the previous family\'s entries mixed in', () => {
+  // Simulates syncOnce's family-switch path: a normal pull merges in
+  // entries for the OLD family, applySyncFamily detects the switch, then
+  // (after this fix) clearFamilyScopedEntries runs before the full resync
+  // for the NEW family is merged in.
+  applySyncResponse({ baby: null, settings: null, entries: [{ id: 'old-fam-e1', type: 'feed', start: '2026-01-01T00:00:00Z' }], growth: [] });
+  assert.ok(state().log.find((e) => e.id === 'old-fam-e1'));
+
+  clearFamilyScopedEntries();
+  applySyncResponse({ baby: null, settings: null, entries: [{ id: 'new-fam-e1', type: 'sleep', start: '2026-01-02T00:00:00Z' }], growth: [] });
+
+  assert.equal(state().log.find((e) => e.id === 'old-fam-e1'), undefined,
+    'the old family\'s entry must not linger alongside the new family\'s data');
+  assert.ok(state().log.find((e) => e.id === 'new-fam-e1'));
+  assert.equal(state().log.length, 1);
+  reset();
+});
+
+test('hasNewEntryFromOtherCaregiver is true only for a not-yet-known entry logged by someone else', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    true
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores an edit to an already-known entry', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'known-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores a new entry logged by this device itself', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-me' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores entries with no caregiverId', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver handles an empty or missing entries list', () => {
+  assert.equal(hasNewEntryFromOtherCaregiver([], new Set(), 'cg-me'), false);
+  assert.equal(hasNewEntryFromOtherCaregiver(undefined, new Set(), 'cg-me'), false);
+});
+
 test('maybeInterruptSleep splits an ongoing sleep and resumes after the gap, during quiet hours', () => {
   const nap = addEntry({ type: 'sleep', start: '2026-01-01T01:00:00' }); // 1am local, ongoing
   const before = state().log.filter((e) => e.type === 'sleep').length;
@@ -153,6 +232,7 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
   // exact condition the naive "ongoing = !e.end" check gets wrong.
   const r = state().settings.reminders;
   const savedStart = r.quietStart, savedEnd = r.quietEnd;
+  let ongoing;
   try {
     // Close any stale ongoing sleeps from other tests
     state().log.forEach((e) => { if (e.type === 'sleep' && !e.end) updateEntry(e.id, { end: e.start }); });
@@ -162,7 +242,7 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
     r.quietStart = hhmm(new Date(now.getTime() - 60 * 60000));
     r.quietEnd = hhmm(new Date(now.getTime() + 60 * 60000));
 
-    addEntry({ type: 'sleep', start: new Date(now.getTime() - 30 * 60000).toISOString() });
+    ongoing = addEntry({ type: 'sleep', start: new Date(now.getTime() - 30 * 60000).toISOString() });
     const atISO = now.toISOString();
     maybeInterruptSleep('bottle', atISO);
 
@@ -171,6 +251,13 @@ test('derive.status() reads as awake (not asleep at a future time) during the ga
     assert.equal(st.since.getTime(), new Date(atISO).getTime());
   } finally {
     r.quietStart = savedStart; r.quietEnd = savedEnd;
+    // Remove the ongoing sleep this test added rather than leaving it for a
+    // later test's stale-sleep sweep to close near "now": once closed, it
+    // sits at the very front of derive.personalWakeWindow's sleep list and,
+    // depending on what wall-clock time the suite happens to run at, can
+    // land inside its 10-360-min sanity window and pollute that test's
+    // otherwise-exact-90-min wake-gap fixture.
+    if (ongoing) removeEntry(ongoing.id);
   }
 });
 
@@ -359,6 +446,14 @@ test('derive.sweetSpot() returns night mode for late evening wakes', () => {
   } finally {
     global.Date = OrigDate;
   }
+});
+
+test('derive.sweetSpotSchedule returns empty during an ongoing away block', () => {
+  reset();
+  const now = new Date();
+  addEntry({ type: 'away', start: new Date(now.getTime() - 30 * 60000).toISOString() });
+  const result = derive.sweetSpotSchedule();
+  assert.deepEqual(result, []);
 });
 
 test('wakeWindowPrediction returns null for night', () => {
@@ -758,6 +853,18 @@ test('nextHygiene computes per-item due dates like nextMeds', () => {
   assert.equal(after[0].due.getTime() - after[0].last.getTime(), 168 * 60 * 60 * 1000);
 });
 
+test('nextMeds never predicts a due date for an as-needed medicine (no everyH)', () => {
+  reset();
+  state().settings.meds = [{ id: 'm1', name: 'Ibuprofen', dose: '5', unit: 'ml', everyH: null }];
+  const before = derive.nextMeds();
+  assert.equal(before[0].last, null);
+  assert.equal(before[0].due, null);
+  addEntry({ type: 'medicine', start: new Date().toISOString(), medId: 'm1', name: 'Ibuprofen' });
+  const after = derive.nextMeds();
+  assert.ok(after[0].last instanceof Date);
+  assert.equal(after[0].due, null);
+});
+
 test('derive.insightWakeCalibration returns null with no personal data', () => {
   reset();
   assert.equal(derive.insightWakeCalibration('middle'), null);
@@ -785,6 +892,7 @@ test('derive.insightWakeCalibration narrates an earlier-than-typical consistent 
   assert.equal(result.direction, 'earlier');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.includes('earlier'), 'text should say earlier');
+  assert.match(result.why, /\d+ of her own recent naps/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightWakeCalibration returns null for a scattered personal pattern (low trust)', () => {
@@ -881,6 +989,7 @@ test('derive.insightOvertiredLag narrates when overshooting predicts a rougher n
   assert.ok(result !== null, 'a clean 6/6 split should clear the threshold');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.onTimeGoodP > result.overshotGoodP, 'on-time group should show a higher good-quality rate');
+  assert.match(result.why, /nap transitions from the last 3 weeks/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightOvertiredLag returns null with no meaningful quality gap', () => {
@@ -937,6 +1046,7 @@ test('derive.insightDurationTrend narrates a lengthening trend', () => {
   assert.equal(result.deltaMin > 0, true, 'delta should be positive for a lengthening trend');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.includes('longer'), 'text should say longer');
+  assert.match(result.why, /Comparing the last \d+ naps to the \d+ before that/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightDurationTrend returns null with no meaningful change', () => {
@@ -979,6 +1089,7 @@ test('derive.insightMethodQuality narrates when self-settled naps run higher qua
   assert.ok(result !== null, 'a clean 5/1 vs 1/5 split should clear the threshold');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.startsWith('Self-settled'), 'self-settled should be named as the better group');
+  assert.match(result.why, /Based on \d+ naps from the last 3 weeks/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightMethodQuality returns null with no meaningful gap', () => {
@@ -1190,4 +1301,67 @@ test('seed() logs the overnight sleep quality using the same capitalized vocabul
   for (const e of qualitySleeps) {
     assert.equal(isGoodQuality(e.quality), true, `quality "${e.quality}" should match isGoodQuality's capitalized vocabulary`);
   }
+});
+
+test('derive.personalWakeWindow excludes a wake gap that overlaps an away block', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same 10-day 90-min-wake-window fixture as the earlier personalWakeWindow
+  // test, but day 5's wake gap gets an away block logged over it.
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 90 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+    if (d === 5) {
+      addEntry({ type: 'away', start: new Date(sleepAEnd.getTime() + 10 * MIN_MS).toISOString(), end: new Date(sleepAEnd.getTime() + 40 * MIN_MS).toISOString() });
+    }
+  }
+  const result = derive.personalWakeWindow('middle');
+  assert.ok(result !== null, 'should still return data with 9 clean observations');
+  assert.equal(result.sampleSize, 9, `sampleSize ${result.sampleSize} should drop by exactly 1 (the away-overlapping day)`);
+});
+
+test('derive.insightOvertiredLag excludes a wake gap that overlaps an away block', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same 12-day overtired-lag fixture as the "narrates" test, but day 1's
+  // wake gap (an overshoot day) gets an away block logged over it.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70;
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: overshoot ? 'Restless' : 'Great' });
+    if (d === 1) {
+      addEntry({ type: 'away', start: new Date(napPrevEnd.getTime() + 5 * MIN_MS).toISOString(), end: new Date(napPrevEnd.getTime() + 60 * MIN_MS).toISOString() });
+    }
+  }
+  const result = derive.insightOvertiredLag();
+  assert.ok(result !== null, 'the remaining 11 clean triples should still clear every threshold');
+  assert.equal(result.sampleSize, 11, `sampleSize ${result.sampleSize} should drop by exactly 1 (the away-overlapping day)`);
+});
+
+test('derive.reminders() no longer schedules bottle/meds/hygiene locally (server push covers them)', () => {
+  reset();
+  const keys = derive.reminders().map((r) => r.key);
+  assert.ok(!keys.includes('bottle'), 'bottle should not be locally scheduled: server push already delivers it');
+  assert.ok(!keys.some((k) => k.startsWith('med-')), 'medicine reminders should not be locally scheduled: server push already delivers them');
+  assert.ok(!keys.some((k) => k.startsWith('hyg-')), 'hygiene reminders should not be locally scheduled: server push already delivers them');
 });

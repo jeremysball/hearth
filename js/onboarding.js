@@ -1,6 +1,6 @@
 // onboarding.js: first-run setup (name, birthdate, theme, photo, caregiver).
 import { state, save, seed, reset, markSynced, enqueueSettingsSync } from './store.js';
-import { $, applyTheme, toast, $$ } from './ui.js';
+import { $, applyTheme, toast, $$, THEME_COLORS, resolveMode } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
 import { signInButtons } from './account.js';
@@ -62,8 +62,8 @@ export function onboardTheme(theme) {
   $$('.theme-opt').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const colors = { girl: '#f3eee0', boy: '#eef0e4', 'dayjob-girl': '#f3ead9', 'dayjob-boy': '#f3ead9' };
-    meta.content = colors[theme] || '#f3eee0';
+    const c = THEME_COLORS[theme] || THEME_COLORS.girl;
+    meta.content = resolveMode() === 'dark' ? c.dark : c.light;
   }
 }
 

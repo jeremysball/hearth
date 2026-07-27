@@ -1,18 +1,18 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, hasNewEntryFromOtherCaregiver, clearFamilyScopedEntries, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
 import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
-import { growth } from './growth.js';
+import { growth, showGrowthStat } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
-import { animateGrow, buzz, warmAudio } from './fx.js';
+import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
@@ -84,6 +84,14 @@ function shell() {
   </main>`;
 }
 
+function updateProfileTabBadge() {
+  $$('.tab[data-tab="profile"]').forEach((t) => {
+    const badge = t.querySelector('.tab-badge');
+    if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
+    else if (!hasUnseenChangelog() && badge) badge.remove();
+  });
+}
+
 export const router = {
   boot() {
     $('#app').innerHTML = shell();
@@ -99,11 +107,7 @@ export const router = {
     if (view === 'timeline') initTimelineFilters();
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
-    $$('.tab[data-tab="profile"]').forEach((t) => {
-      const badge = t.querySelector('.tab-badge');
-      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
-      else if (!hasUnseenChangelog() && badge) badge.remove();
-    });
+    updateProfileTabBadge();
     if (view === 'trends') enterTrends();
     else if (view === 'sleep') enterSleep();
     else if (view === 'growth') enterGrowth();
@@ -111,11 +115,7 @@ export const router = {
   refresh() {
     if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); initSky(); if (current === 'timeline') initTimelineFilters(); }
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
-    $$('.tab[data-tab="profile"]').forEach((t) => {
-      const badge = t.querySelector('.tab-badge');
-      if (hasUnseenChangelog() && !badge) t.insertAdjacentHTML('beforeend', '<span class="tab-badge"></span>');
-      else if (!hasUnseenChangelog() && badge) badge.remove();
-    });
+    updateProfileTabBadge();
   }
 };
 
@@ -126,7 +126,7 @@ function setPath(path, val) {
   o[parts[parts.length - 1]] = val;
   save();
   if (path.startsWith('baby.')) enqueueBabySync();
-  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.clock24' && path !== 'settings.sound' && path !== 'settings.theme') enqueueSettingsSync();
+  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.clock24' && path !== 'settings.sound' && path !== 'settings.theme' && path !== 'settings.celebrateCaregiverLogs') enqueueSettingsSync();
 }
 function getPath(path) { return path.split('.').reduce((o, k) => (o ? o[k] : undefined), state()); }
 
@@ -181,7 +181,19 @@ document.addEventListener('click', (ev) => {
       opt.classList.add('on');
       positionThumb(group);
       const bind = group.dataset.bindSeg;
-      if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
+      if (bind) {
+        // opt.dataset.val is always a DOM string. settings.reminders.lead is
+        // the one numeric path on a segctl — every other bind is a string
+        // enum (theme, darkMode, units.*, clock24) and must stay a string.
+        // Without this coercion the lead value reaches the server as JSON
+        // {"lead":"30"}; reminderSettings.Lead is float64, the unmarshal
+        // silently drops the type mismatch, and the lead-time feature is a
+        // no-op for every real user (see server/push.go parseReminderSettings).
+        let val = opt.dataset.val;
+        if (bind === 'settings.reminders.lead') val = Number(val);
+        setPath(bind, val);
+        if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme();
+      }
       if (group.dataset.seg === 'kind') syncDiaperSizeVisibility(opt.dataset.val);
     }
     // don't return; seg-opt has no data-action
@@ -195,6 +207,7 @@ document.addEventListener('click', (ev) => {
     'nav:trends': () => router.go('trends'),
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
+    'growth:showstat': () => { showGrowthStat(d.stat); router.refresh(); },
     'nav:profile': () => {
       const scrollAfterOpen = hasUnseenChangelog();
       router.go('profile');
@@ -830,6 +843,15 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   });
   setInterval(() => { if (pendingReload && !editingInProgress() && !$('#toast.show')) reloadNow(); }, 3000);
 }
+// Best-effort native lock for platforms that support it (installed Android PWA
+// in fullscreen/standalone display). The manifest's "orientation": "portrait"
+// hint already covers this case for browsers that read it; this call is a
+// no-op everywhere else (iOS Safari has no Screen Orientation API, and the
+// call throws outside a fullscreen top-level browsing context). The CSS
+// `.rotate-lock` overlay is what actually covers those cases.
+if (typeof screen !== 'undefined' && screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('portrait').catch(() => {});
+}
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); deferredPrompt = e;
@@ -854,6 +876,14 @@ async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
   try {
+    // A blank cursor means this device has never synced before (or just
+    // cleared family-scoped entries below). Either way the very next pull is
+    // a full resync of everything the family already has, which is not "a
+    // caregiver just logged something" — gate the celebration check below on
+    // this so joining a family doesn't trigger one confetti burst per entry
+    // that already existed.
+    const wasFirstSync = !getLastSyncRev();
+    let fullResync = false;
     // Pull first, before draining the outbox. The session cookie already
     // points at whatever family this pull answers for — if that's a switch
     // from the family our cursor and outbox belong to (OAuth restore into a
@@ -867,11 +897,22 @@ async function syncOnce() {
     let data = await res.json();
     if (applySyncFamily(data.familyId)) {
       log.warn('sync', 'family switch detected before any outbox drain, forcing full resync');
+      fullResync = true;
       res = await fetch('/api/sync?since=-1', { credentials: 'include' });
       if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
       data = await res.json();
       if (data.familyId !== getLastSyncFamilyId()) { log.warn('sync', 'family changed again mid-resync, aborting'); return; }
+      // log/growth/caregivers merge by id (see mergeById below), so without
+      // this the previous family's rows would just sit alongside the new
+      // family's — never removed, since none of their ids match anything
+      // in this full resync.
+      clearFamilyScopedEntries();
     }
+    // Snapshot which entries this device already knows about before the pull
+    // above gets merged in, so the celebration check below can tell a
+    // brand-new entry from one that already existed (e.g. an edit to an
+    // entry this device logged itself).
+    const knownEntryIds = new Set(state().log.map((e) => e.id));
     // The pull above is read-only and merges by id, so it's safe to apply
     // before draining: it never drops a local, not-yet-pushed entry. Only
     // drain once we know the outbox targets the family this session is in —
@@ -887,6 +928,13 @@ async function syncOnce() {
     if (!drained) log.warn('sync', 'outbox drain incomplete');
     const n = syncChangeCount(data);
     applySyncResponse(data, pending);
+    // A confetti burst (no sound) when another caregiver logged something new
+    // — not on the first-ever sync or a full resync, both of which would
+    // otherwise "celebrate" every pre-existing entry at once.
+    if (!wasFirstSync && !fullResync && state().settings.celebrateCaregiverLogs !== false
+      && hasNewEntryFromOtherCaregiver(data.entries, knownEntryIds, state().currentCaregiverId)) {
+      confetti();
+    }
     setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) {

@@ -2,6 +2,36 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-27',
+    version: '2026-07-27',
+    features: [
+      'When another caregiver logs something, you now get a little confetti burst (no sound) so you know someone else is on it. Turn it off in Profile → Sound & haptics if you\'d rather not see it.',
+      'Mark a stretch of time as “away” (like when a babysitter has the baby) — reminders pause and that time won\'t skew your trends.',
+    ],
+    fixes: [
+      'Fixed a bug where bottle, medicine, and hygiene reminders could silently fail to notify you when the app was closed or in the background.',
+    ]
+  },
+  {
+    date: '2026-07-26',
+    version: '2026-07-26',
+    features: [
+      'The app now stays locked to portrait. If your phone rotates to landscape, you\'ll see a gentle prompt to turn it back instead of a broken layout.',
+      'The growth tab now shows a change-since-last-measurement indicator on head circumference, matching weight and height.',
+      'A medicine\'s dosing interval is now optional, so you can add an as-needed medicine without it forcing a recurring reminder.',
+      'Play entries now have a duration field, same as sleep and feed.',
+      'Insight cards on the Trends tab now explain roughly how each one is calculated, not just the headline stat.',
+      'Tap a stat card on the growth tab to switch the graph below to that stat.',
+    ],
+    fixes: [
+      'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
+      'Fixed switching or merging accounts sometimes leaving old entries from your previous account mixed in on the timeline.',
+      'Fixed joining a family or setting up for the first time occasionally leaving you unable to sign in if something interrupted the process partway through.',
+      'Fixed a delete sometimes getting silently undone by an older edit from another device that was still catching up.',
+      'Fixed the play type picker being unusable when you had three or more play types with long names; it\'s now a proper dropdown.',
+    ]
+  },
+  {
     date: '2026-07-12',
     version: '2026-07-12',
     features: [
