@@ -577,7 +577,7 @@ export const derive = {
     return _state.settings.meds.map((m) => {
       const given = _state.log.filter((e) => e.type === 'medicine' && e.medId === m.id);
       const last = given.length ? new Date(given[0].start) : null;
-      const due = last ? new Date(last.getTime() + m.everyH * HR) : null;
+      const due = (last && m.everyH != null) ? new Date(last.getTime() + m.everyH * HR) : null;
       return { med: m, last, due };
     }).sort((a, b) => (a.due ? a.due : Infinity) - (b.due ? b.due : Infinity));
   },

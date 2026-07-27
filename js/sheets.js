@@ -873,7 +873,7 @@ export function medRow(m) {
       <input class="med-dose" placeholder="Dose" value="${esc(m.dose)}" />
       <input class="med-unit" placeholder="unit" value="${esc(m.unit)}" />
       <span class="med-every">every</span>
-      <input class="med-eh" type="number" min="1" max="48" value="${m.everyH}" /><span class="med-every">h</span>
+      <input class="med-eh" type="number" min="1" max="48" placeholder="as needed" value="${m.everyH != null ? m.everyH : ''}" /><span class="med-every">h</span>
       <button class="med-del" data-action="med:remove" data-mid="${m.id}" aria-label="Remove"><svg class="icon"><use href="#trash-2"></use></svg></button>
     </div>
   </div>`;
@@ -929,6 +929,15 @@ export function saveBottle() {
   state().settings.bottleAmountDefault = Number($('#c-amt').dataset.value) || 120;
   save(); enqueueSettingsSync(); sheet.close(); toast('Bottle reminder updated'); router.refresh();
 }
+// A blank interval means "as needed" (no recurring reminder); anything
+// non-blank but not a valid positive number falls back to the old default
+// instead of silently dropping the medicine's schedule.
+function parseEveryH(raw) {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const n = Number(trimmed);
+  return n > 0 ? n : 24;
+}
 export function saveMeds() {
   const rows = $$('#med-list .med-edit');
   state().settings.meds = rows.map((r) => ({
@@ -936,7 +945,7 @@ export function saveMeds() {
     name: $('.med-name', r).value.trim() || 'Medicine',
     dose: $('.med-dose', r).value.trim() || '1',
     unit: $('.med-unit', r).value.trim() || '',
-    everyH: Number($('.med-eh', r).value) || 24
+    everyH: parseEveryH($('.med-eh', r).value)
   }));
   save(); enqueueSettingsSync(); sheet.close(); toast('Medicines updated'); router.refresh();
 }
