@@ -10,6 +10,7 @@ export const CHANGELOG = [
       'A medicine\'s dosing interval is now optional, so you can add an as-needed medicine without it forcing a recurring reminder.',
       'Play entries now have a duration field, same as sleep and feed.',
       'Insight cards on the Trends tab now explain roughly how each one is calculated, not just the headline stat.',
+      'Tap a stat card on the growth tab to switch the graph below to that stat.',
     ],
     fixes: [
       'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
