@@ -45,6 +45,10 @@ export function summary(e) {
     meta = [e.duration ? fmt.dur(e.duration) : '', e.note || ''].filter(Boolean).join(' · ');
   } else if (e.type === 'hygiene') {
     label = e.name || 'Hygiene'; detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'away') {
+    label = e.end ? 'Was away' : 'Away';
+    if (e.end) { detail = fmt.clock(e.start) + ' – ' + fmt.clock(e.end); meta = fmt.dur((new Date(e.end) - new Date(e.start)) / 60000); }
+    else { detail = 'since ' + fmt.clock(e.start); meta = 'now'; }
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
