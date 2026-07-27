@@ -121,6 +121,40 @@ func TestParseReminderSettingsDefaults(t *testing.T) {
 	}
 }
 
+func TestParseReminderSettingsAcceptsLeadAsNumericString(t *testing.T) {
+	// Real Profile UI used to send settings.reminders.lead as a DOM string
+	// ("30"), which json.Unmarshal silently dropped into the zero value
+	// because the field is float64. parseReminderSettings now coerces valid
+	// numeric strings to their float equivalent; this test pins that path
+	// so a regression in the regex/extraction step is caught before it
+	// reaches scheduling. Unparseable values must still fall back to 0
+	// (the safe "no lead" default), never zero out other fields.
+	if r := parseReminderSettings(`{"lead":"30"}`); r.Lead != 30 {
+		t.Fatalf("numeric-string lead = %v, want 30", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"0"}`); r.Lead != 0 {
+		t.Fatalf("numeric-string zero lead = %v, want 0", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"12.5"}`); r.Lead != 12.5 {
+		t.Fatalf("numeric-string fractional lead = %v, want 12.5", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"abc"}`); r.Lead != 0 {
+		t.Fatalf("unparseable lead = %v, want 0 (safe default)", r.Lead)
+	}
+	// A non-string lead (number, null) must keep working unchanged.
+	if r := parseReminderSettings(`{"lead":30}`); r.Lead != 30 {
+		t.Fatalf("numeric lead = %v, want 30", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":null}`); r.Lead != 0 {
+		t.Fatalf("null lead = %v, want 0", r.Lead)
+	}
+	// A non-lead garbage string must not poison the rest of the struct.
+	r := parseReminderSettings(`{"lead":"abc","bottle":false}`)
+	if r.Bottle {
+		t.Fatalf("other fields should survive a non-numeric lead: %+v", r)
+	}
+}
+
 func TestIsQuietAt(t *testing.T) {
 	cases := []struct {
 		at         string
@@ -512,6 +546,119 @@ func TestFamilyRemindersAppliesLeadTime(t *testing.T) {
 	wantFireAt := bottle.At.Add(-30 * time.Minute)
 	if !fireAt.Equal(wantFireAt) {
 		t.Fatalf("expected fireAt %v (due minus 30min lead), got %v", wantFireAt, fireAt)
+	}
+}
+
+func TestFamilyRemindersAppliesLeadTimeFromNumericString(t *testing.T) {
+	// Regression for the "lead silently dropped when sent as a JSON string"
+	// bug: the Profile "Remind me before" segmented control historically
+	// serialized settings.reminders.lead as a string ("30"), reminderSettings
+	// is float64, and the main json.Unmarshal discarded the type-mismatch
+	// error, leaving Lead at 0. parseReminderSettings now coerces a valid
+	// numeric string to its float equivalent; this test exercises the
+	// end-to-end fire time, not just the field value, so a client that
+	// hasn't picked up the JS-side Number() coercion still gets the lead.
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, '{}', ?)`,
+		"fam1",
+		`{"bottle":true,"meds":false,"hygiene":false,"lead":"30","quietStart":"00:00","quietEnd":"00:00"}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-3*time.Hour).UTC().Format(time.RFC3339Nano), now)
+
+	s := newPushScheduler(db)
+	raw, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var bottle pushReminder
+	for _, r := range raw {
+		if r.Key == "bottle" {
+			bottle = r
+		}
+	}
+	if bottle.LeadTitle == "" {
+		t.Fatalf("expected a lead-phrased title even when lead was sent as a numeric string, got %+v", bottle)
+	}
+
+	resolved := s.resolveScheduled("fam1", raw)
+	var fireAt time.Time
+	var found bool
+	for _, r := range resolved {
+		if r.Key == "bottle" {
+			fireAt, found = r.At, true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a scheduled bottle reminder, got %+v", resolved)
+	}
+	wantFireAt := bottle.At.Add(-30 * time.Minute)
+	if !fireAt.Equal(wantFireAt) {
+		t.Fatalf("expected fireAt %v (due minus 30min lead from a numeric-string lead), got %v", wantFireAt, fireAt)
+	}
+}
+
+func TestResolveScheduledSkipsLeadForGenericCardsWithoutLeadCopy(t *testing.T) {
+	// Regression: resolveScheduled historically applied a single shared
+	// `lead` duration to every reminder in raw, including the generic
+	// per-card "X due" reminders that familyReminders() never pairs with
+	// LeadTitle/LeadBody (diaper, play, pump, etc. — anything not bottle/
+	// meds/hygiene). With a nonzero lead setting that meant a generic
+	// card fired early (at due - lead) while still advertising its normal
+	// "X due" copy, i.e. a premature, mislabeled notification for reminder
+	// types the plan never scoped lead-time to. Per-reminder lead must be
+	// 0 when LeadTitle is empty, regardless of settings.Lead.
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, ?, ?)`,
+		"fam1",
+		`{"bottle":true,"meds":true,"hygiene":true,"lead":30,"quietStart":"00:00","quietEnd":"00:00"}`,
+		// "play" is the simplest non-excluded card type that familyReminders
+		// produces a generic "Play due" reminder for (no LeadTitle).
+		`{"bottle":true,"medicine":true,"order":["bottle","medicine"],"intervals":{"play":2}}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	// a play entry 3h ago on a 2h interval → due in 1h from the log time
+	// (so the reminder is unambiguously future — easy to compare against).
+	playStart := time.Now().Add(-3 * time.Hour).UTC().Format(time.RFC3339Nano)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('p1', 'fam1', 'play', ?, '{}', 'cg1', ?)`,
+		playStart, now)
+
+	s := newPushScheduler(db)
+	raw, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var play pushReminder
+	for _, r := range raw {
+		if r.Key == "play" {
+			play = r
+		}
+	}
+	if play.Key == "" {
+		t.Fatalf("expected a generic 'play' reminder in raw, got %+v", raw)
+	}
+	if play.LeadTitle != "" {
+		t.Fatalf("generic play reminder must not carry LeadTitle (that's the whole point of the fix), got %+v", play)
+	}
+
+	resolved := s.resolveScheduled("fam1", raw)
+	var fireAt time.Time
+	var found bool
+	for _, r := range resolved {
+		if r.Key == "play" {
+			fireAt, found = r.At, true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a scheduled play reminder, got %+v", resolved)
+	}
+	if !fireAt.Equal(play.At) {
+		t.Fatalf("generic 'play' reminder should fire at its exact due time (no lead applied), got fireAt=%v want=%v", fireAt, play.At)
 	}
 }
 
