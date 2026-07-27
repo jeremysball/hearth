@@ -6,7 +6,7 @@
 <title>Hearth: baby tracker</title>
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#f3eee0" />
-<meta name="version" content="2026-07-26T21:58Z" /><!-- Must match VERSION in sw.js -->
+<meta name="version" content="2026-07-27T02:22Z" /><!-- Must match VERSION in sw.js -->
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -288,8 +288,17 @@
   <path d="M4 17v2" />
   <path d="M5 18H3" />
 </symbol>
+<symbol id="icon-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+  <path d="M12 18h.01" />
+</symbol>
 </svg>
   <div id="app"></div>
+  <div class="rotate-lock" role="alert">
+    <svg class="icon" aria-hidden="true"><use href="#icon-smartphone"></use></svg>
+    <h2>Turn your phone back to portrait</h2>
+    <p>Hearth isn't designed for landscape yet.</p>
+  </div>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

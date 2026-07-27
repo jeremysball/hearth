@@ -830,6 +830,15 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   });
   setInterval(() => { if (pendingReload && !editingInProgress() && !$('#toast.show')) reloadNow(); }, 3000);
 }
+// Best-effort native lock for platforms that support it (installed Android PWA
+// in fullscreen/standalone display). The manifest's "orientation": "portrait"
+// hint already covers this case for browsers that read it; this call is a
+// no-op everywhere else (iOS Safari has no Screen Orientation API, and the
+// call throws outside a fullscreen top-level browsing context). The CSS
+// `.rotate-lock` overlay is what actually covers those cases.
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('portrait').catch(() => {});
+}
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); deferredPrompt = e;

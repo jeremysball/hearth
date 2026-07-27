@@ -1382,3 +1382,25 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 
 /* parallax: depth-scaled transform from tilt (stars 0.15 · clouds 0.3) */
 .sky-stars, .sky-clouds { transform: translate(calc(var(--par-x, 0) * -3px), calc(var(--par-y, 0) * -2px)); }
+
+/* ---- rotate lock: covers the broken landscape layout on touch phones ---- */
+.rotate-lock {
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 32px; text-align: center;
+  background: var(--page); color: var(--ink);
+}
+.rotate-lock .icon { width: 56px; height: 56px; color: var(--accent); animation: rotate-lock-hint 2.4s ease-in-out infinite; }
+.rotate-lock h2 { margin: 0; font-size: 19px; font-weight: 700; }
+.rotate-lock p { margin: 0; color: var(--soft); font-size: 14px; max-width: 260px; }
+@keyframes rotate-lock-hint {
+  0%, 15%, 100% { transform: rotate(0deg); }
+  50%, 65% { transform: rotate(-90deg); }
+}
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .rotate-lock { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotate-lock .icon { animation: none; }
+}
