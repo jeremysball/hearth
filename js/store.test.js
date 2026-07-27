@@ -839,6 +839,7 @@ test('derive.insightWakeCalibration narrates an earlier-than-typical consistent 
   assert.equal(result.direction, 'earlier');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.includes('earlier'), 'text should say earlier');
+  assert.match(result.why, /\d+ of her own recent naps/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightWakeCalibration returns null for a scattered personal pattern (low trust)', () => {
@@ -935,6 +936,7 @@ test('derive.insightOvertiredLag narrates when overshooting predicts a rougher n
   assert.ok(result !== null, 'a clean 6/6 split should clear the threshold');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.onTimeGoodP > result.overshotGoodP, 'on-time group should show a higher good-quality rate');
+  assert.match(result.why, /nap transitions from the last 3 weeks/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightOvertiredLag returns null with no meaningful quality gap', () => {
@@ -991,6 +993,7 @@ test('derive.insightDurationTrend narrates a lengthening trend', () => {
   assert.equal(result.deltaMin > 0, true, 'delta should be positive for a lengthening trend');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.includes('longer'), 'text should say longer');
+  assert.match(result.why, /Comparing the last \d+ naps to the \d+ before that/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightDurationTrend returns null with no meaningful change', () => {
@@ -1033,6 +1036,7 @@ test('derive.insightMethodQuality narrates when self-settled naps run higher qua
   assert.ok(result !== null, 'a clean 5/1 vs 1/5 split should clear the threshold');
   assert.ok(result.text.split(' ').length <= 12, `"${result.text}" should be ≤12 words`);
   assert.ok(result.text.startsWith('Self-settled'), 'self-settled should be named as the better group');
+  assert.match(result.why, /Based on \d+ naps from the last 3 weeks/, 'why should explain the basis in plain terms');
 });
 
 test('derive.insightMethodQuality returns null with no meaningful gap', () => {
