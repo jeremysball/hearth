@@ -2,6 +2,7 @@ certs/
 .worktrees/
 site/icon.png
 site/screenshots/
+site/videos/
 site/robots.txt
 site/sitemap.xml
 .prettierrc
@@ -14,7 +15,8 @@ site/sitemap.xml
 node_modules/
 hearth-server
 test-results/
-.superpowers/
+!.superpowers/
+!.superpowers/**
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .claude/settings.local.json

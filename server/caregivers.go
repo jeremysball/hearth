@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -37,6 +38,10 @@ func handleListCaregivers(db *sql.DB) http.HandlerFunc {
 		if includeRemoved {
 			query = `SELECT id, display_name, role, photo, removed_at FROM caregivers WHERE family_id = ? ORDER BY created_at`
 		}
+		var adminID string
+		if err := db.QueryRow(`SELECT id FROM caregivers WHERE family_id = ? AND removed_at = '' ORDER BY created_at LIMIT 1`, session.FamilyID).Scan(&adminID); err != nil && err != sql.ErrNoRows {
+			log.Printf("caregivers: read admin family=%s: %v", session.FamilyID, err)
+		}
 		rows, err := db.Query(query, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -44,17 +49,17 @@ func handleListCaregivers(db *sql.DB) http.HandlerFunc {
 		}
 		defer rows.Close()
 		list := []caregiverInfo{}
-		adminMarked := false
 		for rows.Next() {
 			var c caregiverInfo
 			if err := rows.Scan(&c.ID, &c.DisplayName, &c.Role, &c.Photo, &c.RemovedAt); err != nil {
+				log.Printf("caregivers: scan family=%s: %v", session.FamilyID, err)
 				continue
 			}
-			if !adminMarked && c.RemovedAt == "" {
-				c.IsAdmin = true
-				adminMarked = true
-			}
+			c.IsAdmin = c.ID == adminID
 			list = append(list, c)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("caregivers: rows iteration family=%s: %v", session.FamilyID, err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(list)

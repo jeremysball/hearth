@@ -1,8 +1,8 @@
 const { startServer, launchBrowser, onboard, check, tally } = require('./helpers');
 
 // Seeds baby + sleep log relative to the page's (faked) clock, then reloads.
-async function seed(page, { minutesAwake = null, asleep = false, birthDaysAgo = 245, birthdate = null }) {
-  await page.evaluate(({ minutesAwake, asleep, birthDaysAgo, birthdate }) => {
+async function seed(page, { minutesAwake = null, asleep = false, birthDaysAgo = 245, birthdate = null, awayStartAgo = null }) {
+  await page.evaluate(({ minutesAwake, asleep, birthDaysAgo, birthdate, awayStartAgo }) => {
     const st = JSON.parse(localStorage.getItem('hearth.state.v1'));
     const now = new Date();
     if (birthdate) { st.baby.birthdate = birthdate; }
@@ -19,8 +19,14 @@ async function seed(page, { minutesAwake = null, asleep = false, birthDaysAgo = 
       const start = new Date(end.getTime() - 70 * 60000);
       st.log.push({ id: 's1', type: 'sleep', start: start.toISOString(), end: end.toISOString() });
     }
+    if (awayStartAgo != null) {
+      // Ongoing away block: started `awayStartAgo` minutes before now,
+      // no end (still away).
+      const awayStart = new Date(now.getTime() - awayStartAgo * 60000);
+      st.log.push({ id: 'a1', type: 'away', start: awayStart.toISOString(), end: null });
+    }
     localStorage.setItem('hearth.state.v1', JSON.stringify(st));
-  }, { minutesAwake, asleep, birthDaysAgo, birthdate });
+  }, { minutesAwake, asleep, birthDaysAgo, birthdate, awayStartAgo });
   await page.reload();
   await page.waitForSelector('.card.hero .sky');
 }
@@ -128,6 +134,30 @@ const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
     const anim = await rmPage.$eval('.sky-cloud', (el) => getComputedStyle(el).animationName);
     check('reduced motion stops cloud drift', anim === 'none', anim);
     await rmCtx.close();
+
+    // ---- away hero: clock-driven scene, not wake-window arc ----
+    // Regression: with no prediction on the away gate (sp.prediction=null),
+    // the wake-window arc fell into the 'elapsedMin > highMin' branch almost
+    // immediately, so a 2pm away block rendered 'twilight' regardless of the
+    // actual time of day. The away path in sceneSpec now picks a scene from
+    // the clock hour. Pin the page clock to 14:00 and seed an ongoing away
+    // block, then assert a daytime mode.
+    const awayCtx = await browser.newContext({ viewport: { width: 360, height: 820 }, storageState });
+    const awayPage = await awayCtx.newPage();
+    await awayPage.route('**/api/sync*', (route) => route.abort());
+    await awayPage.clock.install({ time: at(14) });
+    await awayPage.goto(srv.base + '/');
+    await onboard(awayPage);
+    // Seed an away block that started 30 minutes before the (pinned) now —
+    // elapsedMin=30 with highMin=0 used to resolve to 'twilight'.
+    await seed(awayPage, { awayStartAgo: 30 });
+    const awayMode = await skyMode(awayPage);
+    check('2pm away hero renders a daytime sky mode, not twilight/night', ['morning', 'day', 'golden'].includes(awayMode), awayMode);
+    const awayState = await awayPage.getAttribute('.card.hero', 'data-state');
+    check('2pm away hero is in the away state', awayState === 'away', awayState);
+    const awayLabel = await awayPage.$eval('.hero .state-lbl', (el) => el.textContent);
+    check('2pm away hero shows "Away since…" copy', /Away since/.test(awayLabel), awayLabel);
+    await awayCtx.close();
   } catch (e) {
     check('sky scene suite ran without throwing', false, e.message);
   } finally {

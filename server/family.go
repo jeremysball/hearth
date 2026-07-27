@@ -30,6 +30,29 @@ type statusResponse struct {
 	Provisioned bool `json:"provisioned"`
 }
 
+// provisionFamily inserts a family, its baby, its first caregiver (always
+// role 'Parent'), and default settings within tx. Shared by the manual
+// onboarding form (handleCreateFamily) and the OAuth first-sign-in path
+// (reconcile.go), which differ only in the values supplied.
+func provisionFamily(tx *sql.Tx, familyID, babyID, caregiverID, babyName, birthdate, theme, caregiverName, now string) error {
+	if _, err := tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, familyID, now); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		babyID, familyID, babyName, birthdate, theme, now); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, ?, 'Parent', ?, ?)`,
+		caregiverID, familyID, caregiverName, now, now); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
+		familyID, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); err != nil {
+		return err
+	}
+	return nil
+}
+
 func handleStatus(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var exists bool
@@ -82,32 +105,20 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if _, err := tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, familyID, now); err != nil {
+		if err := provisionFamily(tx, familyID, babyID, caregiverID, req.BabyName, req.Birthdate, theme, caregiverName, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		if _, err := tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-			babyID, familyID, req.BabyName, req.Birthdate, theme, now); err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		if _, err := tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, ?, 'Parent', ?, ?)`,
-			caregiverID, familyID, caregiverName, now, now); err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		if _, err := tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
-			familyID, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); err != nil {
+		// createSession runs in the same transaction as provisioning, not
+		// after a separate commit: if it fails, the whole signup rolls back
+		// instead of leaving a fully provisioned family with no session and
+		// no way to retry (the second-family guard above would block it).
+		token, err := createSession(tx, caregiverID, familyID)
+		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 		if err := tx.Commit(); err != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-
-		token, err := createSession(db, caregiverID, familyID)
-		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}

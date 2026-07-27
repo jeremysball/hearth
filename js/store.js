@@ -24,6 +24,7 @@ const DEFAULT = () => ({
     reminders: { naps: true, bottle: true, meds: true, hygiene: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
+    celebrateCaregiverLogs: true,
     clock24: '12h',
     darkMode: 'auto',
     seenChangelog: ''
@@ -64,6 +65,7 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.dismissedRegressions)) s.dismissedRegressions = [];
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
+  if (typeof s.celebrateCaregiverLogs !== 'boolean') s.celebrateCaregiverLogs = true;
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
   if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
@@ -91,6 +93,23 @@ export function save() {
 }
 export function markSynced() { _state.synced = true; save(); }
 export function reset() { _state = DEFAULT(); save(); clearSyncState(); }
+
+// applySyncResponse's log/growth/caregivers merges are add-or-update by id,
+// never a wholesale replace (see mergeById) — fine for a normal incremental
+// pull, but on a detected family switch (OAuth restore, admin remove +
+// re-invite, conflict-resolution merge/switch) the device's previous
+// family's rows never match any id in the new family's full resync, so they
+// linger forever, indistinguishable from the new family's own data. Call
+// this once, right before merging in the post-switch full resync, so the
+// merge starts from a clean slate instead of mixing two families' entries.
+// Baby/settings need no equivalent: applySyncResponse always Object.assigns
+// every field a full resync sends, so they're never partially stale.
+export function clearFamilyScopedEntries() {
+  _state.log = [];
+  _state.growth = [];
+  _state.caregivers = [];
+  save();
+}
 
 export function state() { return _state; }
 
@@ -449,6 +468,20 @@ const STAGE_TIPS = [
 
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
+const aways = () => _state.log.filter((e) => e.type === 'away');
+
+// True if any away block's interval intersects [startMs, endMs). Used to drop
+// wake-gap observations that overlap an away block from the wake-window and
+// overtired-lag insight math, since a real nap or feed may have happened
+// there unlogged -- the gap isn't a clean "how long can baby stay awake"
+// signal regardless of how much of it overlaps.
+function overlapsAway(startMs, endMs) {
+  return aways().some((e) => {
+    const aStart = new Date(e.start).getTime();
+    const aEnd = e.end ? new Date(e.end).getTime() : Date.now();
+    return aStart < endMs && aEnd > startMs;
+  });
+}
 
 // Extracts morning wake times: end timestamps on overnight sleeps
 // (duration > 3h, ending between 4am–10am local, within 21 days).
@@ -474,8 +507,11 @@ function morningWakes() {
 }
 export const derive = {
   status() {
+    const now = new Date();
+    const ongoingAway = aways().find((e) => !e.end && new Date(e.start) <= now);
+    if (ongoingAway) return { state: 'away', since: new Date(ongoingAway.start) };
     const ss = sleeps();
-    const ongoing = ss.find((e) => !e.end && new Date(e.start) <= new Date());
+    const ongoing = ss.find((e) => !e.end && new Date(e.start) <= now);
     if (ongoing) return { state: 'asleep', since: new Date(ongoing.start) };
     let lastWake = null;
     ss.forEach((e) => { if (e.end) { const d = new Date(e.end); if (!lastWake || d > lastWake) lastWake = d; } });
@@ -483,6 +519,7 @@ export const derive = {
   },
   sweetSpot() {
     const st = derive.status();
+    if (st.state === 'away') return { away: true, napping: false, from: null, to: null, prediction: null };
     const pos = wakePosition();
     // Nighttime arousals are circadian, not homeostatic: adenosine hasn't
     // built up enough to govern a true nap window. Return night mode so the
@@ -506,6 +543,7 @@ export const derive = {
   },
   sweetSpotSchedule(limit = 4) {
     const out = [];
+    if (derive.status().state === 'away') return out;
     const today = startOfDay(Date.now());
     const dayEnd = today.getTime() + DAY;
     const st = derive.status();
@@ -560,7 +598,7 @@ export const derive = {
     return _state.settings.meds.map((m) => {
       const given = _state.log.filter((e) => e.type === 'medicine' && e.medId === m.id);
       const last = given.length ? new Date(given[0].start) : null;
-      const due = last ? new Date(last.getTime() + m.everyH * HR) : null;
+      const due = (last && m.everyH != null) ? new Date(last.getTime() + m.everyH * HR) : null;
       return { med: m, last, due };
     }).sort((a, b) => (a.due ? a.due : Infinity) - (b.due ? b.due : Infinity));
   },
@@ -625,6 +663,7 @@ export const derive = {
       if (wakeEnd <= wakeStart) continue;
       const wakeMin = (wakeEnd - wakeStart) / MIN;
       if (wakeMin < 10 || wakeMin > 360) continue; // sanity bounds
+      if (overlapsAway(wakeStart.getTime(), wakeEnd.getTime())) continue;
       if (wakePosition(wakeStart) !== position) continue;
       observations.push({ value: wakeMin, weight: recencyWeight(wakeStart, now) });
       const priorDur = (new Date(ss[i + 1].end) - new Date(ss[i + 1].start)) / MIN;
@@ -696,6 +735,7 @@ export const derive = {
     const direction = gapMin > 0 ? 'later' : 'earlier';
     return {
       text: `Naps tend to land ${direction} than the age guide, around ${Math.round(Math.abs(gapMin))} min.`,
+      why: `Based on ${prediction.sampleSize} of her own recent naps, blended with the standard age-based guide.`,
       direction, gapMin: Math.round(gapMin), w_p: prediction.w_p, sampleSize: prediction.sampleSize,
     };
   },
@@ -715,6 +755,7 @@ export const derive = {
       if (!napNext.quality) continue;
       const wakeGapMin = (new Date(napI.start) - new Date(napPrev.end)) / MIN;
       if (wakeGapMin < MIN_PLAUSIBLE_MIN || wakeGapMin > MAX_PLAUSIBLE_MIN) continue;
+      if (overlapsAway(new Date(napPrev.end).getTime(), new Date(napI.start).getTime())) continue;
       const pos = wakePosition(new Date(napPrev.end));
       if (pos === 'night') continue;
       const pop = wakeWindowRange(pos);
@@ -731,6 +772,7 @@ export const derive = {
     if (onTimeGoodP - overshotGoodP < MIN_NARRATABLE_QUALITY_GAP) return null;
     return {
       text: 'A late wake window often means a rougher next nap.',
+      why: `Comparing next-nap quality across ${pairs.length} nap transitions from the last 3 weeks, grouped by whether the wake window before them ran long or stayed on time.`,
       onTimeGoodP, overshotGoodP, sampleSize: pairs.length,
     };
   },
@@ -774,6 +816,7 @@ export const derive = {
     const direction = deltaMin > 0 ? 'longer' : 'shorter';
     return {
       text: `Nap lengths are trending ${direction} over the last few weeks.`,
+      why: `Comparing the last ${recent.length} naps to the ${older.length} before that, weighted toward more recent and more consistent data.`,
       deltaMin: Math.round(deltaMin), recentShrunk: Math.round(recentShrunk), olderShrunk: Math.round(olderShrunk),
     };
   },
@@ -793,6 +836,7 @@ export const derive = {
     const better = gap > 0 ? 'Self-settled' : 'Assisted';
     return {
       text: `${better} naps tend to run higher quality than the other kind.`,
+      why: `Based on ${naps.length} naps from the last 3 weeks where both a settling method and a quality rating were logged.`,
       selfP, assistedP, sampleSize: naps.length,
     };
   },
@@ -876,42 +920,7 @@ export const derive = {
   },
   reminders() {
     const r = _state.settings.reminders, out = [];
-    const leadMs = (Number(r.lead) || 0) * MIN;
-    // With a lead time set, fire before the due moment and phrase the
-    // notification as a heads-up ("coming up") rather than "due", since it
-    // isn't due yet. Nap reminders already fire ahead of the window and read
-    // as a heads-up, so they're left as-is. Every entry also carries dueAt
-    // plus due-phrased title/body: if a lead-adjusted notification actually
-    // fires at or after the real due moment (e.g. quiet hours suppressed it
-    // until just after due), reminders.js swaps to the due copy at fire time
-    // rather than reading a stale "in N min" once the moment has passed.
-    // dueAt (not the lead-adjusted at) also anchors the notified-dedup key,
-    // so changing the lead setting mid-cycle doesn't re-fire a reminder that
-    // already fired under the old lead.
     if (r.naps) { const sp = derive.sweetSpot(); if (!sp.napping && !sp.night && sp.from) { const at = sp.from.getTime(); out.push({ key: 'nap', title: 'Nap time soon', body: 'SweetSpot nap window is approaching.', at, dueAt: at, dueTitle: 'Nap time soon', dueBody: 'SweetSpot nap window is approaching.' }); } }
-    if (r.bottle) {
-      const nb = derive.nextBottle(), dueAt = nb.due.getTime();
-      const dueTitle = 'Bottle due', dueBody = 'Time for the next feed.';
-      out.push(leadMs
-        ? { key: 'bottle', title: 'Feed coming up', body: `Next feed in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
-        : { key: 'bottle', title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
-    }
-    if (r.meds) { derive.nextMeds().forEach((m) => {
-      if (!m.due) return;
-      const dueAt = m.due.getTime();
-      const dueTitle = m.med.name + ' due', dueBody = m.med.dose + (m.med.unit || '') + ' scheduled now.';
-      out.push(leadMs
-        ? { key: 'med-' + m.med.id, title: m.med.name + ' coming up', body: `${m.med.dose}${m.med.unit || ''} in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
-        : { key: 'med-' + m.med.id, title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
-    }); }
-    if (r.hygiene) { derive.nextHygiene().forEach((h) => {
-      if (!h.due) return;
-      const dueAt = h.due.getTime();
-      const dueTitle = h.item.name + ' due', dueBody = h.item.name + ' is due now.';
-      out.push(leadMs
-        ? { key: 'hyg-' + h.item.id, title: h.item.name + ' coming up', body: `${h.item.name} in about ${r.lead} min.`, at: dueAt - leadMs, dueAt, dueTitle, dueBody }
-        : { key: 'hyg-' + h.item.id, title: dueTitle, body: dueBody, at: dueAt, dueAt, dueTitle, dueBody });
-    }); }
     return out.sort((a, b) => a.at - b.at);
   }
 };
@@ -1003,6 +1012,16 @@ export function applySyncResponse(resp, pending = pendingSyncState()) {
   if (resp.currentCaregiverId) _state.currentCaregiverId = resp.currentCaregiverId;
   _state.caregivers = mergeById(_state.caregivers || [], resp.caregivers || []);
   save();
+}
+
+// Used to decide whether a sync response is worth a confetti celebration
+// (js/app.js): true only for an entry this device didn't already know about
+// and that some other caregiver logged, never an edit to an existing entry
+// or one this device wrote itself. Call with the set of entry ids this
+// device already had *before* the response was merged in — mergeById would
+// otherwise make every entry "already known".
+export function hasNewEntryFromOtherCaregiver(entries, knownIds, myCaregiverId) {
+  return (entries || []).some((e) => e.caregiverId && e.caregiverId !== myCaregiverId && !knownIds.has(e.id));
 }
 
 export function enqueueBabySync() {

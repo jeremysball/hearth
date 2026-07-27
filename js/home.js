@@ -5,10 +5,14 @@ import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './sleep.js';
 import { heroSky, emberGlow } from './sky.js';
 
-// Diaper size label map. Stored values stay "Small"/"Medium"/"Large" but the
-// "Small" option is rendered as "Little" in the UI. Keep this in sync with
-// `SIZE_OPTS` in sheets.js.
-const SIZE_LABELS = { Small: 'Little', Medium: 'Medium', Large: 'Large' };
+// Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
+// "Small" option is rendered as "Little" in the UI.
+export const SIZE_OPTS = [
+  { val: 'Small', label: 'Little' },
+  { val: 'Medium', label: 'Medium' },
+  { val: 'Large', label: 'Large' },
+];
+const SIZE_LABELS = Object.fromEntries(SIZE_OPTS.map((o) => [o.val, o.label]));
 function sizeLabel(s) { return SIZE_LABELS[s] || s; }
 
 export function summary(e) {
@@ -37,9 +41,14 @@ export function summary(e) {
     detail = fmt.clock(e.start); meta = e.note || '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
-    detail = fmt.clock(e.start); meta = e.note || '';
+    detail = fmt.clock(e.start);
+    meta = [e.duration ? fmt.dur(e.duration) : '', e.note || ''].filter(Boolean).join(' · ');
   } else if (e.type === 'hygiene') {
     label = e.name || 'Hygiene'; detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'away') {
+    label = e.end ? 'Was away' : 'Away';
+    if (e.end) { detail = fmt.clock(e.start) + ' – ' + fmt.clock(e.end); meta = fmt.dur((new Date(e.end) - new Date(e.start)) / 60000); }
+    else { detail = 'since ' + fmt.clock(e.start); meta = 'now'; }
   }
   return { label, detail, meta, tone: c.tone, icon: e.type === 'diaper' ? diaperIcon(e.kind) : icon(c.icon) };
 }
@@ -162,6 +171,14 @@ function heroCard() {
   const open = (attrs, glowHTML = '') => `<div class="card hero hero-sky" data-sky-mode="${sky.mode}" ${attrs} style="${sky.cardStyle}">${sky.html}${glowHTML}<div class="hero-fg">`;
   const close = `</div></div>`;
   const timer = `<div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>`;
+
+  if (sp.away) {
+    return open('data-state="away"') + `
+      <div class="state"><span class="livedot"></span><span class="state-lbl">Away since ${fmt.clock(st.since)}</span></div>
+      ${timer}
+      <div class="hero-sub">No logging expected while away.</div>` + close;
+  }
+
   // The ember-glow ground+field replaces the 16-coal bed: same warm ember
   // material, now a continuous card-level glow instead of discrete tiles.
   const emberGlowHTML = (x, glow) => `<div class="ember-glow">
@@ -302,7 +319,10 @@ function medicineCard() {
     </div>`;
   }
   let val, lbl;
-  if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
+  if (next.med.everyH == null) {
+    lbl = next.med.name + ' · as needed';
+    val = next.last ? `${fmt.clock(next.last)} <span class="ic-rel">${fmt.untilOrAgo(next.last)}</span>` : 'Not given yet';
+  } else if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
   else {
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${fmt.untilOrAgo(next.due)}</span>`;

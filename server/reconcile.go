@@ -86,17 +86,7 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			// Sign up: fresh family + caregiver + default settings, then identity.
 			newFamily, newBaby, newCare := newID(), newID(), newID()
 			now := nowISO()
-			if _, e = tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, newFamily, now); e != nil {
-				return ReconcileResult{}, e
-			}
-			if _, e = tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, '', '', 'girl', ?)`, newBaby, newFamily, now); e != nil {
-				return ReconcileResult{}, e
-			}
-			if _, e = tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, 'Parent', 'Parent', ?, ?)`, newCare, newFamily, now, now); e != nil {
-				return ReconcileResult{}, e
-			}
-			if _, e = tx.Exec(`INSERT INTO settings (family_id, units_json, reminders_json, cards_json, updated_at) VALUES (?, ?, ?, ?, ?)`,
-				newFamily, defaultUnitsJSON, defaultRemindersJSON, defaultCardsJSON, now); e != nil {
+			if e = provisionFamily(tx, newFamily, newBaby, newCare, "", "", "girl", "Parent", now); e != nil {
 				return ReconcileResult{}, e
 			}
 			if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,

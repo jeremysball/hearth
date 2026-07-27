@@ -138,6 +138,7 @@ export function profile() {
       <div class="set-row"><span>Length</span>${segBind('settings.units.length', [{ v: 'cm', l: 'cm' }, { v: 'in', l: 'in' }], s.units.length)}</div>
       <div class="set-row"><span>Clock</span>${segBind('settings.clock24', [{ v: '12h', l: '12h' }, { v: '24h', l: '24h' }], s.clock24)}</div>
       <div class="set-row"><span>Sound & haptics</span>${sw('settings.sound', s.sound !== false)}</div>
+      <div class="set-row"><span>Celebrate caregiver logs</span>${sw('settings.celebrateCaregiverLogs', s.celebrateCaregiverLogs !== false)}</div>
     </div>
 
     <div class="sec-label">Account</div>
