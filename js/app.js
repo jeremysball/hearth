@@ -6,7 +6,7 @@ import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
 import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
-import { growth } from './growth.js';
+import { growth, showGrowthStat } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
 import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
@@ -195,6 +195,7 @@ document.addEventListener('click', (ev) => {
     'nav:trends': () => router.go('trends'),
     'nav:sleep': () => router.go('sleep'),
     'nav:growth': () => router.go('growth'),
+    'growth:showstat': () => { showGrowthStat(d.stat); router.refresh(); },
     'nav:profile': () => {
       const scrollAfterOpen = hasUnseenChangelog();
       router.go('profile');
