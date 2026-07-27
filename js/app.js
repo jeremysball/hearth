@@ -181,7 +181,19 @@ document.addEventListener('click', (ev) => {
       opt.classList.add('on');
       positionThumb(group);
       const bind = group.dataset.bindSeg;
-      if (bind) { setPath(bind, opt.dataset.val); if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme(); }
+      if (bind) {
+        // opt.dataset.val is always a DOM string. settings.reminders.lead is
+        // the one numeric path on a segctl — every other bind is a string
+        // enum (theme, darkMode, units.*, clock24) and must stay a string.
+        // Without this coercion the lead value reaches the server as JSON
+        // {"lead":"30"}; reminderSettings.Lead is float64, the unmarshal
+        // silently drops the type mismatch, and the lead-time feature is a
+        // no-op for every real user (see server/push.go parseReminderSettings).
+        let val = opt.dataset.val;
+        if (bind === 'settings.reminders.lead') val = Number(val);
+        setPath(bind, val);
+        if (bind === 'baby.theme' || bind === 'settings.theme' || bind === 'settings.darkMode') applyTheme();
+      }
       if (group.dataset.seg === 'kind') syncDiaperSizeVisibility(opt.dataset.val);
     }
     // don't return; seg-opt has no data-action
