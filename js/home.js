@@ -41,7 +41,8 @@ export function summary(e) {
     detail = fmt.clock(e.start); meta = e.note || '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
-    detail = fmt.clock(e.start); meta = e.note || '';
+    detail = fmt.clock(e.start);
+    meta = [e.duration ? fmt.dur(e.duration) : '', e.note || ''].filter(Boolean).join(' · ');
   } else if (e.type === 'hygiene') {
     label = e.name || 'Hygiene'; detail = fmt.clock(e.start); meta = e.note || '';
   }
