@@ -10,13 +10,13 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
 
     // Open the play log form: it should offer a type selector seeded with defaults.
     await page.click('[data-action="log:open"][data-type="play"]');
-    await page.waitForSelector('[data-seg="playType"]');
-    const defaultTypes = await page.$$eval('[data-seg="playType"] .seg-opt', (els) => els.map((el) => el.dataset.val));
+    await page.waitForSelector('#f-playtype');
+    const defaultTypes = await page.$$eval('#f-playtype option', (els) => els.map((el) => el.value));
     check('play form offers default play types', defaultTypes.length > 0, defaultTypes.join(','));
 
     // Pick a non-default-selected type and save.
     const target = defaultTypes[defaultTypes.length - 1];
-    await page.click(`[data-seg="playType"] .seg-opt[data-val="${target}"]`);
+    await page.selectOption('#f-playtype', target);
     await page.click('[data-action="log:save"][data-type="play"]');
     await page.waitForTimeout(300);
 
@@ -48,10 +48,10 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     check('saving play types persists additions', updatedTypes.includes('Sensory bin'), JSON.stringify(updatedTypes));
     check('saving play types persists removals', !updatedTypes.includes(defaultTypes[0]), JSON.stringify(updatedTypes));
 
-    // Reopen the play form: the seg options should reflect the updated list.
+    // Reopen the play form: the options should reflect the updated list.
     await page.click('[data-action="log:open"][data-type="play"]');
-    await page.waitForSelector('[data-seg="playType"]');
-    const refreshedTypes = await page.$$eval('[data-seg="playType"] .seg-opt', (els) => els.map((el) => el.dataset.val));
+    await page.waitForSelector('#f-playtype');
+    const refreshedTypes = await page.$$eval('#f-playtype option', (els) => els.map((el) => el.value));
     check('play form reflects updated type list', refreshedTypes.includes('Sensory bin') && !refreshedTypes.includes(defaultTypes[0]), refreshedTypes.join(','));
     await page.click('[data-action="sheet:close"]');
     await page.waitForTimeout(200);
@@ -74,8 +74,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.click(`[data-id="${playEntryId}"]`);
     await page.waitForSelector('[data-action="entry:edit"]');
     await page.click('[data-action="entry:edit"]');
-    await page.waitForSelector('[data-seg="playType"]');
-    const reselected = await page.$eval('[data-seg="playType"] .seg-opt.on', (el) => el.dataset.val).catch(() => null);
+    await page.waitForSelector('#f-playtype');
+    const reselected = await page.$eval('#f-playtype', (el) => el.value).catch(() => null);
     check('editing a play entry reselects its saved type', reselected === target, reselected);
     await page.click('[data-action="sheet:close"]');
     await page.waitForTimeout(200);
@@ -94,9 +94,9 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     await page.click(`[data-id="${playEntryId}"]`);
     await page.waitForSelector('[data-action="entry:edit"]');
     await page.click('[data-action="entry:edit"]');
-    await page.waitForSelector('[data-seg="playType"]');
-    const orphanedSelection = await page.$('[data-seg="playType"] .seg-opt.on');
-    check('editing an entry whose type was removed shows no option selected', orphanedSelection === null);
+    await page.waitForSelector('#f-playtype');
+    const orphanedSelection = await page.$eval('#f-playtype', (el) => el.value);
+    check('editing an entry whose type was removed shows no option selected', orphanedSelection === '', orphanedSelection);
 
     await page.click('[data-action="log:save"][data-type="play"]');
     await page.waitForTimeout(300);
@@ -123,8 +123,8 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
 
     await page.click('[data-action="log:open"][data-type="play"]');
     await page.waitForSelector('[data-action="log:save"][data-type="play"]');
-    const noSegRendered = await page.$('[data-seg="playType"]');
-    check('an empty play-types list renders the form without a type selector', noSegRendered === null);
+    const noSelectRendered = await page.$('#f-playtype');
+    check('an empty play-types list renders the form without a type selector', noSelectRendered === null);
     await page.click('[data-action="log:save"][data-type="play"]');
     await page.waitForTimeout(300);
     const savedWithoutType = await page.evaluate(() => {

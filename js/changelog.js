@@ -14,6 +14,7 @@ export const CHANGELOG = [
       'Fixed switching or merging accounts sometimes leaving old entries from your previous account mixed in on the timeline.',
       'Fixed joining a family or setting up for the first time occasionally leaving you unable to sign in if something interrupted the process partway through.',
       'Fixed a delete sometimes getting silently undone by an older edit from another device that was still catching up.',
+      'Fixed the play type picker being unusable when you had three or more play types with long names; it\'s now a proper dropdown.',
     ]
   },
   {
