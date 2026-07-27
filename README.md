@@ -71,6 +71,17 @@ roll back, pin the `app` image to a specific `:sha-<hash>` tag in
 and run `sudo docker compose up -d`. Watchtower ignores pinned non-`:latest`
 tags.
 
+**Why Watchtower instead of `build: .`:** `build: .` would build the image
+locally on the host, from source, at `docker compose up` time. That needs the
+full Go toolchain on the host, a checked-out copy of the source, and a manual
+SSH-in-and-rebuild step for every update. The GHCR + Watchtower pattern moves
+the build off the host entirely: `.github/workflows/build.yml` builds and
+publishes the image once, centrally, in CI's clean environment, on every merge
+to `main`. The host then only ever pulls a finished image and never builds
+anything, so a deploy is "merge to `main`," not "SSH in and rebuild." This is
+also why rollback works by pinning a `:sha-<hash>` tag rather than reverting
+source and rebuilding: the old image already exists in GHCR.
+
 ### Without Docker
 
 Requires Go (version in `go.mod`). The frontend embeds into the binary at build time, so the resulting binary is self-contained.

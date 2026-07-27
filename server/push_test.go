@@ -121,6 +121,40 @@ func TestParseReminderSettingsDefaults(t *testing.T) {
 	}
 }
 
+func TestParseReminderSettingsAcceptsLeadAsNumericString(t *testing.T) {
+	// Real Profile UI used to send settings.reminders.lead as a DOM string
+	// ("30"), which json.Unmarshal silently dropped into the zero value
+	// because the field is float64. parseReminderSettings now coerces valid
+	// numeric strings to their float equivalent; this test pins that path
+	// so a regression in the regex/extraction step is caught before it
+	// reaches scheduling. Unparseable values must still fall back to 0
+	// (the safe "no lead" default), never zero out other fields.
+	if r := parseReminderSettings(`{"lead":"30"}`); r.Lead != 30 {
+		t.Fatalf("numeric-string lead = %v, want 30", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"0"}`); r.Lead != 0 {
+		t.Fatalf("numeric-string zero lead = %v, want 0", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"12.5"}`); r.Lead != 12.5 {
+		t.Fatalf("numeric-string fractional lead = %v, want 12.5", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":"abc"}`); r.Lead != 0 {
+		t.Fatalf("unparseable lead = %v, want 0 (safe default)", r.Lead)
+	}
+	// A non-string lead (number, null) must keep working unchanged.
+	if r := parseReminderSettings(`{"lead":30}`); r.Lead != 30 {
+		t.Fatalf("numeric lead = %v, want 30", r.Lead)
+	}
+	if r := parseReminderSettings(`{"lead":null}`); r.Lead != 0 {
+		t.Fatalf("null lead = %v, want 0", r.Lead)
+	}
+	// A non-lead garbage string must not poison the rest of the struct.
+	r := parseReminderSettings(`{"lead":"abc","bottle":false}`)
+	if r.Bottle {
+		t.Fatalf("other fields should survive a non-numeric lead: %+v", r)
+	}
+}
+
 func TestIsQuietAt(t *testing.T) {
 	cases := []struct {
 		at         string
@@ -197,6 +231,33 @@ func TestFamilyRemindersIncludesMedDuringQuietHours(t *testing.T) {
 	}
 	if !foundMed {
 		t.Fatalf("expected a medicine reminder despite quiet hours, got %+v", reminders)
+	}
+}
+
+func TestFamilyRemindersSkipsAsNeededMedicine(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	// everyH omitted entirely, matching what a client sends for an as-needed
+	// medicine (no recurring interval), not just zeroed out.
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, ?, '{}', ?, '{}', ?)`,
+		"fam1",
+		`[{"id":"m1","name":"Ibuprofen","dose":"5","unit":"ml"}]`,
+		`{"bottle":false,"meds":true,"quietStart":"00:00","quietEnd":"23:59"}`,
+		now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('med1', 'fam1', 'medicine', ?, '{"medId":"m1"}', 'cg1', ?)`,
+		time.Now().UTC().Format(time.RFC3339Nano), now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	for _, r := range reminders {
+		if strings.HasPrefix(r.Key, "med-") {
+			t.Fatalf("as-needed medicine should not schedule a reminder, got %+v", r)
+		}
 	}
 }
 
@@ -384,6 +445,223 @@ func TestFamilyRemindersIgnoresEmptyStringIntervalKeyWithoutPanicking(t *testing
 	}
 }
 
+func TestFamilyRemindersSkippedDuringOngoingAway(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, '{}', ?)`,
+		"fam1",
+		`{"bottle":true,"meds":true,"quietStart":"00:00","quietEnd":"00:00"}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	// a bottle logged 3h ago is due now under the 3h interval
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-3*time.Hour).UTC().Format(time.RFC3339Nano), now)
+	// an away block started an hour ago, still ongoing (no end in the payload)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('a1', 'fam1', 'away', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-1*time.Hour).UTC().Format(time.RFC3339Nano), now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	if len(reminders) != 0 {
+		t.Fatalf("expected no reminders during an ongoing away block, got %+v", reminders)
+	}
+}
+
+func TestFamilyRemindersResumeAfterAwayEnds(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, '{}', ?)`,
+		"fam1",
+		`{"bottle":true,"meds":true,"quietStart":"00:00","quietEnd":"00:00"}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-3*time.Hour).UTC().Format(time.RFC3339Nano), now)
+	// a past away block that already ended
+	awayEnd := time.Now().Add(-4 * time.Hour).UTC().Format(time.RFC3339Nano)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('a1', 'fam1', 'away', ?, ?, 'cg1', ?)`,
+		time.Now().Add(-5*time.Hour).UTC().Format(time.RFC3339Nano),
+		`{"end":"`+awayEnd+`"}`,
+		now)
+
+	s := newPushScheduler(db)
+	reminders, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var foundBottle bool
+	for _, r := range reminders {
+		if r.Key == "bottle" {
+			foundBottle = true
+		}
+	}
+	if !foundBottle {
+		t.Fatalf("expected a bottle reminder once the away block has ended, got %+v", reminders)
+	}
+}
+
+func TestFamilyRemindersAppliesLeadTime(t *testing.T) {
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, '{}', ?)`,
+		"fam1",
+		`{"bottle":true,"meds":false,"hygiene":false,"lead":30,"quietStart":"00:00","quietEnd":"00:00"}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-3*time.Hour).UTC().Format(time.RFC3339Nano), now)
+
+	s := newPushScheduler(db)
+	raw, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var bottle pushReminder
+	for _, r := range raw {
+		if r.Key == "bottle" {
+			bottle = r
+		}
+	}
+	if bottle.LeadTitle == "" {
+		t.Fatalf("expected a lead-phrased title on the raw bottle reminder, got %+v", bottle)
+	}
+
+	resolved := s.resolveScheduled("fam1", raw)
+	var fireAt time.Time
+	var found bool
+	for _, r := range resolved {
+		if r.Key == "bottle" {
+			fireAt, found = r.At, true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a scheduled bottle reminder, got %+v", resolved)
+	}
+	wantFireAt := bottle.At.Add(-30 * time.Minute)
+	if !fireAt.Equal(wantFireAt) {
+		t.Fatalf("expected fireAt %v (due minus 30min lead), got %v", wantFireAt, fireAt)
+	}
+}
+
+func TestFamilyRemindersAppliesLeadTimeFromNumericString(t *testing.T) {
+	// Regression for the "lead silently dropped when sent as a JSON string"
+	// bug: the Profile "Remind me before" segmented control historically
+	// serialized settings.reminders.lead as a string ("30"), reminderSettings
+	// is float64, and the main json.Unmarshal discarded the type-mismatch
+	// error, leaving Lead at 0. parseReminderSettings now coerces a valid
+	// numeric string to its float equivalent; this test exercises the
+	// end-to-end fire time, not just the field value, so a client that
+	// hasn't picked up the JS-side Number() coercion still gets the lead.
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, '{}', ?)`,
+		"fam1",
+		`{"bottle":true,"meds":false,"hygiene":false,"lead":"30","quietStart":"00:00","quietEnd":"00:00"}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('b1', 'fam1', 'bottle', ?, '{}', 'cg1', ?)`,
+		time.Now().Add(-3*time.Hour).UTC().Format(time.RFC3339Nano), now)
+
+	s := newPushScheduler(db)
+	raw, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var bottle pushReminder
+	for _, r := range raw {
+		if r.Key == "bottle" {
+			bottle = r
+		}
+	}
+	if bottle.LeadTitle == "" {
+		t.Fatalf("expected a lead-phrased title even when lead was sent as a numeric string, got %+v", bottle)
+	}
+
+	resolved := s.resolveScheduled("fam1", raw)
+	var fireAt time.Time
+	var found bool
+	for _, r := range resolved {
+		if r.Key == "bottle" {
+			fireAt, found = r.At, true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a scheduled bottle reminder, got %+v", resolved)
+	}
+	wantFireAt := bottle.At.Add(-30 * time.Minute)
+	if !fireAt.Equal(wantFireAt) {
+		t.Fatalf("expected fireAt %v (due minus 30min lead from a numeric-string lead), got %v", wantFireAt, fireAt)
+	}
+}
+
+func TestResolveScheduledSkipsLeadForGenericCardsWithoutLeadCopy(t *testing.T) {
+	// Regression: resolveScheduled historically applied a single shared
+	// `lead` duration to every reminder in raw, including the generic
+	// per-card "X due" reminders that familyReminders() never pairs with
+	// LeadTitle/LeadBody (diaper, play, pump, etc. — anything not bottle/
+	// meds/hygiene). With a nonzero lead setting that meant a generic
+	// card fired early (at due - lead) while still advertising its normal
+	// "X due" copy, i.e. a premature, mislabeled notification for reminder
+	// types the plan never scoped lead-time to. Per-reminder lead must be
+	// 0 when LeadTitle is empty, regardless of settings.Lead.
+	db := newParallelTestDB(t)
+	now := nowISO()
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, now)
+	db.Exec(`INSERT INTO settings (family_id, bottle_interval_h, meds_json, units_json, reminders_json, cards_json, updated_at) VALUES (?, 3, '[]', '{}', ?, ?, ?)`,
+		"fam1",
+		`{"bottle":true,"meds":true,"hygiene":true,"lead":30,"quietStart":"00:00","quietEnd":"00:00"}`,
+		// "play" is the simplest non-excluded card type that familyReminders
+		// produces a generic "Play due" reminder for (no LeadTitle).
+		`{"bottle":true,"medicine":true,"order":["bottle","medicine"],"intervals":{"play":2}}`,
+		now)
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Maya', 'Parent', ?)`, now)
+	// a play entry 3h ago on a 2h interval → due in 1h from the log time
+	// (so the reminder is unambiguously future — easy to compare against).
+	playStart := time.Now().Add(-3 * time.Hour).UTC().Format(time.RFC3339Nano)
+	db.Exec(`INSERT INTO log_entries (id, family_id, type, start, payload_json, created_by, updated_at) VALUES ('p1', 'fam1', 'play', ?, '{}', 'cg1', ?)`,
+		playStart, now)
+
+	s := newPushScheduler(db)
+	raw, err := s.familyReminders("fam1")
+	if err != nil {
+		t.Fatalf("familyReminders: %v", err)
+	}
+	var play pushReminder
+	for _, r := range raw {
+		if r.Key == "play" {
+			play = r
+		}
+	}
+	if play.Key == "" {
+		t.Fatalf("expected a generic 'play' reminder in raw, got %+v", raw)
+	}
+	if play.LeadTitle != "" {
+		t.Fatalf("generic play reminder must not carry LeadTitle (that's the whole point of the fix), got %+v", play)
+	}
+
+	resolved := s.resolveScheduled("fam1", raw)
+	var fireAt time.Time
+	var found bool
+	for _, r := range resolved {
+		if r.Key == "play" {
+			fireAt, found = r.At, true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a scheduled play reminder, got %+v", resolved)
+	}
+	if !fireAt.Equal(play.At) {
+		t.Fatalf("generic 'play' reminder should fire at its exact due time (no lead applied), got fireAt=%v want=%v", fireAt, play.At)
+	}
+}
+
 func TestScheduleAllEnumeratesAllFamilies(t *testing.T) {
 	db := newParallelTestDB(t)
 	now := nowISO()
@@ -443,19 +721,22 @@ func TestBackoffFireAtSchedule(t *testing.T) {
 	due := time.Date(2026, 7, 2, 10, 0, 0, 0, time.UTC)
 	cases := []struct {
 		stage int
+		lead  time.Duration
 		want  time.Time
 		ok    bool
 	}{
-		{0, due, true},
-		{1, due.Add(15 * time.Minute), true},
-		{2, due.Add(75 * time.Minute), true},
-		{3, time.Time{}, false},
-		{4, time.Time{}, false},
+		{0, 0, due, true},
+		{0, 30 * time.Minute, due.Add(-30 * time.Minute), true},
+		{1, 30 * time.Minute, due.Add(15 * time.Minute), true}, // backoff retries ignore lead
+		{1, 0, due.Add(15 * time.Minute), true},
+		{2, 0, due.Add(75 * time.Minute), true},
+		{3, 0, time.Time{}, false},
+		{4, 0, time.Time{}, false},
 	}
 	for _, c := range cases {
-		got, ok := backoffFireAt(due, c.stage)
+		got, ok := backoffFireAt(due, c.stage, c.lead)
 		if ok != c.ok || (ok && !got.Equal(c.want)) {
-			t.Errorf("backoffFireAt(due, %d) = (%v, %v), want (%v, %v)", c.stage, got, ok, c.want, c.ok)
+			t.Errorf("backoffFireAt(due, %d, %v) = (%v, %v), want (%v, %v)", c.stage, c.lead, got, ok, c.want, c.ok)
 		}
 	}
 }

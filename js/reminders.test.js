@@ -73,11 +73,12 @@ globalThis.fetch = async (url, opts = {}) => {
 };
 
 // ---------- navigator ----------
+const notifyCalls = [];
 Object.defineProperty(globalThis, 'navigator', {
   value: {
     serviceWorker: {
       ready: Promise.resolve({
-        showNotification: () => Promise.resolve(),
+        showNotification: (title, opts) => { notifyCalls.push({ title, body: opts?.body }); return Promise.resolve(); },
         pushManager: {
           subscribe: async () => ({
             endpoint: 'https://push.example/sub',
@@ -160,29 +161,6 @@ function resetFetches() {
 
 // ---------- Tests ----------
 
-test('Past-due reminder fires once', async () => {
-  // Clear any previous notified state
-  localStorage.removeItem('hearth.notified.v1');
-  resetTimeouts();
-
-  // Enable notifs — sets _granted=true and calls scheduleReminders
-  await enableNotifs();
-
-  // Bottle due = now - 2h → past-due → delay clamped to 0
-  const call = timeoutForBottle();
-  assert.ok(call, 'setTimeout should be called for past-due bottle reminder');
-  assert.ok(call.delay <= 0, `delay should be <= 0, got ${call.delay}`);
-
-  // Fire the callback — should write to notified set
-  call.fn();
-
-  const raw = localStorage.getItem('hearth.notified.v1');
-  assert.ok(raw, 'notified set should be persisted after callback fires');
-  const notified = new Map(JSON.parse(raw));
-  const found = [...notified.keys()].find((k) => k.startsWith('bottle:'));
-  assert.ok(found, 'notified set should contain a bottle key');
-});
-
 test('Enable notifications subscribes browser push with server key', async () => {
   resetFetches();
 
@@ -195,41 +173,6 @@ test('Enable notifications subscribes browser push with server key', async () =>
   assert.equal(subscribeCall.opts.credentials, 'include');
   assert.match(subscribeCall.opts.body, /https:\/\/push\.example\/sub/);
   assert.ok(notifsGranted(), 'notifsGranted should be true after enableNotifs resolves');
-});
-
-test('Does not re-fire on second call', () => {
-  // notified key is already in localStorage from test 1
-  resetTimeouts();
-  scheduleReminders();
-
-  const call = timeoutForBottle();
-  assert.equal(call, undefined, 'should not schedule again for the same notified reminder');
-});
-
-test('New bottle re-arms when due time changes', () => {
-  // Add a newer feed (4h ago) so nextBottle().due changes to now-1h
-  state().settings.reminders.quietStart = '00:00';
-  state().settings.reminders.quietEnd = '00:00';
-  addEntry({ type: 'bottle', start: new Date(NOW - 4 * HR).toISOString() });
-
-  resetTimeouts();
-  scheduleReminders();
-
-  const call = timeoutForBottle();
-  assert.ok(call, 'setTimeout should be called for the new due time');
-  assert.ok(call.delay <= 0, `delay should be <= 0, got ${call.delay}`);
-});
-
-test('Medicine reminders schedule during quiet hours', async () => {
-  state().settings.reminders = { naps: false, bottle: false, meds: true, lead: 0, quietStart: '00:00', quietEnd: '23:59' };
-  state().settings.meds = [{ id: 'm1', name: 'Vitamin D', dose: '1', unit: 'drop', everyH: 0 }];
-  state().log = [{ id: 'med1', type: 'medicine', medId: 'm1', start: new Date().toISOString() }];
-  localStorage.removeItem('hearth.notified.v1');
-  resetTimeouts();
-
-  await enableNotifs();
-
-  assert.ok(timeoutCalls.find((c) => c.delay <= 0), 'medicine reminder should schedule despite quiet hours');
 });
 
 test('refreshSubState reads getSubscription and updates _hasLocalSub', async () => {
