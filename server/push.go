@@ -370,6 +370,15 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 	}
 	settings := parseReminderSettings(remindersJSON)
 	reminders := []pushReminder{}
+	var ongoingAwayID string
+	err := s.db.QueryRow(`SELECT id FROM log_entries WHERE family_id = ? AND type = 'away' AND deleted_at IS NULL AND json_extract(payload_json, '$.end') IS NULL AND start <= ? ORDER BY start DESC LIMIT 1`,
+		familyID, time.Now().UTC().Format(time.RFC3339Nano)).Scan(&ongoingAwayID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("push: familyReminders family=%s away: read ongoing away failed: %v", familyID, err)
+	}
+	if err == nil {
+		return reminders, nil // ongoing away block: nothing expected to be logged
+	}
 	if settings.Bottle {
 		var lastBottle string
 		err := s.db.QueryRow(`SELECT start FROM log_entries WHERE family_id = ? AND type = 'bottle' AND deleted_at IS NULL ORDER BY start DESC LIMIT 1`, familyID).Scan(&lastBottle)
