@@ -526,7 +526,7 @@ const FORMS = {
   note: () => `${timeRow()} ${field('Note', `<textarea id="f-note" rows="3" placeholder="What happened?"></textarea>`)}`,
   play: () => {
     const types = state().settings.playTypes;
-    return `${types.length ? field('Type', seg('playType', types, types[0])) : ''}
+    return `${types.length ? field('Type', `<select id="f-playtype">${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>`) : ''}
     <button type="button" class="btn-ghost" data-action="playtypes:open"><svg class="icon"><use href="#pencil"></use></svg> Manage play types</button>
     ${timeRow()} ${noteRow()}`;
   },
@@ -577,7 +577,11 @@ function gather(type) {
     if (!m) return base;
     base.medId = id; base.name = m.name; base.dose = m.dose + m.unit;
   } else if (type === 'play') {
-    base.playType = segVal('playType') || null;
+    // An empty value means either no play types are configured, or the
+    // entry being edited had its saved type removed from settings (the
+    // <select> then has no matching <option>, so the browser leaves it
+    // unselected) — either way that's "no type", not the empty string.
+    base.playType = ($('#f-playtype') ? $('#f-playtype').value : '') || null;
   } else if (type === 'hygiene') {
     const id = $('#f-hyg').value;
     const it = state().settings.hygiene.find((x) => x.id === id);
@@ -673,7 +677,7 @@ function prefill(type, e) {
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
-  else if (type === 'play') { setSeg('playType', e.playType); }
+  else if (type === 'play') { if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType; }
   else if (type === 'hygiene') { if ($('#f-hyg')) $('#f-hyg').value = e.itemId; }
 }
 
