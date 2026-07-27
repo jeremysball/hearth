@@ -306,7 +306,10 @@ function medicineCard() {
     </div>`;
   }
   let val, lbl;
-  if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
+  if (next.med.everyH == null) {
+    lbl = next.med.name + ' · as needed';
+    val = next.last ? `${fmt.clock(next.last)} <span class="ic-rel">${fmt.untilOrAgo(next.last)}</span>` : 'Not given yet';
+  } else if (!next.due) { lbl = next.med.name + ' · every ' + next.med.everyH + 'h'; val = 'Not given yet'; }
   else {
     lbl = next.med.name + ' · ' + next.med.dose + next.med.unit;
     val = `${fmt.clock(next.due)} <span class="ic-rel">${fmt.untilOrAgo(next.due)}</span>`;
