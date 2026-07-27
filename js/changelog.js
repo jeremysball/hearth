@@ -4,6 +4,9 @@ export const CHANGELOG = [
   {
     date: '2026-07-26',
     version: '2026-07-26',
+    features: [
+      'The app now stays locked to portrait. If your phone rotates to landscape, you\'ll see a gentle prompt to turn it back instead of a broken layout.',
+    ],
     fixes: [
       'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
       'Fixed switching or merging accounts sometimes leaving old entries from your previous account mixed in on the timeline.',
