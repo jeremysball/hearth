@@ -124,13 +124,16 @@ func handleJoinInvite(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "invite expired or already used", http.StatusGone)
 			return
 		}
-		if err := tx.Commit(); err != nil {
+		// createSession runs in the same transaction as the caregiver insert
+		// and invite consumption, not after a separate commit: if it fails,
+		// the whole join rolls back instead of leaving a caregiver who
+		// joined with no way to sign in and a burned, unretryable invite.
+		sessToken, err := createSession(tx, caregiverID, familyID)
+		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-
-		sessToken, err := createSession(db, caregiverID, familyID)
-		if err != nil {
+		if err := tx.Commit(); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}

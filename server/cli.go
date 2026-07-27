@@ -71,12 +71,16 @@ func listFamiliesCLI(db *sql.DB) {
 		var familyID, name string
 		var caregivers, entries int
 		if err := rows.Scan(&familyID, &name, &caregivers, &entries); err != nil {
+			fmt.Println("scan error:", err)
 			continue
 		}
 		if name == "" {
 			name = "(unnamed)"
 		}
 		fmt.Printf("%-38s %-20s %-11d %d\n", familyID, name, caregivers, entries)
+	}
+	if err := rows.Err(); err != nil {
+		fmt.Println("rows error:", err)
 	}
 }
 

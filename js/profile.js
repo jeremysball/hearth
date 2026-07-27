@@ -124,6 +124,7 @@ export function profile() {
       <div class="set-row"><span>Bottle reminders</span>${sw('settings.reminders.bottle', s.reminders.bottle)}</div>
       <div class="set-row"><span>Medicine reminders</span>${sw('settings.reminders.meds', s.reminders.meds)}</div>
       <div class="set-row"><span>Hygiene reminders</span>${sw('settings.reminders.hygiene', s.reminders.hygiene)}</div>
+      <div class="set-row"><span>Remind me before</span>${segBind('settings.reminders.lead', [{ v: '0', l: 'On time' }, { v: '10', l: '10m' }, { v: '20', l: '20m' }, { v: '30', l: '30m' }], String(s.reminders.lead || 0))}</div>
       <div class="set-row"><span>Quiet hours</span><span class="quiet"><input type="time" data-bind="settings.reminders.quietStart" value="${s.reminders.quietStart}" /> – <input type="time" data-bind="settings.reminders.quietEnd" value="${s.reminders.quietEnd}" /></span></div>
       ${isDevMode() ? `<div class="set-row"><span>Developer mode</span><button class="btn-sm" data-action="dev:test-push">Test push in 15s</button></div>
       <div class="set-row"><span>Resync all entries</span><button class="btn-sm" data-action="resync:all">Resync</button></div>` : ''}
@@ -137,6 +138,7 @@ export function profile() {
       <div class="set-row"><span>Length</span>${segBind('settings.units.length', [{ v: 'cm', l: 'cm' }, { v: 'in', l: 'in' }], s.units.length)}</div>
       <div class="set-row"><span>Clock</span>${segBind('settings.clock24', [{ v: '12h', l: '12h' }, { v: '24h', l: '24h' }], s.clock24)}</div>
       <div class="set-row"><span>Sound & haptics</span>${sw('settings.sound', s.sound !== false)}</div>
+      <div class="set-row"><span>Celebrate caregiver logs</span>${sw('settings.celebrateCaregiverLogs', s.celebrateCaregiverLogs !== false)}</div>
     </div>
 
     <div class="sec-label">Account</div>

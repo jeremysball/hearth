@@ -143,6 +143,82 @@ test('sceneSpec: newborn gets a fixed gentle mid-morning sky', () => {
   assert.equal(s.stars, false);
 });
 
+test('sceneSpec: away hero at a daytime hour never resolves to twilight/night/deep-night', () => {
+  // Regression: with no prediction on the away gate (sp.prediction=null),
+  // sp.prediction.high is 0, so the wake-window arc fell into 'elapsedMin >
+  // highMin' almost immediately — a 2pm away block would render the
+  // 'twilight' scene regardless of the actual time of day. The away scene
+  // is now picked from the clock hour, so a known daytime hour must always
+  // land in a daytime mode.
+  for (const h of [9, 12, 14, 16, 18]) {
+    const s = sceneSpec({ ...specBase, away: true, hour: h });
+    assert.notEqual(s.mode, 'twilight', `hour=${h} should not be twilight`);
+    assert.notEqual(s.mode, 'night', `hour=${h} should not be night`);
+    assert.notEqual(s.mode, 'deep-night', `hour=${h} should not be deep-night`);
+    assert.ok(['morning', 'day', 'golden'].includes(s.mode), `hour=${h} expected a daytime mode, got ${s.mode}`);
+  }
+});
+
+test('sceneSpec: away hero at hour=14 lands in a daytime mode with a meaningful sun', () => {
+  // Pin the specific assertion the bug report calls out (hour=14): the
+  // scene must not be twilight, and the sun position should reflect the
+  // clock hour (mid-afternoon, sun west of center, elevation still high)
+  // rather than a wake-window arc that doesn't apply during an away block.
+  const s = sceneSpec({ ...specBase, away: true, hour: 14 });
+  assert.ok(s.sun, 'daytime away should carry a sun object');
+  assert.ok(s.sun.elevation > 0, 'mid-afternoon sun should be above the horizon');
+  assert.ok(s.sun.x > 0.1 && s.sun.x < 0.9, 'mid-afternoon sun should be between the east and west edges, not pinned to the horizon');
+});
+
+test('sceneSpec: away hero at hour=20 hides the sun (just set) and shows the first stars', () => {
+  // Evening boundary: 8pm is inside the away-defined 'twilight' window
+  // (hour 20-22), so the sun is below the horizon (the scene builder
+  // already hides the disc below elevation -0.05) and stars are on. This
+  // pins the day-evening transition so a regression that collapses the
+  // away range to a single daytime mode is caught.
+  const s = sceneSpec({ ...specBase, away: true, hour: 20 });
+  assert.equal(s.mode, 'twilight');
+  assert.equal(s.stars, true);
+  assert.ok(s.sun.elevation < 0, 'sun should be below the horizon at 8pm');
+});
+
+test('sceneSpec: away hero at pre-dawn hours uses deep-night (matches existing hour<6 threshold)', () => {
+  // Reusing the existing asleep/night `hour<6` deep-night threshold keeps
+  // a 4am away block from rendering as bright daytime, and keeps a
+  // day/night transition consistent across the away and non-away paths.
+  for (const h of [0, 2, 3, 5]) {
+    const s = sceneSpec({ ...specBase, away: true, hour: h });
+    assert.equal(s.mode, 'deep-night', `hour=${h} should be deep-night`);
+    assert.equal(s.sun, null);
+    assert.ok(s.moon && typeof s.moon.frac === 'number');
+  }
+});
+
+test('sceneSpec: away hero at late evening uses night (not deep-night) and shows the moon', () => {
+  // Past the day-evening transition but before midnight: night mode (the
+  // 1-cloud c2 layout), not deep-night (no clouds), so the scene is still
+  // alive with motion. Catches a regression that lumps hour 22-23 into
+  // deep-night or that drops the moon.
+  for (const h of [22, 23]) {
+    const s = sceneSpec({ ...specBase, away: true, hour: h });
+    assert.equal(s.mode, 'night', `hour=${h} should be night`);
+    assert.equal(s.sun, null);
+    assert.ok(s.moon && typeof s.moon.frac === 'number');
+    assert.equal(s.stars, true);
+  }
+});
+
+test('sceneSpec: non-away path is unchanged by the away input (defaults to false)', () => {
+  // The away branch is opt-in: omitting `away` from the input must hit the
+  // existing wake-window arc logic, and passing `away: false` explicitly
+  // must do the same. Pin both so a future refactor can't accidentally
+  // flip the default and silently break the awake hero for every user.
+  const withoutFlag = sceneSpec({ ...specBase, elapsedMin: 200 });
+  const withFalse = sceneSpec({ ...specBase, away: false, elapsedMin: 200 });
+  assert.equal(withoutFlag.mode, withFalse.mode);
+  assert.equal(withoutFlag.mode, 'twilight'); // existing semantics: past the window
+});
+
 test('starsSVG: deterministic for a given seed', () => {
   assert.equal(starsSVG('2026-01-01'), starsSVG('2026-01-01'));
   assert.notEqual(starsSVG('2026-01-01'), starsSVG('2025-06-15'));
