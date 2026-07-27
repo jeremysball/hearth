@@ -2,6 +2,7 @@ certs/
 .worktrees/
 site/icon.png
 site/screenshots/
+site/videos/
 site/robots.txt
 site/sitemap.xml
 .prettierrc
