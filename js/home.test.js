@@ -12,7 +12,7 @@ globalThis.document = {
 };
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { bathDaysSinceLabel, home } = await import('./home.js');
+const { bathDaysSinceLabel, home, summary } = await import('./home.js');
 const { reset } = await import('./store.js');
 
 const atDaysAgo = (n) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - n); return d.toISOString(); };
@@ -28,6 +28,19 @@ test('bathDaysSinceLabel returns Yesterday for one calendar day ago', () => {
 });
 test('bathDaysSinceLabel returns N days ago for older entries', () => {
   assert.equal(bathDaysSinceLabel(atDaysAgo(3)), '3 days ago');
+});
+
+test('summary() shows a play entry\'s duration in the meta badge', () => {
+  const s = summary({ type: 'play', start: new Date().toISOString(), playType: 'Reading', duration: 25 });
+  assert.equal(s.meta, '25m');
+});
+test('summary() combines play duration and note without dropping either', () => {
+  const s = summary({ type: 'play', start: new Date().toISOString(), playType: 'Reading', duration: 90, note: 'with grandma' });
+  assert.equal(s.meta, '1h 30m · with grandma');
+});
+test('summary() falls back to the note alone for a play entry with no duration (legacy entries)', () => {
+  const s = summary({ type: 'play', start: new Date().toISOString(), playType: 'Reading', note: 'quiet time' });
+  assert.equal(s.meta, 'quiet time');
 });
 
 test('home hero rail renders a prediction source info button while awake', () => {

@@ -8,6 +8,7 @@ export const CHANGELOG = [
       'The app now stays locked to portrait. If your phone rotates to landscape, you\'ll see a gentle prompt to turn it back instead of a broken layout.',
       'The growth tab now shows a change-since-last-measurement indicator on head circumference, matching weight and height.',
       'A medicine\'s dosing interval is now optional, so you can add an as-needed medicine without it forcing a recurring reminder.',
+      'Play entries now have a duration field, same as sleep and feed.',
     ],
     fixes: [
       'Fixed merging your account\'s data into a shared family sometimes losing the merged history for good, or leaving you stuck signed out if the merge was interrupted partway through.',
