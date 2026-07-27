@@ -468,6 +468,7 @@ const STAGE_TIPS = [
 
 // ---------- derived ----------
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
+const aways = () => _state.log.filter((e) => e.type === 'away');
 
 // Extracts morning wake times: end timestamps on overnight sleeps
 // (duration > 3h, ending between 4am–10am local, within 21 days).
@@ -493,8 +494,11 @@ function morningWakes() {
 }
 export const derive = {
   status() {
+    const now = new Date();
+    const ongoingAway = aways().find((e) => !e.end && new Date(e.start) <= now);
+    if (ongoingAway) return { state: 'away', since: new Date(ongoingAway.start) };
     const ss = sleeps();
-    const ongoing = ss.find((e) => !e.end && new Date(e.start) <= new Date());
+    const ongoing = ss.find((e) => !e.end && new Date(e.start) <= now);
     if (ongoing) return { state: 'asleep', since: new Date(ongoing.start) };
     let lastWake = null;
     ss.forEach((e) => { if (e.end) { const d = new Date(e.end); if (!lastWake || d > lastWake) lastWake = d; } });
@@ -502,6 +506,7 @@ export const derive = {
   },
   sweetSpot() {
     const st = derive.status();
+    if (st.state === 'away') return { away: true, napping: false, from: null, to: null, prediction: null };
     const pos = wakePosition();
     // Nighttime arousals are circadian, not homeostatic: adenosine hasn't
     // built up enough to govern a true nap window. Return night mode so the
@@ -525,6 +530,7 @@ export const derive = {
   },
   sweetSpotSchedule(limit = 4) {
     const out = [];
+    if (derive.status().state === 'away') return out;
     const today = startOfDay(Date.now());
     const dayEnd = today.getTime() + DAY;
     const st = derive.status();
