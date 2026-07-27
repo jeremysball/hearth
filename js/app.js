@@ -1,5 +1,5 @@
 // app.js: shell, router, event delegation, binders, PWA.
-import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, clearFamilyScopedEntries, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
+import { state, save, reset, addEntry, removeEntry, removeMeasure, enqueueBabySync, enqueueSettingsSync, enqueueFullResync, applySyncResponse, hasNewEntryFromOtherCaregiver, clearFamilyScopedEntries, pendingSyncState, markSynced, setSyncTrigger, derive } from './store.js';
 import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, applySyncFamily, syncChangeCount, dismissDeadLetter } from './sync.js';
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
@@ -12,7 +12,7 @@ import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView 
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
-import { animateGrow, buzz, warmAudio } from './fx.js';
+import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
@@ -126,7 +126,7 @@ function setPath(path, val) {
   o[parts[parts.length - 1]] = val;
   save();
   if (path.startsWith('baby.')) enqueueBabySync();
-  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.clock24' && path !== 'settings.sound' && path !== 'settings.theme') enqueueSettingsSync();
+  else if (path.startsWith('settings.') && path !== 'settings.darkMode' && path !== 'settings.clock24' && path !== 'settings.sound' && path !== 'settings.theme' && path !== 'settings.celebrateCaregiverLogs') enqueueSettingsSync();
 }
 function getPath(path) { return path.split('.').reduce((o, k) => (o ? o[k] : undefined), state()); }
 
@@ -864,6 +864,14 @@ async function syncOnce() {
   if (document.visibilityState === 'hidden') return;
   log.info('sync', 'start');
   try {
+    // A blank cursor means this device has never synced before (or just
+    // cleared family-scoped entries below). Either way the very next pull is
+    // a full resync of everything the family already has, which is not "a
+    // caregiver just logged something" — gate the celebration check below on
+    // this so joining a family doesn't trigger one confetti burst per entry
+    // that already existed.
+    const wasFirstSync = !getLastSyncRev();
+    let fullResync = false;
     // Pull first, before draining the outbox. The session cookie already
     // points at whatever family this pull answers for — if that's a switch
     // from the family our cursor and outbox belong to (OAuth restore into a
@@ -877,6 +885,7 @@ async function syncOnce() {
     let data = await res.json();
     if (applySyncFamily(data.familyId)) {
       log.warn('sync', 'family switch detected before any outbox drain, forcing full resync');
+      fullResync = true;
       res = await fetch('/api/sync?since=-1', { credentials: 'include' });
       if (!res.ok) { log.warn('sync', 'full resync pull failed', res.status); return; }
       data = await res.json();
@@ -887,6 +896,11 @@ async function syncOnce() {
       // in this full resync.
       clearFamilyScopedEntries();
     }
+    // Snapshot which entries this device already knows about before the pull
+    // above gets merged in, so the celebration check below can tell a
+    // brand-new entry from one that already existed (e.g. an edit to an
+    // entry this device logged itself).
+    const knownEntryIds = new Set(state().log.map((e) => e.id));
     // The pull above is read-only and merges by id, so it's safe to apply
     // before draining: it never drops a local, not-yet-pushed entry. Only
     // drain once we know the outbox targets the family this session is in —
@@ -902,6 +916,13 @@ async function syncOnce() {
     if (!drained) log.warn('sync', 'outbox drain incomplete');
     const n = syncChangeCount(data);
     applySyncResponse(data, pending);
+    // A confetti burst (no sound) when another caregiver logged something new
+    // — not on the first-ever sync or a full resync, both of which would
+    // otherwise "celebrate" every pre-existing entry at once.
+    if (!wasFirstSync && !fullResync && state().settings.celebrateCaregiverLogs !== false
+      && hasNewEntryFromOtherCaregiver(data.entries, knownEntryIds, state().currentCaregiverId)) {
+      confetti();
+    }
     setLastSyncRev(data.serverRev);
     log.info('sync', `OK: ${n} row${n !== 1 ? 's' : ''} from server`);
     if (n > 0 && (current !== 'home' || $('#view'))) {

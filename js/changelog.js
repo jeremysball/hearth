@@ -2,6 +2,13 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-27',
+    version: '2026-07-27',
+    features: [
+      'When another caregiver logs something, you now get a little confetti burst (no sound) so you know someone else is on it. Turn it off in Profile → Sound & haptics if you\'d rather not see it.',
+    ]
+  },
+  {
     date: '2026-07-26',
     version: '2026-07-26',
     features: [

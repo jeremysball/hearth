@@ -16,7 +16,7 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
-  wakePosition, wakeWindowRange, clearFamilyScopedEntries, _testHelpers } = await import('./store.js');
+  wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -156,6 +156,43 @@ test('a family switch full resync does not leave the previous family\'s entries 
   assert.ok(state().log.find((e) => e.id === 'new-fam-e1'));
   assert.equal(state().log.length, 1);
   reset();
+});
+
+test('hasNewEntryFromOtherCaregiver is true only for a not-yet-known entry logged by someone else', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    true
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores an edit to an already-known entry', () => {
+  const knownIds = new Set(['known-e1']);
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'known-e1', caregiverId: 'cg-mae' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores a new entry logged by this device itself', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1', caregiverId: 'cg-me' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver ignores entries with no caregiverId', () => {
+  const knownIds = new Set();
+  assert.equal(
+    hasNewEntryFromOtherCaregiver([{ id: 'new-e1' }], knownIds, 'cg-me'),
+    false
+  );
+});
+
+test('hasNewEntryFromOtherCaregiver handles an empty or missing entries list', () => {
+  assert.equal(hasNewEntryFromOtherCaregiver([], new Set(), 'cg-me'), false);
+  assert.equal(hasNewEntryFromOtherCaregiver(undefined, new Set(), 'cg-me'), false);
 });
 
 test('maybeInterruptSleep splits an ongoing sleep and resumes after the gap, during quiet hours', () => {
