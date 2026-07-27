@@ -39,3 +39,32 @@ test('growth() renders a measurement date without an off-by-one-day shift', () =
   const html = growth();
   assert.match(html, /Jun 15, 2026/);
 });
+
+test('growth() shows a change indicator for head circumference, same as weight and height', () => {
+  state().growth = [];
+  addMeasure({ date: '2026-05-01', weightKg: 6.0, heightCm: 58, headCm: 40 });
+  addMeasure({ date: '2026-06-01', weightKg: 6.5, heightCm: 62, headCm: 42 });
+  const html = growth();
+  const headCard = html.match(/<div class="card stat"><div class="stat-k">Head<\/div>.*?<\/div>(?:<span class="delta[^>]*>.*?<\/span>)?<\/div>/s)[0];
+  assert.match(headCard, /class="delta up"/);
+});
+
+test('growth() head-circumference delta skips back past a measurement that omitted it', () => {
+  state().growth = [];
+  addMeasure({ date: '2026-04-01', weightKg: 5.0, heightCm: 55, headCm: 38 });
+  addMeasure({ date: '2026-05-01', weightKg: 5.5, heightCm: 58 }); // head skipped this visit
+  addMeasure({ date: '2026-06-01', weightKg: 6.0, heightCm: 61, headCm: 40 });
+  const html = growth();
+  const headCard = html.match(/<div class="card stat"><div class="stat-k">Head<\/div>.*?<\/div>(?:<span class="delta[^>]*>.*?<\/span>)?<\/div>/s)[0];
+  assert.match(headCard, /class="delta up"/);
+});
+
+test('growth() weight delta skips back past a measurement that omitted weight, instead of hiding it', () => {
+  state().growth = [];
+  addMeasure({ date: '2026-04-01', weightKg: 5.0, heightCm: 55 });
+  addMeasure({ date: '2026-05-01', weightKg: null, heightCm: 58 }); // weight skipped this visit
+  addMeasure({ date: '2026-06-01', weightKg: 6.0, heightCm: 61 });
+  const html = growth();
+  const weightCard = html.match(/<div class="card stat"><div class="stat-k">Weight<\/div>.*?<\/div>(?:<span class="delta[^>]*>.*?<\/span>)?<\/div>/s)[0];
+  assert.match(weightCard, /class="delta up"/);
+});

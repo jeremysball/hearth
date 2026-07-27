@@ -23,6 +23,17 @@ function delta(cur, prev, fmt) {
   return `<span class="delta ${d >= 0 ? 'up' : 'down'}">${s}${fmt(Math.abs(d))}</span>`;
 }
 
+// Not every measurement logs every field (head circumference especially is
+// often skipped), so "since last measurement" has to skip back past rows
+// that didn't record this particular field rather than just using the
+// immediately preceding row.
+function prevWithField(chronological, field) {
+  for (let i = chronological.length - 2; i >= 0; i--) {
+    if (chronological[i][field] != null) return chronological[i];
+  }
+  return null;
+}
+
 function lineChart(points) {
   const pts0 = points.filter((p) => p.weightKg != null);
   if (pts0.length < 2) return `<div class="empty-log">Add at least two measurements to see a growth curve.</div>`;
@@ -53,7 +64,10 @@ function measureRow(m, prev) {
 
 export function growth() {
   const g = state().growth.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
-  const latest = g[g.length - 1], prev = g[g.length - 2];
+  const latest = g[g.length - 1];
+  const prevWeight = prevWithField(g, 'weightKg');
+  const prevHeight = prevWithField(g, 'heightCm');
+  const prevHead = prevWithField(g, 'headCm');
   return `
     <div class="page-hd">
       <h1 class="page-title">Growth</h1>
@@ -61,9 +75,9 @@ export function growth() {
     </div>
 
     <div class="stat-grid growth-stats">
-      <div class="card stat"><div class="stat-k">Weight</div><div class="stat-v">${latest ? dispW(latest.weightKg) : '—'}</div>${latest && prev ? delta(latest.weightKg, prev.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ' ')) : ''}</div>
-      <div class="card stat"><div class="stat-k">Height</div><div class="stat-v">${latest ? dispL(latest.heightCm) : '—'}</div>${latest && prev ? delta(latest.heightCm, prev.heightCm, (v) => dispL(v).replace(/ (cm|in)/, ' ')) : ''}</div>
-      <div class="card stat"><div class="stat-k">Head</div><div class="stat-v">${latest && latest.headCm ? dispL(latest.headCm) : '—'}</div></div>
+      <div class="card stat"><div class="stat-k">Weight</div><div class="stat-v">${latest ? dispW(latest.weightKg) : '—'}</div>${delta(latest && latest.weightKg, prevWeight && prevWeight.weightKg, (v) => dispW(v).replace(/ (kg|lb)/, ' '))}</div>
+      <div class="card stat"><div class="stat-k">Height</div><div class="stat-v">${latest ? dispL(latest.heightCm) : '—'}</div>${delta(latest && latest.heightCm, prevHeight && prevHeight.heightCm, (v) => dispL(v).replace(/ (cm|in)/, ' '))}</div>
+      <div class="card stat"><div class="stat-k">Head</div><div class="stat-v">${latest && latest.headCm ? dispL(latest.headCm) : '—'}</div>${delta(latest && latest.headCm, prevHead && prevHead.headCm, (v) => dispL(v).replace(/ (cm|in)/, ' '))}</div>
       <div class="card stat"><div class="stat-k">Measurements</div><div class="stat-v">${g.length}</div></div>
     </div>
 
