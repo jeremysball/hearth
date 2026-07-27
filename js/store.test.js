@@ -448,6 +448,14 @@ test('derive.sweetSpot() returns night mode for late evening wakes', () => {
   }
 });
 
+test('derive.sweetSpotSchedule returns empty during an ongoing away block', () => {
+  reset();
+  const now = new Date();
+  addEntry({ type: 'away', start: new Date(now.getTime() - 30 * 60000).toISOString() });
+  const result = derive.sweetSpotSchedule();
+  assert.deepEqual(result, []);
+});
+
 test('wakeWindowPrediction returns null for night', () => {
   assert.equal(derive.wakeWindowPrediction('night'), null);
 });

@@ -171,6 +171,14 @@ function heroCard() {
   const open = (attrs, glowHTML = '') => `<div class="card hero hero-sky" data-sky-mode="${sky.mode}" ${attrs} style="${sky.cardStyle}">${sky.html}${glowHTML}<div class="hero-fg">`;
   const close = `</div></div>`;
   const timer = `<div class="timer">${t.h ? t.h + '<span class="u">h</span> ' : ''}${t.m}<span class="u">m</span></div>`;
+
+  if (sp.away) {
+    return open('data-state="away"') + `
+      <div class="state"><span class="livedot"></span><span class="state-lbl">Away since ${fmt.clock(st.since)}</span></div>
+      ${timer}
+      <div class="hero-sub">No logging expected while away.</div>` + close;
+  }
+
   // The ember-glow ground+field replaces the 16-coal bed: same warm ember
   // material, now a continuous card-level glow instead of discrete tiles.
   const emberGlowHTML = (x, glow) => `<div class="ember-glow">

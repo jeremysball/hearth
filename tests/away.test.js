@@ -60,6 +60,19 @@ const { startServer, launchBrowser, onboard, check, tally } = require('./helpers
     const reselectedDate = await page.$eval('#f-end-date', (el) => el.value);
     check('editing a closed away entry reselects its saved end date', reselectedDate === '2026-01-02', reselectedDate);
     await page.click('[data-action="sheet:close"]');
+    await page.waitForTimeout(200);
+
+    // Start a fresh, still-ongoing away block and check the hero reflects it.
+    await page.click('[data-action="log:more"]');
+    await page.waitForSelector('.chooser');
+    await page.click('.chooser [data-action="log:open"][data-type="away"]');
+    await page.waitForSelector('[data-action="log:save"][data-type="away"]');
+    await page.click('[data-action="log:save"][data-type="away"]');
+    await page.waitForTimeout(300);
+    const heroText = await page.evaluate(() => document.querySelector('.hero .state-lbl')?.textContent || '');
+    check('the hero shows "Away since" while an away block is ongoing', heroText.includes('Away since'), heroText);
+    const heroSubText = await page.evaluate(() => document.querySelector('.hero .hero-sub')?.textContent || '');
+    check('the hero away state has no sweetspot rail', await page.$('.hero .sh-rail-wrap') === null, heroSubText);
   } catch (e) {
     check('away entry test ran without throwing', false, e.message);
   } finally {
