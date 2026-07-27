@@ -13,7 +13,7 @@ globalThis.document = {
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { bathDaysSinceLabel, home, summary } = await import('./home.js');
-const { reset } = await import('./store.js');
+const { reset, addEntry } = await import('./store.js');
 
 const atDaysAgo = (n) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - n); return d.toISOString(); };
 
@@ -70,4 +70,26 @@ test('home hero replaces the coal bed with an ember-glow field', () => {
   assert.match(html, /class="ember-field"/);
   assert.doesNotMatch(html, /class="sh-bed/);
   assert.doesNotMatch(html, /class="coal/);
+});
+
+test('home away hero at a daytime hour does not render a twilight/night sky mode', () => {
+  // End-to-end regression for the away-hero sky mode bug: with the wake-window
+  // prediction absent on the away gate (sp.prediction=null), the wake-window
+  // arc fell into the 'elapsedMin > highMin' branch almost immediately, so a
+  // 2pm away block rendered the 'twilight' scene regardless of clock time.
+  // The away path in sceneSpec now picks a scene from the clock hour, so
+  // 2pm must land in a daytime mode.
+  reset();
+  // Ongoing away block: a 2pm start, no end yet.
+  const start = new Date('2026-07-03T14:00:00').toISOString();
+  addEntry({ type: 'away', start, end: null });
+  const html = withMockedNow('2026-07-03T14:30:00', () => home());
+  const modeMatch = html.match(/data-sky-mode="([^"]+)"/);
+  assert.ok(modeMatch, 'hero should expose its sky mode via data-sky-mode');
+  const mode = modeMatch[1];
+  assert.notEqual(mode, 'twilight', `2pm away hero should not be twilight, got ${mode}`);
+  assert.notEqual(mode, 'night', `2pm away hero should not be night, got ${mode}`);
+  assert.notEqual(mode, 'deep-night', `2pm away hero should not be deep-night, got ${mode}`);
+  assert.match(html, /data-state="away"/);
+  assert.match(html, /Away since/);
 });
