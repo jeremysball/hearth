@@ -1302,3 +1302,58 @@ test('seed() logs the overnight sleep quality using the same capitalized vocabul
     assert.equal(isGoodQuality(e.quality), true, `quality "${e.quality}" should match isGoodQuality's capitalized vocabulary`);
   }
 });
+
+test('derive.personalWakeWindow excludes a wake gap that overlaps an away block', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same 10-day 90-min-wake-window fixture as the earlier personalWakeWindow
+  // test, but day 5's wake gap gets an away block logged over it.
+  for (let d = 10; d >= 1; d--) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const sleepAEnd = new Date(base.getTime() + 12 * 60 * MIN_MS);
+    const sleepAStart = new Date(sleepAEnd.getTime() - 70 * MIN_MS);
+    const sleepBStart = new Date(sleepAEnd.getTime() + 90 * MIN_MS);
+    const sleepBEnd = new Date(sleepBStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: sleepAStart.toISOString(), end: sleepAEnd.toISOString() });
+    addEntry({ type: 'sleep', start: sleepBStart.toISOString(), end: sleepBEnd.toISOString() });
+    if (d === 5) {
+      addEntry({ type: 'away', start: new Date(sleepAEnd.getTime() + 10 * MIN_MS).toISOString(), end: new Date(sleepAEnd.getTime() + 40 * MIN_MS).toISOString() });
+    }
+  }
+  const result = derive.personalWakeWindow('middle');
+  assert.ok(result !== null, 'should still return data with 9 clean observations');
+  assert.equal(result.sampleSize, 9, `sampleSize ${result.sampleSize} should drop by exactly 1 (the away-overlapping day)`);
+});
+
+test('derive.insightOvertiredLag excludes a wake gap that overlaps an away block', () => {
+  reset();
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const MIN_MS = 60000;
+  // Same 12-day overtired-lag fixture as the "narrates" test, but day 1's
+  // wake gap (an overshoot day) gets an away block logged over it.
+  for (let d = 1; d <= 12; d++) {
+    const base = new Date(now - d * DAY_MS);
+    base.setHours(0, 0, 0, 0);
+    const napPrevStart = new Date(base.getTime() + 9 * 60 * MIN_MS);
+    const napPrevEnd = new Date(napPrevStart.getTime() + 20 * MIN_MS);
+    const overshoot = d <= 6;
+    const gapMin = overshoot ? 150 : 70;
+    const napIStart = new Date(napPrevEnd.getTime() + gapMin * MIN_MS);
+    const napIEnd = new Date(napIStart.getTime() + 70 * MIN_MS);
+    const napNextStart = new Date(napIEnd.getTime() + 90 * MIN_MS);
+    const napNextEnd = new Date(napNextStart.getTime() + 70 * MIN_MS);
+    addEntry({ type: 'sleep', start: napPrevStart.toISOString(), end: napPrevEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napIStart.toISOString(), end: napIEnd.toISOString() });
+    addEntry({ type: 'sleep', start: napNextStart.toISOString(), end: napNextEnd.toISOString(), quality: overshoot ? 'Restless' : 'Great' });
+    if (d === 1) {
+      addEntry({ type: 'away', start: new Date(napPrevEnd.getTime() + 5 * MIN_MS).toISOString(), end: new Date(napPrevEnd.getTime() + 60 * MIN_MS).toISOString() });
+    }
+  }
+  const result = derive.insightOvertiredLag();
+  assert.ok(result !== null, 'the remaining 11 clean triples should still clear every threshold');
+  assert.equal(result.sampleSize, 11, `sampleSize ${result.sampleSize} should drop by exactly 1 (the away-overlapping day)`);
+});

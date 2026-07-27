@@ -470,6 +470,19 @@ const STAGE_TIPS = [
 const sleeps = () => _state.log.filter((e) => e.type === 'sleep');
 const aways = () => _state.log.filter((e) => e.type === 'away');
 
+// True if any away block's interval intersects [startMs, endMs). Used to drop
+// wake-gap observations that overlap an away block from the wake-window and
+// overtired-lag insight math, since a real nap or feed may have happened
+// there unlogged -- the gap isn't a clean "how long can baby stay awake"
+// signal regardless of how much of it overlaps.
+function overlapsAway(startMs, endMs) {
+  return aways().some((e) => {
+    const aStart = new Date(e.start).getTime();
+    const aEnd = e.end ? new Date(e.end).getTime() : Date.now();
+    return aStart < endMs && aEnd > startMs;
+  });
+}
+
 // Extracts morning wake times: end timestamps on overnight sleeps
 // (duration > 3h, ending between 4am–10am local, within 21 days).
 function morningWakes() {
@@ -650,6 +663,7 @@ export const derive = {
       if (wakeEnd <= wakeStart) continue;
       const wakeMin = (wakeEnd - wakeStart) / MIN;
       if (wakeMin < 10 || wakeMin > 360) continue; // sanity bounds
+      if (overlapsAway(wakeStart.getTime(), wakeEnd.getTime())) continue;
       if (wakePosition(wakeStart) !== position) continue;
       observations.push({ value: wakeMin, weight: recencyWeight(wakeStart, now) });
       const priorDur = (new Date(ss[i + 1].end) - new Date(ss[i + 1].start)) / MIN;
@@ -741,6 +755,7 @@ export const derive = {
       if (!napNext.quality) continue;
       const wakeGapMin = (new Date(napI.start) - new Date(napPrev.end)) / MIN;
       if (wakeGapMin < MIN_PLAUSIBLE_MIN || wakeGapMin > MAX_PLAUSIBLE_MIN) continue;
+      if (overlapsAway(new Date(napPrev.end).getTime(), new Date(napI.start).getTime())) continue;
       const pos = wakePosition(new Date(napPrev.end));
       if (pos === 'night') continue;
       const pop = wakeWindowRange(pos);
