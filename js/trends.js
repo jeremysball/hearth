@@ -36,7 +36,7 @@ function insightsCard() {
   return `<div class="card chart-card insight-card">
     <div class="chart-hd"><h2>Insights</h2></div>
     <ul class="insight-list">
-      ${insights.map((i) => `<li>${esc(i.text)}</li>`).join('')}
+      ${insights.map((i) => `<li>${esc(i.text)}${i.why ? `<span class="insight-why">${esc(i.why)}</span>` : ''}</li>`).join('')}
     </ul>
   </div>`;
 }
