@@ -598,7 +598,7 @@ body[data-mode="dark"] {
     0 -6px 28px oklch(0 0 0 / 0.55),
     0 -1px 0 oklch(0.58 0.20 46 / 0.28);
 }
-[data-mode="dark"] .theme-opt { box-shadow: 0 2px 6px oklch(0 0 0 / .2), 0 1px 2px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .12), inset 0 0 10px oklch(1 0 0 / .04); }
+[data-mode="dark"] .theme-opt, [data-mode="dark"] .sex-opt { box-shadow: 0 2px 6px oklch(0 0 0 / .2), 0 1px 2px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .12), inset 0 0 10px oklch(1 0 0 / .04); }
 
 /* dayjob category tone overrides */
 [data-theme^="dayjob"] .diaper,
@@ -776,6 +776,7 @@ input[type="number"] { max-width: 140px; text-align: center; }
 textarea { resize: none; }
 input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.theme-pick.shake { animation: shake .4s; }
 
 .segctl {
   position: relative;
@@ -963,8 +964,8 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .theme-section { display: flex; flex-direction: column; gap: 6px; }
 .theme-section-hd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--soft); }
 .theme-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.theme-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; color: oklch(0.18 0.02 50); background: var(--surface); box-shadow: 0 2px 6px oklch(0 0 0 / .07), 0 1px 2px oklch(0 0 0 / .05), inset 0 1px 0 oklch(1 0 0 / .75); transition: box-shadow .1s; }
-.theme-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); box-shadow: 0 1px 2px oklch(0 0 0 / .05), inset 0 2px 4px oklch(0 0 0 / .08), inset 0 1px 0 color-mix(in oklch, var(--accent) 30%, white 70%); }
+.theme-opt, .sex-opt { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); font-weight: 700; font-size: 14px; color: oklch(0.18 0.02 50); background: var(--surface); box-shadow: 0 2px 6px oklch(0 0 0 / .07), 0 1px 2px oklch(0 0 0 / .05), inset 0 1px 0 oklch(1 0 0 / .75); transition: box-shadow .1s; }
+.theme-opt.on, .sex-opt.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink); box-shadow: 0 1px 2px oklch(0 0 0 / .05), inset 0 2px 4px oklch(0 0 0 / .08), inset 0 1px 0 color-mix(in oklch, var(--accent) 30%, white 70%); }
 .theme-swatch { width: 22px; height: 22px; border-radius: 50%; }
 .theme-swatch.girl { background: oklch(0.42 0.07 125); }
 .theme-swatch.boy { background: oklch(0.45 0.06 175); }
