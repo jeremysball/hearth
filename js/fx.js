@@ -2,12 +2,23 @@
 import { state } from './store.js';
 
 let audioCtx = null;
+let audioResumeFailedAt = 0;
+// A rejected resume() leaves state stuck at 'suspended' (WebKit does not
+// transition it to any other state on failure), so without this cooldown
+// every call during a drag (js/sheets.js's maybeBuzz(), throttled to one
+// buzz() per 40ms) would retry the same doomed resume() and throw another
+// unhandled rejection. 2s is long enough to stop a single gesture's retries
+// from storming, short enough that the very next interaction after the
+// session actually recovers (e.g. a phone call ending) can try again.
+const AUDIO_RESUME_COOLDOWN_MS = 2000;
 
 function getCtx() {
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
   }
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx && audioCtx.state === 'suspended' && Date.now() - audioResumeFailedAt > AUDIO_RESUME_COOLDOWN_MS) {
+    audioCtx.resume().catch(() => { audioResumeFailedAt = Date.now(); });
+  }
   return audioCtx;
 }
 
