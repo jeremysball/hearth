@@ -121,6 +121,16 @@ test('growth() omits the percentile badge when sex is unset', () => {
   assert.doesNotMatch(html, /stat-pctl/);
 });
 
+test('growth() omits the percentile badge and chart overlay when birthdate is unset', () => {
+  state().baby.sex = 'boy';
+  state().baby.birthdate = '';
+  state().growth = [];
+  addMeasure({ date: '2026-07-01', weightKg: 7.934 });
+  const html = growth();
+  assert.doesNotMatch(html, /stat-pctl/);
+  assert.doesNotMatch(html, /class="who-median"/);
+});
+
 test('growth() omits the percentile badge and chart overlay when the baby is older than 24 months', () => {
   state().baby.sex = 'boy';
   state().baby.birthdate = '2020-01-01'; // well past 24 months old
