@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 )
@@ -53,5 +55,23 @@ func TestCreateInviteCLIRejectsUnknownFamily(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM invites`).Scan(&n)
 	if n != 0 {
 		t.Fatalf("expected no invite row for unknown family, got %d", n)
+	}
+}
+
+func TestDialHealthcheckSucceedsAgainstATLSListener(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer srv.Close()
+	_, port, err := net.SplitHostPort(srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dialHealthcheck(port); err != nil {
+		t.Fatalf("expected healthcheck to succeed, got %v", err)
+	}
+}
+
+func TestDialHealthcheckFailsWithNothingListening(t *testing.T) {
+	if err := dialHealthcheck("1"); err == nil {
+		t.Fatal("expected an error when nothing is listening on the port")
 	}
 }
