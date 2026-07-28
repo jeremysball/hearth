@@ -23,4 +23,6 @@ USER hearth
 ENV DB_PATH=/app/data/hearth.db
 EXPOSE 8443
 VOLUME ["/app/data"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["./hearth-server", "healthcheck"]
 ENTRYPOINT ["/sbin/tini", "--", "./hearth-server"]
