@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-28',
+    version: '2026-07-28',
+    features: [],
+    fixes: [
+      'Fixed haptic feedback and sounds getting stuck (and silently failing over and over) after an interruption to your phone\'s audio, like a phone call or switching Bluetooth devices.',
+    ]
+  },
+  {
     date: '2026-07-27',
     version: '2026-07-27',
     features: [
