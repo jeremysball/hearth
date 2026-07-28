@@ -24,7 +24,7 @@ services:
     # alone doesn't expose a sibling container over the tailnet. This join
     # only happens at app's own startup, so if tailscale restarts on its
     # own, app is orphaned in the old namespace until it too restarts —
-    # see the netns-watchdog service below.
+    # see the app-watchdog service below.
     network_mode: "service:tailscale"
     depends_on:
       - tailscale
@@ -46,14 +46,14 @@ services:
       - WATCHTOWER_SCOPE=hearth
     restart: unless-stopped
 
-  netns-watchdog:
+  app-watchdog:
     image: docker:cli
     environment:
       - PROJECT_NAME=${COMPOSE_PROJECT_NAME:-hearth-prod}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts/netns-watchdog.sh:/netns-watchdog.sh:ro
-    entrypoint: ["/bin/sh", "/netns-watchdog.sh"]
+      - ./scripts/app-watchdog.sh:/app-watchdog.sh:ro
+    entrypoint: ["/bin/sh", "/app-watchdog.sh"]
     restart: unless-stopped
 
 volumes:

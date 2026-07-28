@@ -1,21 +1,39 @@
 package server
 
 import (
+	"crypto/tls"
 	"database/sql"
 	"fmt"
+	"net"
+	"os"
 	"time"
 )
 
-// RunCLI handles `hearth <subcommand> ...` invocations that operate directly
-// on the database instead of starting the HTTP server. This is the recovery
-// path for a caregiver locked out of the app (removed from a family, or
-// signed in on a device with no valid session and no linked OAuth identity):
-// an operator with shell access to the server can mint an invite without
-// going through the authenticated /api/invites endpoint. Returns true if it
-// handled the command (caller should exit after); false means the args don't
-// match any CLI subcommand and the caller should fall through to server.Run.
+// RunCLI handles `hearth <subcommand> ...` invocations that don't start the
+// HTTP server. Returns true if it handled the command (caller should exit
+// after); false means the args don't match any CLI subcommand and the caller
+// should fall through to server.Run.
+//
+// `invite` is the recovery path for a caregiver locked out of the app
+// (removed from a family, or signed in on a device with no valid session and
+// no linked OAuth identity): an operator with shell access to the server can
+// mint an invite without going through the authenticated /api/invites
+// endpoint.
+//
+// `healthcheck` is the target of the Dockerfile's HEALTHCHECK.
 func RunCLI(args []string) bool {
-	if len(args) < 1 || args[0] != "invite" {
+	if len(args) < 1 {
+		return false
+	}
+	if args[0] == "healthcheck" {
+		if err := dialHealthcheck(loadConfig().Port); err != nil {
+			fmt.Println("healthcheck failed:", err)
+			os.Exit(1)
+		}
+		fmt.Println("ok")
+		return true
+	}
+	if args[0] != "invite" {
 		return false
 	}
 	cfg := loadConfig()
@@ -99,4 +117,23 @@ func createInviteCLI(db *sql.DB, familyID string) (string, error) {
 		return "", fmt.Errorf("database error: %w", err)
 	}
 	return token, nil
+}
+
+// dialHealthcheck completes a TLS handshake against the server's own port on
+// localhost, rather than just opening a TCP connection: a bare connect can
+// succeed even when the process is stuck and never reaches its accept loop
+// again, so only a full handshake proves the server is actually serving.
+func dialHealthcheck(port string) error {
+	if port == "" {
+		port = "8443"
+	}
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{Timeout: 3 * time.Second},
+		"tcp", "127.0.0.1:"+port,
+		&tls.Config{InsecureSkipVerify: true},
+	)
+	if err != nil {
+		return err
+	}
+	return conn.Close()
 }
