@@ -29,6 +29,7 @@ type createFamilyResponse struct {
 
 type statusResponse struct {
 	Provisioned bool `json:"provisioned"`
+	DevMode     bool `json:"devMode"`
 }
 
 // provisionFamily inserts a family, its baby, its first caregiver (always
@@ -54,7 +55,7 @@ func provisionFamily(tx *sql.Tx, familyID, babyID, caregiverID, babyName, birthd
 	return nil
 }
 
-func handleStatus(db *sql.DB) http.HandlerFunc {
+func handleStatus(db *sql.DB, cfg Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var exists bool
 		if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM families)`).Scan(&exists); err != nil {
@@ -62,7 +63,7 @@ func handleStatus(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(statusResponse{Provisioned: exists})
+		json.NewEncoder(w).Encode(statusResponse{Provisioned: exists, DevMode: cfg.DevMode})
 	}
 }
 

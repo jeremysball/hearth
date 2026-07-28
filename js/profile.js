@@ -19,6 +19,11 @@ let _tapResetTimer = null;
 
 export function isDevMode() { return localStorage.getItem(DEV_MODE_KEY) === '1'; }
 
+// Server-driven dev mode (DEV_MODE=1 env var) skips the 10-tap secret
+// entirely, for a dev/test deployment where every device should start in
+// dev mode without anyone needing to know the unlock gesture.
+export function enableDevMode() { localStorage.setItem(DEV_MODE_KEY, '1'); }
+
 // Android-style hidden unlock: tap the build stamp 10× within 2s of each tap.
 // Returns { enabled, remaining } so callers can toast countdown progress on
 // intermediate taps. `remaining` is how many more taps are needed (0 on the

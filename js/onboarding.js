@@ -4,6 +4,7 @@ import { $, applyTheme, toast, $$, THEME_COLORS, resolveMode } from './ui.js';
 import { router } from './app.js';
 import { log } from './log.js';
 import { signInButtons } from './account.js';
+import { isDevMode } from './profile.js';
 
 let _onbPhoto = null;
 let _onbSex = '';
@@ -53,6 +54,8 @@ export function onboarding() {
     <button class="btn-primary onb-go" data-action="onboard:finish"><svg class="icon"><use href="#heart"></use></svg> Create Hearth</button>
     <div class="onb-or">or</div>
     ${signInButtons()}
+    ${isDevMode() ? `<div class="onb-or">or</div>
+    <button class="btn-sm" data-action="onboard:skip-demo">Skip with demo data (dev mode)</button>` : ''}
     <div class="onb-foot">You can change any of this later in Profile.</div>
   </div>`;
 }
@@ -104,6 +107,17 @@ export function onboardPhoto() {
     reader.readAsDataURL(f);
   };
   inp.click();
+}
+
+// Dev-mode only: fills the form with throwaway values and runs the exact
+// same onboardFinish() path a real signup takes, so this stays a real
+// family/caregiver record (still local-first, still synced), just without
+// typing it in by hand.
+export async function onboardSkipDemo() {
+  $('#onb-name').value = 'Demo Baby';
+  $('#onb-bd').value = new Date().toISOString().slice(0, 10);
+  onboardSex('girl');
+  await onboardFinish();
 }
 
 export async function onboardFinish() {

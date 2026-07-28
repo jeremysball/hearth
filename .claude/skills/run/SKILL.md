@@ -58,6 +58,8 @@ await p.waitForTimeout(2000);
 await p.screenshot({ path: '/tmp/hearth-home.png' });
 ```
 
+Faster path: add `DEV_MODE=true` to the launch env vars above. That auto-enables developer mode on every device that boots against this server and adds a "Skip with demo data" button on the onboarding screen (`data-action="onboard:skip-demo"`) that reaches the home screen without filling out the form at all.
+
 ## Dark mode
 
 ```js
