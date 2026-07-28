@@ -112,6 +112,15 @@ export function profile() {
       </div>
     </div>
 
+    <div class="sec-label">Sex</div>
+    <div class="card row-card">
+      <div class="theme-pick">
+        <button type="button" class="theme-opt${b.sex === 'girl' ? ' on' : ''}" data-action="sex:pick" data-sex="girl"><span>Girl</span></button>
+        <button type="button" class="theme-opt${b.sex === 'boy' ? ' on' : ''}" data-action="sex:pick" data-sex="boy"><span>Boy</span></button>
+      </div>
+      <p class="empty-note">Used to calculate growth percentiles on the Growth tab.</p>
+    </div>
+
     <div class="sec-label">Appearance</div>
     <div class="card row-card">
       <div class="set-row"><span>Dark mode</span>${segBind('settings.darkMode', [{ v: 'light', l: 'Light' }, { v: 'auto', l: 'Auto' }, { v: 'dark', l: 'Dark' }], s.darkMode || 'auto')}</div>

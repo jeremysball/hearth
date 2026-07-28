@@ -52,13 +52,13 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var name, birthdate, theme string
+		var name, birthdate, theme, sex string
 		var photo sql.NullString
 		var babyRev int64
-		err = tx.QueryRow(`SELECT name, birthdate, theme, photo, rev FROM babies WHERE family_id = ?`, session.FamilyID).
-			Scan(&name, &birthdate, &theme, &photo, &babyRev)
+		err = tx.QueryRow(`SELECT name, birthdate, theme, sex, photo, rev FROM babies WHERE family_id = ?`, session.FamilyID).
+			Scan(&name, &birthdate, &theme, &sex, &photo, &babyRev)
 		if err == nil && babyRev > since {
-			b, _ := json.Marshal(map[string]any{"name": name, "birthdate": birthdate, "theme": theme, "photo": photo.String})
+			b, _ := json.Marshal(map[string]any{"name": name, "birthdate": birthdate, "theme": theme, "sex": sex, "photo": photo.String})
 			resp.Baby = b
 		}
 

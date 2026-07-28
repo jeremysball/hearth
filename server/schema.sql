@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS babies (
   name TEXT NOT NULL DEFAULT '',
   birthdate TEXT NOT NULL DEFAULT '',
   theme TEXT NOT NULL DEFAULT 'girl',
+  sex TEXT NOT NULL DEFAULT '',
   photo TEXT,
   updated_at TEXT NOT NULL,
   rev INTEGER NOT NULL DEFAULT 0
