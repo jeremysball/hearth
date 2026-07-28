@@ -507,6 +507,7 @@ export function teardownSky() {
   rafId = 0;
   particles = [];
   ctx = null;
+  detachTilt();
 }
 
 export function initSky() {
@@ -644,26 +645,31 @@ if (typeof navigator !== 'undefined' && navigator.getBattery) {
 // permission request; if it never arrives, the autonomous drift below is the
 // graceful fallback.
 let parallaxBound = false;
+let tiltGranted = false;
+let tiltHandler = null;
 
 function bindParallax() {
   if (parallaxBound || reducedMotion() || lowPower) return;
   if (typeof DeviceOrientationEvent === 'undefined') return;
   parallaxBound = true;
+  if (tiltGranted) { attachTilt(); return; }
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     const ask = () => {
       DeviceOrientationEvent.requestPermission()
-        .then((r) => { if (r === 'granted') attachTilt(); })
+        .then((r) => { if (r === 'granted') { tiltGranted = true; attachTilt(); } })
         .catch(() => {});
     };
     document.addEventListener('touchend', ask, { once: true });
   } else {
+    tiltGranted = true;
     attachTilt();
   }
 }
 
 function attachTilt() {
+  if (tiltHandler) return;
   let raf = 0;
-  window.addEventListener('deviceorientation', (e) => {
+  tiltHandler = (e) => {
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
@@ -674,5 +680,17 @@ function attachTilt() {
       el.style.setProperty('--par-x', x.toFixed(3));
       el.style.setProperty('--par-y', y.toFixed(3));
     });
-  });
+  };
+  window.addEventListener('deviceorientation', tiltHandler);
+}
+
+// Only live while a sky is actually on screen — otherwise it keeps
+// scheduling rAFs and querying the DOM on every view, forever, for a
+// parallax effect nothing can see.
+function detachTilt() {
+  if (tiltHandler) {
+    window.removeEventListener('deviceorientation', tiltHandler);
+    tiltHandler = null;
+  }
+  parallaxBound = false;
 }
