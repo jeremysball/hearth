@@ -380,7 +380,7 @@ body {
     0 -3px 4px -2px oklch(0.30 0.06 44 / 0.35) inset,
     0 2px calc(5px + var(--fire-a) * 4px) -1px var(--ember-rim),
     3px 5px 8px var(--mat-cast);
-  transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s, color .2s, box-shadow .1s;
+  transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s, color .2s;
   animation-delay: -0.15s, -0.15s, -0.15s;
 }
 .act:active .tok {
