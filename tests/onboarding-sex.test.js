@@ -30,6 +30,33 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
 
     const savedSex = await page.evaluate(() => JSON.parse(localStorage.getItem('hearth.state.v1')).baby.sex);
     check('the chosen sex persists to state', savedSex === 'boy', savedSex);
+
+    // Regression: stale _onbSex/_onbPhoto must not survive a full reset+reload.
+    // After onboarding, the server-side family exists so init() renders
+    // provisionedView(), not onboarding(). Test the fix directly: reload with
+    // a fresh localStorage, then call onboarding() from the module to confirm
+    // module-level state was reset.
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(srv.base + '/');
+    await page.waitForSelector('.onboard', { timeout: 10000 });
+    // Force onboarding() to render regardless of server state.
+    const html = await page.evaluate(async () => {
+      const mod = await import('/js/onboarding.js');
+      return mod.onboarding();
+    });
+    const hasSelectedSex = html.includes('class="sex-opt on"');
+    check('onboarding() HTML has no pre-selected sex after re-render', !hasSelectedSex);
+
+    // Fill name but skip sex, click finish — must stay on onboarding.
+    await page.evaluate(async () => {
+      const mod = await import('/js/onboarding.js');
+      document.querySelector('#app').innerHTML = mod.onboarding();
+    });
+    await page.fill('#onb-name', 'Second Baby');
+    await page.click('[data-action="onboard:finish"]');
+    await page.waitForTimeout(300);
+    const stillOnboardingAfterReset = await page.$('#onb-name');
+    check('onboarding after a reset still requires a sex choice', !!stillOnboardingAfterReset);
   } catch (e) {
     check('onboarding sex test ran without throwing', false, e.message);
   } finally {
