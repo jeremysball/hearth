@@ -326,6 +326,12 @@ document.addEventListener('click', (ev) => {
       applyTheme();
       router.refresh();
     },
+    'sex:pick': () => {
+      state().baby.sex = d.sex;
+      save();
+      enqueueBabySync();
+      router.refresh();
+    },
     'app:reset': () => resetConfirm(),
     'changelog:toggle': () => { toggleChangelogExpanded(); router.refresh(); },
     'stepper:up': () => { if (!_stepperPointerActive) stepValue(d.target, 1); },
