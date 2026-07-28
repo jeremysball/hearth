@@ -737,6 +737,7 @@ body[data-mode="dark"] {
 .growth-svg { width: 100%; height: auto; aspect-ratio: 320 / 150; overflow: visible; display: block; }
 .growth-svg .growth-x { font-size: 11px; font-family: var(--font-sans); font-weight: 700; fill: var(--muted); }
 .growth-svg circle { transform-box: fill-box; transform-origin: center; }
+.stat-pctl { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 2px; }
 .delta { font-size: 11px; font-weight: 800; margin-top: 2px; display: block; }
 .delta.up { color: var(--good-deep); }
 .delta.down { color: oklch(0.6 0.12 25); }
