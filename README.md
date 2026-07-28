@@ -115,7 +115,7 @@ The server refuses to start without a VAPID keypair for web push. Generate one a
 go run ./cmd/vapidgen
 ```
 
-This prints `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Set both in `.env`, along with `VAPID_SUBJECT` — a real `mailto:` address or URL you control, since push services may contact it if your server misbehaves.
+This prints `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Set both in `.env`, along with `VAPID_SUBJECT`: a real `mailto:` address or URL you control, since push services may contact it if your server misbehaves.
 
 ### systemd
 
