@@ -10,7 +10,7 @@ const KEY = 'hearth.state.v1';
 const DEFAULT = () => ({
   setup: false,
   synced: false,
-  baby: { name: '', birthdate: '', theme: 'girl', photo: null, caregiver: '' },
+  baby: { name: '', birthdate: '', theme: 'girl', sex: '', photo: null, caregiver: '' },
   settings: {
     theme: '',
     bottleIntervalH: 3,
@@ -227,7 +227,7 @@ function ageMonths() {
   return Math.max(0, (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth()));
 }
 
-function parseDateOnlyLocal(value) {
+export function parseDateOnlyLocal(value) {
   const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return new Date(value);
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
