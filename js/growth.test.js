@@ -102,3 +102,44 @@ test('growth() weight delta skips back past a measurement that omitted weight, i
   const weightCard = html.match(/<div class="card stat[^"]*"[^>]*data-stat="weightKg"[^>]*><div class="stat-k">Weight<\/div>.*?<\/div>(?:<span class="delta[^>]*>.*?<\/span>)?<\/div>/s)[0];
   assert.match(weightCard, /class="delta up"/);
 });
+
+test('growth() shows a percentile badge on a stat card when sex and birthdate are set', () => {
+  state().baby.sex = 'boy';
+  state().baby.birthdate = '2026-01-01';
+  state().growth = [];
+  addMeasure({ date: '2026-07-01', weightKg: 7.934 }); // month 6 WHO median for boys -> 50th percentile
+  const html = growth();
+  assert.match(html, /<div class="stat-pctl">50th percentile<\/div>/);
+});
+
+test('growth() omits the percentile badge when sex is unset', () => {
+  state().baby.sex = '';
+  state().baby.birthdate = '2026-01-01';
+  state().growth = [];
+  addMeasure({ date: '2026-07-01', weightKg: 7.934 });
+  const html = growth();
+  assert.doesNotMatch(html, /stat-pctl/);
+});
+
+test('growth() omits the percentile badge and chart overlay when the baby is older than 24 months', () => {
+  state().baby.sex = 'boy';
+  state().baby.birthdate = '2020-01-01'; // well past 24 months old
+  state().growth = [];
+  addMeasure({ date: '2026-06-01', weightKg: 15 });
+  addMeasure({ date: '2026-07-01', weightKg: 15.2 });
+  const html = growth();
+  assert.doesNotMatch(html, /stat-pctl/);
+  assert.doesNotMatch(html, /class="who-median"/);
+});
+
+test('growth() draws a WHO median overlay polyline on the chart when sex and birthdate are set', () => {
+  showGrowthStat('weightKg');
+  state().baby.sex = 'girl';
+  state().baby.birthdate = '2026-01-01';
+  state().growth = [];
+  addMeasure({ date: '2026-04-01', weightKg: 5.8 }); // ~month 3
+  addMeasure({ date: '2026-07-01', weightKg: 7.2 }); // ~month 6
+  const html = growth();
+  assert.match(html, /class="who-median"/);
+  state().baby.sex = ''; // reset module-external state for later tests
+});
