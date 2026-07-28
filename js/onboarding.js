@@ -9,6 +9,8 @@ let _onbPhoto = null;
 let _onbSex = '';
 
 export function onboarding() {
+  _onbSex = '';
+  _onbPhoto = null;
   const t = document.body.dataset.theme || 'girl';
   return `<div class="onboard">
     <div class="onb-top">
