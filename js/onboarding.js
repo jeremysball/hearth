@@ -6,6 +6,7 @@ import { log } from './log.js';
 import { signInButtons } from './account.js';
 
 let _onbPhoto = null;
+let _onbSex = '';
 
 export function onboarding() {
   const t = document.body.dataset.theme || 'girl';
@@ -33,6 +34,13 @@ export function onboarding() {
           <button type="button" class="theme-opt ${t === 'boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="boy"><span class="theme-swatch boy"></span><span>Boy</span></button>
           <button type="button" class="theme-opt ${t === 'dayjob-girl' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-girl"><span class="theme-swatch dayjob-girl"></span><span>Warm</span></button>
           <button type="button" class="theme-opt ${t === 'dayjob-boy' ? 'on' : ''}" data-action="onboard:theme" data-theme="dayjob-boy"><span class="theme-swatch dayjob-boy"></span><span>Cool</span></button>
+        </div>
+      </div>
+
+      <div class="fld"><span class="fld-l">Sex</span>
+        <div class="theme-pick" style="padding: 8px 0;">
+          <button type="button" class="sex-opt" data-action="onboard:sex" data-sex="girl"><span>Girl</span></button>
+          <button type="button" class="sex-opt" data-action="onboard:sex" data-sex="boy"><span>Boy</span></button>
         </div>
       </div>
 
@@ -67,6 +75,11 @@ export function onboardTheme(theme) {
   }
 }
 
+export function onboardSex(sex) {
+  _onbSex = sex;
+  $$('.sex-opt').forEach((b) => b.classList.toggle('on', b.dataset.sex === sex));
+}
+
 export function onboardPhoto() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
@@ -94,10 +107,17 @@ export function onboardPhoto() {
 export async function onboardFinish() {
   const name = $('#onb-name').value.trim();
   if (!name) { $('#onb-name').focus(); $('#onb-name').classList.add('shake'); setTimeout(() => $('#onb-name').classList.remove('shake'), 500); return; }
+  if (!_onbSex) {
+    const grp = $('.sex-opt')?.closest('.theme-pick');
+    if (grp) { grp.classList.add('shake'); setTimeout(() => grp.classList.remove('shake'), 500); }
+    toast('Please choose a sex to continue');
+    return;
+  }
   const st = state();
   st.baby.name = name;
   st.baby.birthdate = $('#onb-bd').value || '';
   st.baby.theme = document.body.dataset.theme || 'girl';
+  st.baby.sex = _onbSex;
   st.baby.caregiver = $('#onb-cg').value.trim();
   st.baby.photo = _onbPhoto;
   st.setup = true;
@@ -114,7 +134,7 @@ export async function onboardFinish() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        babyName: name, birthdate: st.baby.birthdate, theme: st.baby.theme,
+        babyName: name, birthdate: st.baby.birthdate, theme: st.baby.theme, sex: st.baby.sex,
         caregiverName: st.baby.caregiver || 'Parent'
       })
     });

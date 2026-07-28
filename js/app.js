@@ -8,7 +8,7 @@ import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
 import { growth, showGrowthStat } from './growth.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
-import { onboarding, onboardTheme, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
+import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
@@ -295,6 +295,7 @@ document.addEventListener('click', (ev) => {
     'toast:undo': () => runUndo(),
     'toast:dismiss': () => dismissToast(),
     'onboard:theme': () => onboardTheme(d.theme),
+    'onboard:sex': () => onboardSex(d.sex),
     'onboard:photo': () => onboardPhoto(),
     'onboard:finish': () => onboardFinish(),
     'profile:photo': () => profilePhoto(),

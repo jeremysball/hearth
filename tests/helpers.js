@@ -86,6 +86,7 @@ async function onboard(page) {
   if (await page.$('#onb-name')) {
     await page.fill('#onb-name', 'Test');
     await page.fill('#onb-bd', '2025-01-01');
+    await page.click('[data-action="onboard:sex"][data-sex="girl"]');
     await page.fill('#onb-cg', 'Maya');
     await page.click('[data-action="onboard:finish"]');
     await page.waitForTimeout(800);
