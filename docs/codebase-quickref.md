@@ -147,6 +147,10 @@ npm test
 - `scripts/bump-version.sh`: cache-buster version bump (see below).
 - `scripts/sky-phases.js`: screenshots the hero sky scene in all 7 modes (morning/day/golden/twilight/night/deep-night/newborn) against a running dev server. Run after any `js/sky.js` change to compare before/after across the whole scene set: `BASE_URL=https://localhost:9878 OUT_DIR=/tmp node scripts/sky-phases.js` (server must already be running; see the `run` skill).
 
+### Dev mode
+
+Set `DEV_MODE=true` on the server (see README's Configuration section) for a throwaway dev/test deployment: every device that boots against it gets `isDevMode()` (`js/profile.js`) auto-enabled via `/api/status`'s `devMode` field, without the usual 10-tap-the-version-stamp unlock. Onboarding (`js/onboarding.js`'s `onboardSkipDemo`) then shows a "Skip with demo data" button that fills placeholder values and calls the real `onboardFinish()` path, so a fresh instance reaches the home screen without typing in a name/birthdate/sex. Never set this on a deployment real caregivers use.
+
 ---
 
 ## Version Bump (required before every frontend commit)

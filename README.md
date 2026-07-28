@@ -146,11 +146,18 @@ Settings come from environment variables or a `.env` file in the working directo
 | `KEY_FILE`            | *(empty)*   | TLS private key path |
 | `DB_PATH`             | `hearth.db` | SQLite database path |
 | `STATIC_DIR`          | *(empty)*   | Empty: serve the frontend embedded in the binary. Set to `.`: serve files live from disk, so edits show up on refresh without a Go rebuild. |
+| `DEV_MODE`            | `false`     | Never set this in production. Skips the 10-tap secret and auto-enables developer mode on every device that boots against this server, plus adds a "Skip with demo data" button to onboarding. See below. |
 | `GEOIP_ENABLED`       | `false`     | Set to `true` to enrich request logs from a local MaxMind GeoLite2 City database. |
 | `GEOIP_DB_PATH`       | *(empty)*   | Path to `GeoLite2-City.mmdb`. Required when GeoIP is enabled. |
 | `MAXMIND_LICENSE_KEY` | *(empty)*   | Optional. If set and `GEOIP_DB_PATH` is missing, Hearth downloads and extracts GeoLite2 City on startup. |
 
 Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HTTP.
+
+### Developer mode
+
+Normally, developer mode (a hidden "Test push in 15s" button in Profile) unlocks by tapping the version stamp at the bottom of the Profile tab 10 times within 2 seconds of each tap. That's meant for a real device where you don't want a stray tap turning it on by accident.
+
+For a throwaway dev/test deployment, set `DEV_MODE=true` instead: every device that boots against that server gets developer mode automatically, no tapping required, and onboarding gets an extra "Skip with demo data" button that fills in placeholder values and jumps straight to the home screen, so you don't need to fill out the real onboarding form just to get a fresh test instance up. Never set `DEV_MODE=true` on a deployment real caregivers use.
 
 ### Recovering a locked-out caregiver
 

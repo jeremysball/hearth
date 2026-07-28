@@ -13,6 +13,7 @@ type Config struct {
 	KeyFile   string
 	DBPath    string
 	StaticDir string
+	DevMode   bool
 
 	GeoIPEnabled      bool
 	GeoIPDBPath       string
@@ -36,6 +37,7 @@ func loadConfig() Config {
 		KeyFile:   os.Getenv("KEY_FILE"),
 		DBPath:    getenv("DB_PATH", "hearth.db"),
 		StaticDir: getenv("STATIC_DIR", ""),
+		DevMode:   envBool("DEV_MODE"),
 
 		GeoIPEnabled:      envBool("GEOIP_ENABLED"),
 		GeoIPDBPath:       os.Getenv("GEOIP_DB_PATH"),

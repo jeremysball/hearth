@@ -104,7 +104,7 @@ func TestStatusReportsUnprovisionedThenProvisioned(t *testing.T) {
 	db := newParallelTestDB(t)
 
 	rec := httptest.NewRecorder()
-	handleStatus(db)(rec, httptest.NewRequest("GET", "/api/status", nil))
+	handleStatus(db, Config{})(rec, httptest.NewRequest("GET", "/api/status", nil))
 	var resp statusResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
@@ -121,13 +121,37 @@ func TestStatusReportsUnprovisionedThenProvisioned(t *testing.T) {
 	}
 
 	rec2 := httptest.NewRecorder()
-	handleStatus(db)(rec2, httptest.NewRequest("GET", "/api/status", nil))
+	handleStatus(db, Config{})(rec2, httptest.NewRequest("GET", "/api/status", nil))
 	var resp2 statusResponse
 	if err := json.Unmarshal(rec2.Body.Bytes(), &resp2); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
 	if !resp2.Provisioned {
 		t.Fatalf("expected provisioned = true after a family was created")
+	}
+}
+
+func TestStatusReportsDevModeFromConfig(t *testing.T) {
+	db := newParallelTestDB(t)
+
+	rec := httptest.NewRecorder()
+	handleStatus(db, Config{DevMode: true})(rec, httptest.NewRequest("GET", "/api/status", nil))
+	var resp statusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if !resp.DevMode {
+		t.Fatalf("expected devMode = true when Config.DevMode is set")
+	}
+
+	rec2 := httptest.NewRecorder()
+	handleStatus(db, Config{})(rec2, httptest.NewRequest("GET", "/api/status", nil))
+	var resp2 statusResponse
+	if err := json.Unmarshal(rec2.Body.Bytes(), &resp2); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if resp2.DevMode {
+		t.Fatalf("expected devMode = false by default")
 	}
 }
 
