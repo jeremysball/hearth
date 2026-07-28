@@ -93,6 +93,8 @@ go build -o hearth-server ./cmd/hearth
 
 `DB_PATH` defaults to a `hearth.db` relative to where you run the binary. Pick a stable working directory, or set `DB_PATH` to an absolute path.
 
+Confirm it's up: `curl -fsS http://127.0.0.1:8443/` (once `PEPPER` and the VAPID keys below are set — otherwise the binary exits before binding).
+
 ### Token pepper (required)
 
 Every deploy must set `PEPPER`, a comma-separated list of secrets (current pepper first, older ones after) used to HMAC-hash session cookies, invite links, launch tokens, and pending-auth tokens before they touch the database. Each entry must be at least 32 bytes. The server refuses to start without it.
