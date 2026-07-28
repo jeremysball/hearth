@@ -38,6 +38,26 @@ func TestHandleCreateFamily(t *testing.T) {
 	}
 }
 
+func TestHandleCreateFamilyStoresSex(t *testing.T) {
+	db := newParallelTestDB(t)
+	body := bytes.NewBufferString(`{"babyName":"Mira","birthdate":"2026-01-01","theme":"girl","sex":"girl","caregiverName":"Maya"}`)
+	req := httptest.NewRequest("POST", "/api/family", body)
+	rec := httptest.NewRecorder()
+
+	handleCreateFamily(db)(rec, req)
+
+	if rec.Code != 200 {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var sex string
+	if err := db.QueryRow(`SELECT sex FROM babies`).Scan(&sex); err != nil {
+		t.Fatalf("querying baby: %v", err)
+	}
+	if sex != "girl" {
+		t.Errorf("sex = %q, want girl", sex)
+	}
+}
+
 // If session creation fails after the family/baby/caregiver/settings rows
 // already committed, signup is stuck: the DB shows a fully provisioned
 // family but the browser never gets a session cookie, and the second-family

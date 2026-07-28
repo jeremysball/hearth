@@ -98,7 +98,7 @@ func TestHandleSyncIncludesBabyWhenChanged(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
-	reqPatch := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","theme":"boy"}`))
+	reqPatch := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","theme":"boy","sex":"boy"}`))
 	reqPatch = withSession(reqPatch, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
 	handlePatchBaby(db, hub)(httptest.NewRecorder(), reqPatch)
 
@@ -115,10 +115,11 @@ func TestHandleSyncIncludesBabyWhenChanged(t *testing.T) {
 	}
 	var baby struct {
 		Name string `json:"name"`
+		Sex  string `json:"sex"`
 	}
 	json.Unmarshal(resp.Baby, &baby)
-	if baby.Name != "Olive" {
-		t.Errorf("baby.name = %q, want Olive", baby.Name)
+	if baby.Name != "Olive" || baby.Sex != "boy" {
+		t.Errorf("baby.name=%q baby.sex=%q, want Olive/boy", baby.Name, baby.Sex)
 	}
 }
 
