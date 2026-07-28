@@ -7,8 +7,8 @@ import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode
 import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
 import { growth, showGrowthStat } from './growth.js';
-import { profile, loadCaregivers, caregiversSnapshot, tapVersion } from './profile.js';
-import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, provisionedView } from './onboarding.js';
+import { profile, loadCaregivers, caregiversSnapshot, tapVersion, enableDevMode } from './profile.js';
+import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, onboardSkipDemo, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
@@ -298,6 +298,7 @@ document.addEventListener('click', (ev) => {
     'onboard:sex': () => onboardSex(d.sex),
     'onboard:photo': () => onboardPhoto(),
     'onboard:finish': () => onboardFinish(),
+    'onboard:skip-demo': () => onboardSkipDemo(),
     'profile:photo': () => profilePhoto(),
     'baby:photo': () => openBabyPhoto(),
     'prediction:info': () => openPredictionInfo(),
@@ -789,7 +790,11 @@ async function init() {
     let provisioned = false;
     try {
       const statusRes = await fetch('/api/status');
-      if (statusRes.ok) provisioned = (await statusRes.json()).provisioned;
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        provisioned = status.provisioned;
+        if (status.devMode) enableDevMode();
+      }
     } catch (e) { /* offline at boot: fail open to onboarding, same as today */ }
     $('#app').innerHTML = provisioned ? provisionedView() : onboarding();
     handleAuthRedirect(null, async () => {

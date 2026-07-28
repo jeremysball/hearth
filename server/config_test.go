@@ -48,7 +48,7 @@ func TestGetenvFallback(t *testing.T) {
 }
 
 func TestLoadConfigDefaults(t *testing.T) {
-	for _, k := range []string{"HOST", "PORT", "DB_PATH", "STATIC_DIR", "GEOIP_ENABLED", "GEOIP_DB_PATH", "MAXMIND_LICENSE_KEY"} {
+	for _, k := range []string{"HOST", "PORT", "DB_PATH", "STATIC_DIR", "DEV_MODE", "GEOIP_ENABLED", "GEOIP_DB_PATH", "MAXMIND_LICENSE_KEY"} {
 		os.Unsetenv(k)
 	}
 	cfg := loadConfig()
@@ -64,8 +64,21 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.StaticDir != "" {
 		t.Errorf("StaticDir = %q, want empty (embedded by default)", cfg.StaticDir)
 	}
+	if cfg.DevMode {
+		t.Error("DevMode = true, want false by default")
+	}
 	if cfg.GeoIPEnabled {
 		t.Error("GeoIPEnabled = true, want false by default")
+	}
+}
+
+func TestLoadConfigReadsDevModeEnv(t *testing.T) {
+	os.Setenv("DEV_MODE", "true")
+	defer os.Unsetenv("DEV_MODE")
+
+	cfg := loadConfig()
+	if !cfg.DevMode {
+		t.Error("DevMode = false, want true when DEV_MODE=true")
 	}
 }
 
