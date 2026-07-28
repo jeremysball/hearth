@@ -6,7 +6,7 @@ export const CHANGELOG = [
     version: '2026-07-27',
     features: [
       'When another caregiver logs something, you now get a little confetti burst (no sound) so you know someone else is on it. Turn it off in Profile → Sound & haptics if you\'d rather not see it.',
-      'Mark a stretch of time as “away” (like when a babysitter has the baby) — reminders pause and that time won\'t skew your trends.',
+      'Mark a stretch of time as “away” (like when a babysitter has the baby); reminders pause and that time won\'t skew your trends.',
       'Growth percentiles: see how your baby\'s weight, height, and head size compare to WHO growth charts, right on the Growth tab.',
     ],
     fixes: [
@@ -56,7 +56,7 @@ export const CHANGELOG = [
     version: '2026-07-08',
     fixes: [
       'Fixed an edit sometimes being silently undone right after saving, if it landed at the same moment as a routine background sync.',
-      'Fixed unsaved changes to an existing entry sometimes vanishing if the app got reloaded mid-edit (e.g. the phone reclaiming memory in the background) — reopening that entry now restores what you\'d typed, the same way it already did for a brand-new entry.',
+      'Fixed unsaved changes to an existing entry sometimes vanishing if the app got reloaded mid-edit (e.g. the phone reclaiming memory in the background); reopening that entry now restores what you\'d typed, the same way it already did for a brand-new entry.',
       'Fixed the app force-reloading mid-keystroke when an update installed while you were typing in a plain field (like the baby\'s name or birthdate), which could discard what you\'d just typed.'
     ]
   },
@@ -68,7 +68,7 @@ export const CHANGELOG = [
       'Added a "Continue with Google" option to invite links, so a re-invited caregiver can rejoin without retyping their name.'
     ],
     fixes: [
-      'Fixed entries sometimes failing to save when both caregivers logged at the same moment, which could leave one entry from reaching the other person.',
+      'Fixed entries sometimes failing to save when both caregivers logged at the same moment, which could keep one entry from reaching the other person.',
       'A failed save on one device no longer stops that device from receiving the other caregiver\'s new entries.',
       'Fixed the night sky\'s clouds, moon, and sun textures, plus card background textures, failing to load.',
       'Thinned out the Pisces constellation, which was too dense and busy compared to the other zodiac signs.',
