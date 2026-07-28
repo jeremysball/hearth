@@ -32,7 +32,7 @@ else mid-entry is exactly when Hearth gets backgrounded long enough to be
 evicted. Two pieces of prior evidence in this repo that this exact class of
 event has happened before:
 
-- `js/changelog.js:59` (2026-07-08 fix) — "unsaved changes to an existing
+- `js/changelog.js:67` (2026-07-08 fix) — "unsaved changes to an existing
   entry sometimes vanishing if the app got reloaded mid-edit (e.g. the phone
   reclaiming memory in the background)."
 - Commit `28c1078`'s message names the same mechanism directly.
