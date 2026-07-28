@@ -107,13 +107,30 @@ To rotate a pepper without logging everyone out immediately: prepend the new pep
 
 **Rollback:** the migration is forward-only — a previous binary's `SELECT ... WHERE token = ?` breaks against the renamed `token_hash` column. Take a SQLite backup before every deploy (`sqlite3 hearth.db ".backup hearth.pre-migration.db"`); to roll back, stop the new binary, restore that backup over `hearth.db`, and start the previous binary. There's no in-place rollback path.
 
+### VAPID keys (required)
+
+The server refuses to start without a VAPID keypair for web push. Generate one and set all three values in `.env` before first launch, in both the Docker and non-Docker paths:
+
+```bash
+go run ./cmd/vapidgen
+```
+
+This prints `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Set both in `.env`, along with `VAPID_SUBJECT`: a real `mailto:` address or URL you control, since push services may contact it if your server misbehaves.
+
 ### systemd
 
 ```bash
+sudo useradd --system --home-dir /opt/hearth --shell /usr/sbin/nologin hearth 2>/dev/null
+sudo mkdir -p /opt/hearth
 sudo cp hearth-server /usr/local/bin/
-sudo cp hearth.service /etc/systemd/system/
+sudo cp .env /opt/hearth/.env
+sudo chown -R hearth:hearth /opt/hearth
+sudo cp systemd/hearth.service /etc/systemd/system/
+sudo systemctl daemon-reload
 sudo systemctl enable --now hearth
 ```
+
+`hearth.service` runs the binary as the `hearth` user with `WorkingDirectory=/opt/hearth`, so `DB_PATH`'s default (`hearth.db`, relative) resolves to `/opt/hearth/hearth.db`. Use an absolute `DB_PATH` in `.env` instead if you want the database somewhere else.
 
 ## Configuration
 
