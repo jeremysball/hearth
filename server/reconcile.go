@@ -86,7 +86,7 @@ func reconcile(db *sql.DB, hub *Hub, provider, providerUserID, email string, cur
 			// Sign up: fresh family + caregiver + default settings, then identity.
 			newFamily, newBaby, newCare := newID(), newID(), newID()
 			now := nowISO()
-			if e = provisionFamily(tx, newFamily, newBaby, newCare, "", "", "girl", "Parent", now); e != nil {
+			if e = provisionFamily(tx, newFamily, newBaby, newCare, "", "", "girl", "", "Parent", now); e != nil {
 				return ReconcileResult{}, e
 			}
 			if _, e = tx.Exec(`INSERT INTO identities (provider, provider_user_id, caregiver_id, email, created_at) VALUES (?, ?, ?, ?, ?)`,

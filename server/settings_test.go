@@ -21,7 +21,7 @@ func TestHandlePatchBabyUpdatesFields(t *testing.T) {
 	seedFamilyAndBaby(t, db, "fam1")
 	hub := newHub()
 
-	req := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","birthdate":"2026-01-15","theme":"boy","photo":""}`))
+	req := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","birthdate":"2026-01-15","theme":"boy","photo":"","sex":"girl"}`))
 	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
 	rec := httptest.NewRecorder()
 
@@ -30,10 +30,37 @@ func TestHandlePatchBabyUpdatesFields(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
-	var name, theme string
-	db.QueryRow(`SELECT name, theme FROM babies WHERE family_id = 'fam1'`).Scan(&name, &theme)
-	if name != "Olive" || theme != "boy" {
-		t.Errorf("name=%q theme=%q, want Olive/boy", name, theme)
+	var name, theme, sex string
+	db.QueryRow(`SELECT name, theme, sex FROM babies WHERE family_id = 'fam1'`).Scan(&name, &theme, &sex)
+	if name != "Olive" || theme != "boy" || sex != "girl" {
+		t.Errorf("name=%q theme=%q sex=%q, want Olive/boy/girl", name, theme, sex)
+	}
+}
+
+// A caregiver on a stale service-worker shell PATCHes the whole baby object
+// without a "sex" key at all (its local copy predates the field). That must
+// not erase a sex value a different, up-to-date caregiver already set.
+func TestHandlePatchBabyLeavesSexUnchangedWhenOmitted(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+
+	setReq := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","sex":"girl"}`))
+	setReq = withSession(setReq, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	handlePatchBaby(db, hub)(httptest.NewRecorder(), setReq)
+
+	staleReq := httptest.NewRequest("PATCH", "/api/baby", bytes.NewBufferString(`{"name":"Olive","birthdate":"2026-02-01"}`))
+	staleReq = withSession(staleReq, SessionInfo{CaregiverID: "cg2", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+	handlePatchBaby(db, hub)(rec, staleReq)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var sex string
+	db.QueryRow(`SELECT sex FROM babies WHERE family_id = 'fam1'`).Scan(&sex)
+	if sex != "girl" {
+		t.Errorf("sex = %q, want girl (a stale PATCH without a sex key must not erase it)", sex)
 	}
 }
 

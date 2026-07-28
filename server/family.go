@@ -17,6 +17,7 @@ type createFamilyRequest struct {
 	BabyName      string `json:"babyName"`
 	Birthdate     string `json:"birthdate"`
 	Theme         string `json:"theme"`
+	Sex           string `json:"sex"`
 	CaregiverName string `json:"caregiverName"`
 }
 
@@ -34,12 +35,12 @@ type statusResponse struct {
 // role 'Parent'), and default settings within tx. Shared by the manual
 // onboarding form (handleCreateFamily) and the OAuth first-sign-in path
 // (reconcile.go), which differ only in the values supplied.
-func provisionFamily(tx *sql.Tx, familyID, babyID, caregiverID, babyName, birthdate, theme, caregiverName, now string) error {
+func provisionFamily(tx *sql.Tx, familyID, babyID, caregiverID, babyName, birthdate, theme, sex, caregiverName, now string) error {
 	if _, err := tx.Exec(`INSERT INTO families (id, created_at) VALUES (?, ?)`, familyID, now); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		babyID, familyID, babyName, birthdate, theme, now); err != nil {
+	if _, err := tx.Exec(`INSERT INTO babies (id, family_id, name, birthdate, theme, sex, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		babyID, familyID, babyName, birthdate, theme, sex, now); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, updated_at, created_at) VALUES (?, ?, ?, 'Parent', ?, ?)`,
@@ -105,7 +106,7 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if err := provisionFamily(tx, familyID, babyID, caregiverID, req.BabyName, req.Birthdate, theme, caregiverName, now); err != nil {
+		if err := provisionFamily(tx, familyID, babyID, caregiverID, req.BabyName, req.Birthdate, theme, req.Sex, caregiverName, now); err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
@@ -132,10 +133,11 @@ func handleCreateFamily(db *sql.DB) http.HandlerFunc {
 }
 
 type patchBabyRequest struct {
-	Name      string `json:"name"`
-	Birthdate string `json:"birthdate"`
-	Theme     string `json:"theme"`
-	Photo     string `json:"photo"`
+	Name      string  `json:"name"`
+	Birthdate string  `json:"birthdate"`
+	Theme     string  `json:"theme"`
+	Photo     string  `json:"photo"`
+	Sex       *string `json:"sex"`
 }
 
 func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
@@ -162,8 +164,8 @@ func handlePatchBaby(db *sql.DB, hub *Hub) http.HandlerFunc {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
-		res, err := tx.Exec(`UPDATE babies SET name = ?, birthdate = ?, theme = ?, photo = ?, updated_at = ?, rev = ? WHERE family_id = ?`,
-			req.Name, req.Birthdate, req.Theme, req.Photo, now, rev, session.FamilyID)
+		res, err := tx.Exec(`UPDATE babies SET name = ?, birthdate = ?, theme = ?, photo = ?, sex = COALESCE(?, sex), updated_at = ?, rev = ? WHERE family_id = ?`,
+			req.Name, req.Birthdate, req.Theme, req.Photo, req.Sex, now, rev, session.FamilyID)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
