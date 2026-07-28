@@ -158,6 +158,11 @@ test('a family switch full resync does not leave the previous family\'s entries 
   reset();
 });
 
+test('reset() default baby state has an empty sex field, ready for the required onboarding picker to set', () => {
+  reset();
+  assert.equal(state().baby.sex, '');
+});
+
 test('hasNewEntryFromOtherCaregiver is true only for a not-yet-known entry logged by someone else', () => {
   const knownIds = new Set(['known-e1']);
   assert.equal(
