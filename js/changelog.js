@@ -7,6 +7,7 @@ export const CHANGELOG = [
     features: [
       'When another caregiver logs something, you now get a little confetti burst (no sound) so you know someone else is on it. Turn it off in Profile → Sound & haptics if you\'d rather not see it.',
       'Mark a stretch of time as “away” (like when a babysitter has the baby) — reminders pause and that time won\'t skew your trends.',
+      'Growth percentiles: see how your baby\'s weight, height, and head size compare to WHO growth charts, right on the Growth tab.',
     ],
     fixes: [
       'Fixed a bug where bottle, medicine, and hygiene reminders could silently fail to notify you when the app was closed or in the background.',
