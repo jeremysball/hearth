@@ -221,3 +221,41 @@ less disruptive (faster boot, restore the exact view/scroll/sheet state from
 eliminate OS-triggered kills entirely is wrapping the app in a native shell
 (e.g. Capacitor) for real background execution guarantees — a much bigger
 architectural step than this bug alone justifies, evaluated separately.
+
+## Second capture, post-audio-fix: 2026-07-28, `logs.json`
+
+After the audio-resume fix (commit `b29f4d5`) shipped, a new ~41s Safari
+Timeline recording on the same iPhone showed the reload symptom persists,
+and isolated a second, unrelated leak.
+
+- `timeline-record-type-memory`'s `page` category (WebKit's native/paint
+  memory, distinct from the `javascript` heap bucket which stayed flat at
+  ~3-10MB) climbed essentially monotonically for the whole capture: ~474MB
+  at t=22.4s to ~1.31GB at t=63.7s. 166MB of that growth happened before any
+  recorded touch/orientation event, so this is not the audio-retry storm and
+  not touch-driven — it runs even at rest.
+- Querying the capture's `css-transition` records directly: 9,098 `box-shadow`
+  transitions fired on the home screen's 8 action-icon tokens (`.tok`),
+  9,029 of them canceled mid-flight, zero completed — roughly 220/s.
+- Root cause: `.tok`'s `box-shadow` (styles.css, was line 381) reads
+  `calc(5px + var(--fire-a) * 4px)`, and `--fire-a` is continuously animated
+  by the infinite `fire-a` keyframe applied to `.tok` itself. `.tok` also
+  declared `transition: ... box-shadow .1s`, so WebKit kept starting a new
+  box-shadow transition every animation frame and immediately canceling it
+  for the next value — a pattern consistent with unrecycled native
+  backing-store churn, which is where "page" (not JS, not
+  images/layers-bucket) growth would show up.
+- Secondary amplifier found the same way: `js/sky.js`'s `attachTilt()`
+  registered its `deviceorientation` listener once and never removed it, so
+  it kept firing (~54/s) and scheduling rAFs even after navigating away from
+  Home, where the parallax effect has no element to apply to.
+- Fix: dropped `box-shadow` out of `.tok`'s `transition` list (it's driven by
+  the animation already, it never needed a transition on top), and gave the
+  tilt listener a real lifecycle — attached only while a sky renders,
+  detached in `teardownSky()` (which already runs on every route change via
+  `initSky()`).
+- Not yet done: an A/B recapture on the same device with the fix in place,
+  to confirm `page` memory actually flattens and the critical
+  memory-pressure event stops recurring. This entry documents the diagnosis
+  and fix, not a closed loop — update this section once a follow-up capture
+  confirms or contradicts it.

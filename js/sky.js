@@ -197,6 +197,7 @@ export function starsSVG(seedStr) {
   let seed = 0;
   for (const ch of String(seedStr)) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
   const rnd = mulberry32(seed || 42);
+  const twinkleEnabled = state().settings.starTwinkle !== false;
   let circles = '';
   for (let i = 0; i < 150; i++) {
     const x = (rnd() * 100).toFixed(1), y = (rnd() * 68).toFixed(1);
@@ -216,7 +217,7 @@ export function starsSVG(seedStr) {
     // points with only some visibly flickering. Duration/delay are randomized
     // per star so 150 points never beat in sync (same idea as the fire
     // system's coprime periods, just continuous instead of three fixed ones).
-    const twinkle = big || rnd() < 0.18;
+    const twinkle = twinkleEnabled && (big || rnd() < 0.18);
     const cls = [big && 'star-big', twinkle && 'star-twinkle'].filter(Boolean).join(' ');
     const style = twinkle ? ` style="--tw-d:${(1.6 + rnd() * 2.4).toFixed(2)}s;--tw-o:-${(rnd() * 3).toFixed(2)}s"` : '';
     circles += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${cls ? ` class="${cls}"` : ''}${style}/>`;
@@ -295,8 +296,9 @@ export function constellationSVG(birthdate) {
   const radii = pointRadii(c.pts, c.lines);
   const lines = c.lines.map(([a, b]) =>
     `<line x1="${c.pts[a][0]}" y1="${c.pts[a][1]}" x2="${c.pts[b][0]}" y2="${c.pts[b][1]}"/>`).join('');
+  const twinkleEnabled = state().settings.starTwinkle !== false;
   const pts = c.pts.map(([x, y], i) => {
-    const twinkle = radii[i] > RADIUS_BY_ROLE.chain;
+    const twinkle = twinkleEnabled && radii[i] > RADIUS_BY_ROLE.chain;
     if (!twinkle) return `<circle cx="${x}" cy="${y}" r="${radii[i]}"/>`;
     const p = twinklePhase(x, y);
     const style = ` style="--tw-d:${(2.2 + p * 2.6).toFixed(2)}s;--tw-o:-${(p * 4).toFixed(2)}s"`;
@@ -507,6 +509,7 @@ export function teardownSky() {
   rafId = 0;
   particles = [];
   ctx = null;
+  detachTilt();
 }
 
 export function initSky() {
@@ -644,26 +647,32 @@ if (typeof navigator !== 'undefined' && navigator.getBattery) {
 // permission request; if it never arrives, the autonomous drift below is the
 // graceful fallback.
 let parallaxBound = false;
+let tiltGranted = false;
+let tiltHandler = null;
 
 function bindParallax() {
   if (parallaxBound || reducedMotion() || lowPower) return;
+  if (state().settings.heroParallax === false) return;
   if (typeof DeviceOrientationEvent === 'undefined') return;
   parallaxBound = true;
+  if (tiltGranted) { attachTilt(); return; }
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     const ask = () => {
       DeviceOrientationEvent.requestPermission()
-        .then((r) => { if (r === 'granted') attachTilt(); })
+        .then((r) => { if (r === 'granted') { tiltGranted = true; attachTilt(); } })
         .catch(() => {});
     };
     document.addEventListener('touchend', ask, { once: true });
   } else {
+    tiltGranted = true;
     attachTilt();
   }
 }
 
 function attachTilt() {
+  if (tiltHandler) return;
   let raf = 0;
-  window.addEventListener('deviceorientation', (e) => {
+  tiltHandler = (e) => {
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
@@ -674,5 +683,17 @@ function attachTilt() {
       el.style.setProperty('--par-x', x.toFixed(3));
       el.style.setProperty('--par-y', y.toFixed(3));
     });
-  });
+  };
+  window.addEventListener('deviceorientation', tiltHandler);
+}
+
+// Only live while a sky is actually on screen — otherwise it keeps
+// scheduling rAFs and querying the DOM on every view, forever, for a
+// parallax effect nothing can see.
+function detachTilt() {
+  if (tiltHandler) {
+    window.removeEventListener('deviceorientation', tiltHandler);
+    tiltHandler = null;
+  }
+  parallaxBound = false;
 }
