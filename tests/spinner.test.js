@@ -3,6 +3,11 @@
 // plain HTTP so it can run in CI without TLS certs.
 
 const { startServer, launchBrowser, onboard, check, tally, resetCounters } = require('./helpers');
+const { installScript, summarize, gate, frameIntervalsFromRaf } = require('./helpers/spinner-frame-timing');
+
+const CAPTURE_DRAG_PX = 220;
+const CAPTURE_DRAG_MS = 1000;
+const CAPTURE_SETTLE_MS = 1000;
 
 (async () => {
   const server = await startServer();
@@ -32,6 +37,7 @@ async function runSuite(base) {
     await page.waitForTimeout(500);
     await page.click('.stepper-val');
     await page.waitForTimeout(300);
+    await page.evaluate(installScript);
     return await page.$('.spinner-overlay');
   }
 
@@ -371,6 +377,24 @@ async function runSuite(base) {
       }
     }
     await closeOverlay();
+  }
+
+  // Capture workflow: open spinner, idle 700ms, drag 220px up over 1s,
+  // release, idle 1s, close.
+  async function captureRun(page) {
+    const overlay = await openSpinner();
+    await page.waitForTimeout(700);
+    const win = await (await overlay.$('.spinner-window')).boundingBox();
+    const cx = win.x + win.width / 2;
+    const cy = win.y + win.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx, cy - CAPTURE_DRAG_PX, { steps: 20 });
+    await page.mouse.up();
+    await page.waitForTimeout(CAPTURE_SETTLE_MS);
+    const samples = await page.evaluate(() => window.__frames || []);
+    await closeOverlay();
+    return samples;
   }
 
   const exitCode = tally() === 0 ? 0 : 1;
