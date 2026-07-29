@@ -25,6 +25,7 @@ test-results/
 # convention) — ephemeral and can carry personal details, never committed.
 .claude/[0-9]*
 _screenshot.js
+_run.sh
 books/
 docs/superpowers/
 docs/research-books-extracted*.md
