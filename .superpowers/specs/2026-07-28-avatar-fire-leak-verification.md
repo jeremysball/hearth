@@ -1,372 +1,281 @@
-# Avatar fire-a box-shadow leak: fix and manual verification
+# Avatar fire paint investigation and verification
+
+## Status
+
+Implemented in commit `8eab525` on `fix/ios-fire-memory-leak`.
+
+This document records the observed problem, the CSS change, what the available traces do and do not establish, and the verification still required. It must not present browser paint-layer behavior as proven without a same-tool before-and-after capture.
 
 ## Problem
 
-The Chrome DevTools trace captured at
-`/workspace/hearth/user-Trace-20260728T215309.json` shows the avatar as
-the dominant paint cost:
-
-- **`SPAN class='avatar cg-avatar'`**: 41,920 `PaintImage` events in a
-  10.4s window (39,300 with a `data:image/jpeg` URL, 2,620 without),
-  across 8,440 frames — ~4.97 paints per frame on average. This is the
-  caregiver-avatar selector, rendered by `js/profile.js:198-199` inside
-  the profile/caregiver list (`.cg-avatar` overrides the size to
-  38×38 via `styles.css:705`).
-- **Next-closest elements**: `.tok.tone-feed` at 8,297 paints,
-  `.tok.tone-hygiene` at 4,161, `card.hero.hero-sky` at 4,161,
-  `phone.app` at 8,211.
-- **Cascade amplifier**: the caregiver avatar lives inside the
-  profile screen, so each avatar paint invalidates the ancestor paint
-  region — this is why the surrounding container paint counts are
-  inflated.
-
-The same `.avatar` rule (`styles.css:216-228`) is also used for the
-**home-screen baby avatar** (rendered by `js/home.js:103-104`) and the
-**profile-screen baby avatar** (rendered by `js/profile.js:97`). The
-home baby avatar is just `.avatar`, not `.avatar.cg-avatar`, but it
-inherits the same leaky rule. The trace's 41,920 paints are on the
-caregiver variant; the home variant exhibits the same per-frame
-re-paint pattern, just under a different selector.
-
-Root cause: `--fire-a` is registered at `:root` via
-`@property --fire-a { syntax: '<number>'; inherits: true; … }` and
-animated continuously by `body`'s `fire-a 5.3s ease-in-out infinite`
-animation. The `.avatar` rule at `styles.css:216-228` reads
-`var(--fire-a)` in its `box-shadow`:
+The registered custom property `--fire-a` is inherited and animated continuously:
 
 ```css
-box-shadow:
-  0 2px 0 oklch(0.97 0.01 80 / 0.4) inset,
-  0 4px 14px var(--mat-cast),
-  inset 0 1px 0 oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4));
+@property --fire-a {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.06;
+}
+
+body {
+  animation:
+    fire-a 5.3s ease-in-out infinite,
+    fire-b 3.1s ease-in-out infinite,
+    fire-c 8.7s ease-in-out infinite;
+}
 ```
 
-Every animation frame, `--fire-a` ticks, `.avatar` re-computes its
-`box-shadow`, and the element is paint-invalidated. Without layer
-promotion, the avatar's paint buffer dirties every ancestor whose
-paint region contains it — the cascade is the multiplier that turns a
-~8k-paint-per-10s baseline into 41,920 on this selector.
-
-The branch `fix/ios-fire-memory-leak` already shipped a related fix
-(`22382ec`, "stop a continuous box-shadow transition storm") that
-addressed `.tok`'s redundant `box-shadow` transition — but the
-avatar's analogous leak (animated `box-shadow` value rather than
-redundant transition) was diagnosed by the new trace and is **not yet
-fixed on this branch**.
-
-This spec covers the avatar fix and the manual verification that
-proves it on the user's iPhone (the device that produced the original
-trace). No automated harness — the leak was discovered by hand, on a
-real device, and the fix should be verified the same way.
-
-## Approach
-
-**Fix:** move the `--fire-a`-consuming box-shadow from `.avatar` onto
-a `::before` pseudo-element. The pseudo has its own paint step; the
-parent's paint buffer is no longer dirtied by the `--fire-a` tick; the
-cascade to ancestors is broken.
-
-**Hypothesis to verify:** paint-step isolation breaks the cascade.
-This is the standard CSS-engine model but is **not established fact
-without empirical before/after traces** — treat it as a prediction
-the iPhone trace will validate, not a known truth.
-
-**Acceptance criteria** (validated against the user's iPhone trace,
-not a CI test):
-
-- **Primary** (caregiver avatar): post-fix `PaintImage` count on
-  `SPAN class='avatar cg-avatar'` is `<100` in 10s (vs 41,920
-  baseline). This is the trace's actual target. `<100` is the
-  conservative floor; expected realistic post-fix number is
-  single-digits if the pseudo paints on its own layer, or ~8,440
-  (one per frame) if it doesn't get promoted but is at least
-  isolated.
-- **Primary** (home baby avatar): post-fix `PaintImage` count on
-  `SPAN class='avatar'` (without `.cg-avatar`) is `<100` in 10s. The
-  same rule, same fix — this confirms the fix generalizes.
-- **Secondary suspects** must also drop substantially:
-  - `.card.hero.hero-sky` should drop to ≤500 paints/10s (vs 4,161).
-    Most of its baseline cost is cascade from the avatar, not its own
-    `--fire-a` reads.
-  - `phone.app` should drop noticeably (was 8,211; mostly cascade
-    from the avatar paint region spilling up the tree).
-
-## File-level changes
-
-### `styles.css`
-
-At `.avatar` (lines 216-228), the rule gains `position: relative`
-and loses the third `box-shadow` layer; a new `.avatar::before` rule
-follows it that takes over the `--fire-a` consumer.
+Before the fix, `.avatar` consumed `--fire-a` in one layer of its `box-shadow`:
 
 ```css
 .avatar {
-  width: 48px; height: 48px; border-radius: 50%; flex: 0 0 auto;
-  background-image:
-    radial-gradient(circle at 30% 20%, oklch(0.97 0.01 80 / 0.5) 0%, transparent 45%),
-    radial-gradient(circle at 35% 30%, var(--accent-soft), var(--accent));
-  color: var(--on-accent); display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-sans); font-size: 20px; font-weight: 700;
-  background-size: cover; background-position: center;
-  position: relative;                                       /* ← added */
   box-shadow:
     0 2px 0 oklch(0.97 0.01 80 / 0.4) inset,
-    0 4px 14px var(--mat-cast);                             /* ← removed: the --fire-a inset layer */
-  transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    0 4px 14px var(--mat-cast),
+    inset 0 1px 0 oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4));
 }
-.avatar::before {                                           /* ← added */
+```
+
+Each interpolated change to `--fire-a` changed the avatar's computed shadow. Because `box-shadow` is paint-affecting, this made the avatar eligible for paint invalidation on animation ticks.
+
+The `.avatar` rule is shared by:
+
+- the Home baby avatar in `js/home.js`
+- the Profile baby avatar in `js/profile.js`
+- caregiver avatars with the additional `.cg-avatar` class in `js/profile.js`
+- fallback avatars in the baby-photo sheet
+
+Views are not kept mounted offscreen. Navigation replaces `#view.innerHTML`, so Home and Profile avatars do not coexist in a hidden view tree.
+
+## Pre-fix evidence
+
+`user-Trace-20260728T215309.json` is a Chrome/Perfetto trace with a `traceEvents[]` schema. It contains:
+
+- 101,970 total `PaintImage` events
+- 41,920 `PaintImage` events attributed to `SPAN class='avatar cg-avatar'`
+- 8,297 attributed to `SPAN class='tok tone-feed'`
+- 8,211 attributed to `MAIN class='phone app'`
+- 5,474 attributed to `NAV class='tabbar'`
+- 4,161 attributed to `DIV class='card hero hero-sky'`
+
+The caregiver-avatar events occur during a bounded interval of about 10.4 seconds inside the larger trace, at roughly 2,900 to 4,500 events per second during active seconds.
+
+These counts establish that the browser repeatedly performed image-paint work attributed to caregiver avatars. They do not, by themselves, prove:
+
+- that every event represents a displayed frame
+- that ancestor paint counts were caused by the avatar
+- that retained paint buffers caused memory growth
+- that the pseudo-element change creates a compositing layer
+
+Do not divide the 41,920 events by compositor bookkeeping events and call the result "paints per rendered frame." The trace contains hundreds of compositor events per second, so those events are not equivalent to display refreshes.
+
+## Fix
+
+The animated shadow layer was moved from `.avatar` to `.avatar::before`:
+
+```css
+.avatar {
+  position: relative;
+  box-shadow:
+    0 2px 0 oklch(0.97 0.01 80 / 0.4) inset,
+    0 4px 14px var(--mat-cast);
+}
+
+.avatar::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4));
+  box-shadow:
+    inset 0 1px 0
+    oklch(1 0 0 / calc(0.25 + var(--fire-a, 0.08) * 1.4));
 }
 ```
 
-Each line, why:
+The static avatar box now has a stable `box-shadow`. Only the pseudo-element's shadow depends on `--fire-a`.
 
-- **`position: relative` on `.avatar`**: required so the `::before`'s
-  `position: absolute; inset: 0` resolves against the avatar's content
-  box, not some ancestor.
-- **`content: ''` on `::before`**: a pseudo with no `content` doesn't
-  exist in the box tree; without this, the rule does nothing.
-- **`position: absolute; inset: 0`**: stretches the pseudo to cover
-  the avatar's content box pixel-for-pixel, so the inset highlight is
-  in the same place visually.
-- **`border-radius: inherit`**: the parent is `50%` by default,
-  `28px` for `.photo-view .avatar.lg` (line 230). `inherit` makes the
-  pseudo's clip-path match automatically — without this, the
-  highlight on the 220×220 photo-view fallback variant would render
-  as a sharp rectangle inside the rounded square.
-- **`pointer-events: none`**: the avatar lives inside `.avatar-btn`
-  (line 230) which is the tap target. Without this, the pseudo would
-  sit between the tap and the button in the hit-test order.
-- **Removed `box-shadow` layer**: the `--fire-a` consumer leaves
-  `.avatar`. Its paint buffer is no longer invalidated by the
-  `--fire-a` tick.
+Supporting declarations preserve behavior:
 
-`.avatar.lg` (line 229), `.avatar-btn:active .avatar { transform }`
-(line 230), `.photo-view .avatar.lg` (line 231 — the *fallback
-initial* path only; `.photo-view img` is the real-photo path), and
-`.cg-avatar` (line 705) are all unchanged — the pseudo works
-parameter-free across variants via `inset: 0` and
-`border-radius: inherit`.
+- `position: relative` makes the avatar the containing block.
+- `content: ''` creates the pseudo-element box.
+- `position: absolute; inset: 0` covers the avatar.
+- `border-radius: inherit` follows circular and rounded-square variants.
+- `pointer-events: none` prevents the overlay from affecting hit testing.
 
-**Stack-order note:** a positioned `::before` with no `z-index` paints
-*above* the parent's normal content by default — that's a stacking
-context rule, not a bug. For initial-avatar variants (where the
-avatar text is normal-flow content of `.avatar`), the pseudo paints
-above the text. The avatar's `text-shadow` declarations still apply
-to the text, but the pseudo's box-shadow sits on top of the text in
-the visual stack. **Visual verification on real devices is required**
-to confirm this matches the pre-fix appearance — if the pseudo
-obscures the text or changes the perceived contrast, add `z-index:
--1` to push the pseudo below normal content, or `z-index: 0` +
-explicit ordering. Don't ship without the visual check.
+## Mechanism: hypothesis, not established fact
 
-**Real-photo path** (`.avatar` with `background-image: url(...)`,
-e.g. `js/home.js:103` and `js/profile.js:198`): the pseudo's
-`position: absolute; inset: 0` makes it cover the photo exactly. The
-photo is rendered as `.avatar`'s background, then the pseudo paints
-on top with its `inset 0 1px 0` highlight. Pixel-equivalent to the
-pre-fix inset highlight. The `.photo-view img` path
-(`js/profile.js` photo view, a separate `<img>` not styled by
-`.avatar`) is unaffected.
+Moving the animated shadow to `::before` changes the browser's paint object and invalidation bookkeeping. It may let the engine repaint or cache the animated overlay separately from the avatar's background image and static shadows.
 
-### `js/changelog.js`
+However, a pseudo-element does not automatically create:
 
-This is a user-visible `fix` per `CLAUDE.md`, so a one-line parent-facing
-entry is required in the most-recent dated block:
+- a compositing layer
+- a paint-containment boundary
+- a guarantee that ancestor paint regions remain valid
 
+No `contain: paint`, `isolation`, `will-change`, or explicit layer-promoting transform was added. Therefore the claim that the pseudo "breaks the cascade" is a hypothesis about the observed engine behavior, not a property guaranteed by CSS.
+
+A trace may also attribute pseudo-element painting differently from ordinary element painting. The disappearance of `.avatar` records can mean less work, changed attribution, or both. Verification must inspect total paint behavior and related selectors, not only search for the string `avatar`.
+
+## Post-fix evidence currently available
+
+Two post-fix captures exist, both Safari Web Inspector timeline exports with the `recording.records[]` schema:
+
+`_tmp_really-after-fix.json`, captured on Home only, approximately 21.06 seconds, 13,094 records:
+
+- 7,705 `paint` records (~366 paints/sec)
+- 984 `invalidate-layout`, 964 `layout`
+- 552 `invalidate-styles`, 548 `recalculate-styles`
+- 459 `composite`
+- 3 garbage-collection records
+- 0 records whose `domNodeCSSPath` contains `avatar`
+
+`_tmp_really-after-fix-with-profile.json`, captured with the Profile/caregiver view open, approximately 33.2 seconds, 14,512 records:
+
+- 3,727 `paint` records (~112 paints/sec)
+- 1,774 `invalidate-layout`, 1,730 `layout`
+- 1,439 `invalidate-styles`, 1,437 `recalculate-styles`
+- 1,344 `composite`
+- 0 garbage-collection records
+- 12 records whose `domNodeCSSPath` includes an avatar-bearing ancestor: 6 on `div.card.prof-baby` and 6 on `div#cg-list.card.row-card`. All 12 are `css-animation` events. None are `paint` events.
+
+Safari's DOM attribution reports the full parent chain. Where Chrome attributes work to the leaf `SPAN class='avatar cg-avatar'`, Safari attributes to the ancestor container that contains the avatar. The two tools therefore cannot be compared leaf-for-leaf.
+
+Important consequence: in `_tmp_really-after-fix-with-profile.json`, the avatar-bearing ancestor containers accumulated 12 records over 33 seconds, all CSS-animation activity. There were no `paint` records attributed to either container. That is direct evidence on the same view that produced the pre-fix `41,920 PaintImage` baseline.
+
+The captures are useful evidence that:
+
+- Safari, in two different views, does not attribute paint work to the avatar itself or to its immediate ancestors.
+- The ancestor containers of avatars on Profile carry only `css-animation` bookkeeping, not paint work.
+
+They do not directly establish:
+
+- that paint work has dropped in absolute terms (different tools, different attribution rules);
+- that the avatar's pseudo-element is on its own compositing layer;
+- that ancestor paint regions no longer re-rasterize.
+
+Consequently, the defensible statement is:
+
+> The pre-fix Chrome trace attributed heavy repeated image-paint work to caregiver avatars. In two later Safari post-fix captures (Home only, and Profile with caregiver rows visible), Safari attributed no paint records to avatar-bearing DOM paths. The result is consistent with the avatar no longer being a primary paint cost on those views, but a same-tool before-and-after comparison is still the rigorous test.
+
+The post-fix traces also do not directly measure process memory. The 3 garbage-collection records on Home and 0 on Profile suggest no obvious GC churn during these short captures, but they do not prove that long-term memory growth is eliminated.
+
+## Verification requirements
+
+### A. Same-tool performance comparison
+
+For a valid quantitative comparison, capture both sides with the same browser, inspector, view, interaction sequence, and approximate duration.
+
+Because the pre-fix source state is available in Git, use two isolated builds:
+
+1. Pre-fix: parent of `8eab525`.
+2. Post-fix: `8eab525` or its descendant.
+3. Use the same iPhone and the same inspector for both captures.
+4. Start on the same view with the same data.
+5. Record at least 15 seconds of idle time after rendering settles.
+6. Repeat three times per build to distinguish a stable effect from capture noise.
+7. Do not run the two builds from one mutable checkout. Use separate worktrees or immutable deployment versions.
+
+For Profile verification, ensure caregiver rows are visible. For Home verification, ensure the baby avatar is visible. Report the views separately.
+
+Normalize counts as events per second over the settled comparison window. Report at least:
+
+- all paint events
+- image-paint events, if the tool exposes them
+- style invalidations and recalculations
+- layout invalidations and layouts
+- composite activity
+- records attributed to `.avatar`, `.avatar::before`, `.cg-avatar`, and immediate ancestors where available
+
+If the inspector does not expose pseudo-element paths, state that limitation instead of treating missing avatar paths as zero work.
+
+### B. Acceptance and failure criteria
+
+The fix passes the performance check when all of the following hold across the median of three matched runs:
+
+1. Avatar-attributed image-paint rate drops by at least 90 percent, or the inspector no longer attributes avatar work and total paint rate drops materially.
+2. Total paint rate does not increase.
+3. No new selector becomes a similarly dominant paint source because attribution moved.
+4. Layout and style-recalculation rates do not materially regress.
+5. The browser remains responsive during the same interactions.
+
+The fix fails when any of the following occurs:
+
+- total paint work remains effectively unchanged and only attribution changes;
+- pseudo-element or ancestor records replace the former avatar count at a similar rate;
+- visual behavior regresses;
+- memory still grows during the long-duration check.
+
+Do not use an uncalibrated absolute threshold such as `<100 events in 10s`. Inspector event counts are implementation-specific. Prefer matched rate reductions and total-work checks.
+
+### C. Long-duration memory check
+
+Paint traces do not prove memory stability. Run a separate long-duration check on the affected iPhone:
+
+1. Use the same production-like build and data.
+2. Keep the relevant view active for at least 30 minutes.
+3. Record process memory or inspector heap measurements at regular intervals if available.
+4. Exercise the same interactions that previously led to reloads.
+5. Confirm that the app does not reload and that memory does not show sustained unbounded growth.
+
+A short trace can support the paint diagnosis. Only a long-duration observation can support the user-facing claim that the app no longer consumes increasing memory or reloads.
+
+### D. Visual and interaction checks
+
+Check on a real iPhone:
+
+1. Home baby avatar with a photo.
+2. Home baby avatar with an initial.
+3. Profile baby avatar at large size.
+4. Caregiver avatar with a photo.
+5. Caregiver avatar with an initial.
+6. The rounded-square fallback in the photo sheet.
+7. Tap and active-state behavior on avatar buttons.
+8. Light and dark themes.
+
+Confirm that the pseudo-element does not obscure initials and that its inherited radius matches every avatar shape.
+
+## Analyzer requirements
+
+Do not run one trace parser blindly over both files.
+
+- Chrome/Perfetto input: read `traceEvents[]` and classify events such as `PaintImage`, `Paint`, and `UpdateLayer`.
+- Safari Web Inspector input: read `recording.records[]` and classify `eventType`, `domNodeCSSPath`, and timestamps.
+
+A comparison tool must detect the schema, fail explicitly on an unsupported format, and normalize rates by the selected time window. Returning zero events for an unrecognized schema is a parser failure, not evidence of zero browser work.
+
+Keep raw profiler exports outside the repository or in an explicitly ignored local trace directory. They are investigation records, not source files, and untracked files in the repository interfere with PR tooling.
+
+## Project verification
+
+The implementation already includes:
+
+- the CSS change
+- a parent-facing changelog entry
+- the required cache-buster update via `scripts/bump-version.sh`
+
+Before merging, run:
+
+```bash
+node --test js/store.test.js
 ```
-'Stopped the home and caregiver avatars from slowly using up more memory over time, which could eventually cause the app to reload on some phones.',
-```
 
-Place it in the existing block at the top of the file alongside the
-2026-07-28 entry that mentions the prior memory fix. Skip `js/`
-version-bump; the cache buster lives in `index.html` and `sw.js` and is
-handled by `scripts/bump-version.sh` (next section).
+Run the relevant avatar and navigation Playwright suites sequentially if such suites exist. Rely on CI for the full Playwright matrix as required by the project rules.
 
-### `index.html` and `sw.js` (cache buster)
+## Claims permitted in the PR
 
-Run `scripts/bump-version.sh` per `CLAUDE.md`. This rewrites
-`<meta name="version">` in `index.html` and `const VERSION` in `sw.js`
-to the current UTC timestamp. **Do not hand-edit** either string.
+Permitted:
 
-## Why a `::before` pseudo instead of the alternatives
+- The pre-fix Chrome trace attributed 41,920 `PaintImage` events to caregiver avatars during its active interval.
+- The avatar's animated fire-dependent shadow was moved to a pseudo-element, leaving the avatar's own shadow static.
+- Two post-fix Safari captures contained no `paint` records attributed to avatar-bearing DOM paths. The Profile capture included caregiver rows and reported only 12 `css-animation` records across `div.card.prof-baby` and `div#cg-list.card.row-card`.
+- The Safari result is consistent with reduced avatar paint invalidation.
 
-- **`prefers-reduced-motion: reduce` gate**: only fixes the leak for
-  users who have reduced-motion enabled at the OS level. The user
-  hitting the iOS reload problem doesn't have it enabled.
-  Defense-in-depth only, not a fix.
-- **`data-no-fire` flag**: kill-switch that disables the fire system
-  entirely. Useful for opt-out, not for default-case fix.
-- **`::before` pseudo**: isolates the `--fire-a` consumer into its
-  own paint step, breaks the cascade to ancestors, preserves the
-  visual flicker identically. Single CSS-rule change, no JS.
+Not yet permitted without matched captures or a long-duration test:
 
-The first two are *kept in mind* as future options (the dev-mode
-isolation toggles on the branch already cover
-`heroParallax`/`starTwinkle`); neither addresses the default case.
-
-## What does NOT change
-
-- **`.tok` rules** (lines 379-381, 386): the `.tok` transition fix
-  from `22382ec` already shipped. The `.tok` element still reads
-  `--fire-a` in `box-shadow`, but without the redundant transition
-  the leak there is bounded. Not in scope for this spec.
-- **`.card`, `.phone`, `.today-add` rules**: they read `--fire-a` in
-  `box-shadow` or `radial-gradient`, contributing the secondary
-  paint counts (8,297 on `.tok.tone-feed`, 4,161 on
-  `.card.hero.hero-sky`, 8,211 on `phone.app`). The acceptance
-  criteria above *require* these to drop substantially post-fix;
-  the fix targets the avatar, but the cascade is what amplifies the
-  avatar's cost into those containers, so they should see material
-  improvement. Future investigation can drill into any that remain
-  elevated.
-- **Dark-mode variants** of the avatar rules — they don't exist;
-  `.avatar` has no dark-mode override. Pseudo-element works
-  identically in light/dark.
-- **The `box-shadow` transition list on `.avatar`** — it's already
-  minimal (`transform .5s …` only). Not redundant.
-- **Fire keyframes and `@property` declarations** — those define the
-  animation itself. The leak is in the *consumers*, not the
-  producer.
-
-## Testing
-
-### `node --test js/*.test.js`
-
-Run after the CSS change. The CSS-only change should not affect any
-JS unit test; this is a regression gate, not a behavior test for the
-fix itself.
-
-### Manual iPhone trace (ground truth)
-
-The leak was discovered by capturing `user-Trace-20260728T215309.json`
-on the user's iPhone with Safari DevTools over Web Inspector. That's
-the only environment that reproduced the symptom — no headless
-Chromium harness, no synthetic profile. The fix's ground-truth
-verification is the same procedure, with the fix applied.
-
-**Procedure:**
-
-1. Build the patched PWA in release mode (or run the dev server
-   behind the same Tailscale + Web Inspector setup used for the
-   original trace).
-2. Open it on the same iPhone. Connect via Safari Web Inspector.
-3. Open the timeline tab. Click record. Let the page idle for the
-   same ~10s window the original trace covered, with the profile
-   screen visible (where the caregiver avatar lives). Click stop,
-   export the trace as JSON.
-4. Save it alongside the original: name it
-   `user-Trace-<YYYYMMDDTHHMMSS>.json` in `/workspace/hearth/` (the
-   same place the originals live), so the existing analyzer can
-   compare before/after without modification.
-5. Run `/tmp/trace-summary.py` over both files and diff the
-   `.avatar.cg-avatar` row (and the secondary-suspect rows).
-6. Acceptance:
-   - `.avatar.cg-avatar` `PaintImage` count < 100 in 10s (was
-     41,920).
-   - `.avatar` (no `.cg-avatar`) `PaintImage` count < 100 in 10s.
-   - `.card.hero.hero-sky` `PaintImage` count ≤ 500 in 10s (was
-     4,161).
-7. If the avatar count is still elevated, drill in: open Safari
-   DevTools' Layers panel, confirm `.avatar::before` is on its own
-   compositing layer (the `.avatar` parent should be there too
-   pre-fix, but post-fix only the pseudo should re-paint on each
-   `--fire-a` tick).
-
-The user's iPhone is the merge gate. CI's full Playwright E2E leg
-(`.github/workflows/ci.yml`'s `e2e` matrix entry) still runs on every
-PR but is not the gate for this particular fix.
-
-### Manual visual check on real iOS device
-
-Open the patched PWA on a real iPhone (the user's iPhone is the
-target). Specifically check:
-
-1. The home-screen baby avatar's inset highlight flickers with the
-   same intensity and timing as before — pixel-perfect visual
-   parity is the design constraint.
-2. The profile-screen caregiver avatars' inset highlights look the
-   same.
-3. Text initials on fallback-avatar variants (no photo) are not
-   obscured by the pseudo's box-shadow — confirm readability at
-   all three sizes (38×38 caregiver, 48×48 default, 84×84 `.lg`).
-4. The 220×220 `.photo-view .avatar.lg` fallback variant (no
-   photo) renders the inset highlight with `border-radius: 28px`
-   (rounded square), not 50% (circle).
-5. Real photo variants (`.avatar` with `background-image: url(...)`)
-   show the inset highlight on top of the photo — visually identical
-   to pre-fix.
-
-This fix is invisible to the user *except that the page no longer
-grows memory*; visual regression is the most likely failure mode.
-
-## Honest gaps in this spec
-
-The spec is a prediction; the trace data after the fix lands will
-either confirm or contradict each prediction. Things I am not certain
-about, and which the iPhone trace must verify rather than trust:
-
-1. **The cascade-theory prediction** that the parent's paint buffer
-   is no longer dirtied by `--fire-a` ticks once the consumer moves
-   to a pseudo. This is the standard CSS paint-isolation model but
-   engines sometimes promote or de-promote in ways that don't match
-   intuition. Treat as a hypothesis; verify with before/after traces.
-2. **The expected magnitude of the secondary-suspect drop.** I
-   claim `.card.hero.hero-sky` should drop to ≤500, but the
-   precise split between "own `--fire-a` reads" and "cascade from
-   the avatar" is not derivable from the trace alone without
-   isolating each consumer. Set the threshold at 500 conservatively
-   and tighten if actual numbers support it.
-3. **The `<100` threshold for the avatar.** This is a working
-   target, not a measured post-fix number. The realistic floor if
-   the pseudo paints on its own layer is single-digits; if not,
-   ~8,440 (one per frame) — still vastly better than 41,920.
-   Refine the threshold based on actual post-fix captures.
-4. **The z-index / stacking interaction** between the pseudo and
-   the avatar's text content. The spec lists visual verification as
-   required; if any variant shows the pseudo obscuring the text,
-   add `z-index: -1` (push the pseudo below normal content) or
-   restructure.
-
-## Out of scope
-
-- Fixing the same pattern on `.tok`, `.card`, `.phone`, `.today-add`
-  (see "What does NOT change" above). Address only if post-fix
-  traces show they remain dominant costs after the avatar fix
-  ships.
-- Investigating whether the fire-system's 3-keyframe design
-  (`fire-a`/`fire-b`/`fire-c` at 5.3s/3.1s/8.7s) is the right
-  visual rhythm. The leak fix is orthogonal to the aesthetic
-  decision.
-- Production telemetry (sampling paint counts on real users in the
-  field).
-- The `prefers-reduced-motion` defense-in-depth addition. Pair this
-  fix with a follow-up commit if the post-fix trace is clean.
-
-## Rollout
-
-1. **Apply the `styles.css` change.**
-2. **`scripts/bump-version.sh`** (cache buster in `index.html` and
-   `sw.js`).
-3. **Add the changelog line** in `js/changelog.js`.
-4. **`node --test js/*.test.js`** (unit suite, regression gate).
-5. **Open PR.** Branch name `fix/ios-fire-memory-leak` is already
-   the PR title; description should clarify: prior commits
-   `571cb87` and `c3fb8c2` are dev-mode isolation toggles, `22382ec`
-   is the unrelated `.tok` transition fix, the new commit is the
-   actual `.avatar::before` leak fix.
-6. **After merge** (`gh pr merge <N> --merge --delete-branch`):
-   `git pull --ff-only origin main` from whichever checkout has
-   `main`, then `git push origin main`. Never leave `main` ahead of
-   `origin/main` — this is a hard `CLAUDE.md` rule.
-7. **Manual iPhone trace** (merge gate): capture a fresh trace on
-   the user's iPhone in the same conditions as the original
-   `user-Trace-20260728T215309.json`, confirm the avatar
-   `PaintImage` count is now below 100. This is the ground-truth
-   validation of the fix — re-run `node --test js/*.test.js` is
-   not.
+- The fix reduced avatar paints from 41,920 to zero.
+- The pseudo-element is on its own compositing layer.
+- The pseudo-element guarantees paint containment.
+- Ancestor paints were caused by the avatar and have now disappeared.
+- The memory leak is conclusively eliminated.
+- The app can no longer reload because of this issue.
