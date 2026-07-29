@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-07-29',
+    version: '2026-07-29',
+    features: [],
+    fixes: [
+      'Made the number picker feel smooth on iPhone when you scroll it, without changing how it looks.',
+    ]
+  },
+  {
     date: '2026-07-28',
     version: '2026-07-28',
     features: [],
