@@ -67,6 +67,8 @@ export function provisionedView() {
       <p class="onb-sub onb-tagline">This Hearth already has a family.&nbsp;<br>Sign in if you're a caregiver, or ask for an invite link.</p>
     </div>
     ${signInButtons()}
+    ${isDevMode() ? `<div class="onb-or">or</div>
+    <button class="btn-sm" data-action="dev:join">Join as dev caregiver (dev mode)</button>` : ''}
   </div>`;
 }
 

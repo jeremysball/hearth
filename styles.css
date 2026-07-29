@@ -952,7 +952,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .toast button[data-action="toast:undo"] { all: unset; cursor: pointer; background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 80%, white 20%) 0%, var(--accent) 100%); color: var(--on-accent); padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 4px oklch(0 0 0 / .15), inset 0 1px 0 oklch(1 0 0 / .25); }
 
 /* ---- onboarding ---- */
-.onboard { display: flex; flex-direction: column; gap: 16px; padding: 8px var(--pad) calc(26px + env(safe-area-inset-bottom)); overflow-y: auto; min-height: 0; flex: 1; }
+.onboard { display: flex; flex-direction: column; gap: 16px; padding: 8px var(--pad, 22px) calc(26px + env(safe-area-inset-bottom)); overflow-y: auto; min-height: 0; flex: 1; }
 .onb-top { text-align: center; padding: 20px 0 4px; }
 .onb-logo { display: block; margin: 0 auto 18px; height: 48px; width: auto; }
 .onb-sub { font-size: 14px; color: var(--muted); font-weight: 600; margin: 0 auto; max-width: 280px; line-height: 1.5; }
@@ -974,6 +974,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .theme-swatch.dayjob-boy  { background: oklch(0.42 0.09 220); }
 .onb-go { margin: 0; }
 .onb-foot { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
+.onboard .btn-sm { align-self: center; }
 
 /* ---------- spinner overlay ---------- */
 .spinner-overlay { position: fixed; inset: 0; z-index: 10000; background: oklch(0 0 0 / .35); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .18s; }
