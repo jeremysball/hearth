@@ -149,7 +149,7 @@ npm test
 
 ### Dev mode
 
-Set `DEV_MODE=true` on the server (see README's Configuration section) for a throwaway dev/test deployment: every device that boots against it gets `isDevMode()` (`js/profile.js`) auto-enabled via `/api/status`'s `devMode` field, without the usual 10-tap-the-version-stamp unlock. Onboarding (`js/onboarding.js`'s `onboardSkipDemo`) then shows a "Skip with demo data" button that fills placeholder values and calls the real `onboardFinish()` path, so a fresh instance reaches the home screen without typing in a name/birthdate/sex. Never set this on a deployment real caregivers use.
+Set `DEV_MODE=true` on the server (see README's Configuration section) for a throwaway dev/test deployment: every device that boots against it gets `isDevMode()` (`js/profile.js`) auto-enabled via `/api/status`'s `devMode` field, without the usual 10-tap-the-version-stamp unlock. On an unprovisioned instance, onboarding (`js/onboarding.js`'s `onboardSkipDemo`) shows a "Skip with demo data" button that fills placeholder values and calls the real `onboardFinish()` path. On an instance that already has a family (e.g. seeded from a copy of real data), `provisionedView()` instead shows "Join as dev caregiver", which hits `POST /api/dev/join` (`server/dev.go`, gated on `cfg.DevMode`) to create a new caregiver + session on the sole existing family with no invite token. Never set this on a deployment real caregivers use.
 
 ---
 

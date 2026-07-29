@@ -20,6 +20,10 @@ test-results/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+# Bare-numeric-filename scratch state dropped directly in .claude/ (ad hoc
+# continuation-prompt/session-handoff files, not the CONTINUATION.md
+# convention) — ephemeral and can carry personal details, never committed.
+.claude/[0-9]*
 _screenshot.js
 books/
 docs/superpowers/
