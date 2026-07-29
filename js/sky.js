@@ -296,8 +296,9 @@ export function constellationSVG(birthdate) {
   const radii = pointRadii(c.pts, c.lines);
   const lines = c.lines.map(([a, b]) =>
     `<line x1="${c.pts[a][0]}" y1="${c.pts[a][1]}" x2="${c.pts[b][0]}" y2="${c.pts[b][1]}"/>`).join('');
+  const twinkleEnabled = state().settings.starTwinkle !== false;
   const pts = c.pts.map(([x, y], i) => {
-    const twinkle = radii[i] > RADIUS_BY_ROLE.chain;
+    const twinkle = twinkleEnabled && radii[i] > RADIUS_BY_ROLE.chain;
     if (!twinkle) return `<circle cx="${x}" cy="${y}" r="${radii[i]}"/>`;
     const p = twinklePhase(x, y);
     const style = ` style="--tw-d:${(2.2 + p * 2.6).toFixed(2)}s;--tw-o:-${(p * 4).toFixed(2)}s"`;
