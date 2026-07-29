@@ -18,6 +18,11 @@ import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
 import { initSky } from './sky.js';
 
+export function setAmbientPaused(paused) {
+  if (paused) document.body.dataset.noFire = '1';
+  else delete document.body.dataset.noFire;
+}
+
 let current = 'home';
 const VIEWS = { home, trends, sleep, growth, profile, timeline };
 
