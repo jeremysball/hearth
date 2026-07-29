@@ -197,6 +197,7 @@ export function starsSVG(seedStr) {
   let seed = 0;
   for (const ch of String(seedStr)) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
   const rnd = mulberry32(seed || 42);
+  const twinkleEnabled = state().settings.starTwinkle !== false;
   let circles = '';
   for (let i = 0; i < 150; i++) {
     const x = (rnd() * 100).toFixed(1), y = (rnd() * 68).toFixed(1);
@@ -216,7 +217,7 @@ export function starsSVG(seedStr) {
     // points with only some visibly flickering. Duration/delay are randomized
     // per star so 150 points never beat in sync (same idea as the fire
     // system's coprime periods, just continuous instead of three fixed ones).
-    const twinkle = big || rnd() < 0.18;
+    const twinkle = twinkleEnabled && (big || rnd() < 0.18);
     const cls = [big && 'star-big', twinkle && 'star-twinkle'].filter(Boolean).join(' ');
     const style = twinkle ? ` style="--tw-d:${(1.6 + rnd() * 2.4).toFixed(2)}s;--tw-o:-${(rnd() * 3).toFixed(2)}s"` : '';
     circles += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${cls ? ` class="${cls}"` : ''}${style}/>`;
@@ -650,6 +651,7 @@ let tiltHandler = null;
 
 function bindParallax() {
   if (parallaxBound || reducedMotion() || lowPower) return;
+  if (state().settings.heroParallax === false) return;
   if (typeof DeviceOrientationEvent === 'undefined') return;
   parallaxBound = true;
   if (tiltGranted) { attachTilt(); return; }

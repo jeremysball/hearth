@@ -25,6 +25,8 @@ const DEFAULT = () => ({
     cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
     sound: true,
     celebrateCaregiverLogs: true,
+    heroParallax: true,
+    starTwinkle: true,
     clock24: '12h',
     darkMode: 'auto',
     seenChangelog: ''
@@ -66,6 +68,8 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.dismissedTips)) s.dismissedTips = [];
   if (typeof s.seenChangelog !== 'string') s.seenChangelog = '';
   if (typeof s.celebrateCaregiverLogs !== 'boolean') s.celebrateCaregiverLogs = true;
+  if (typeof s.heroParallax !== 'boolean') s.heroParallax = true;
+  if (typeof s.starTwinkle !== 'boolean') s.starTwinkle = true;
   if (!Array.isArray(s.playTypes)) s.playTypes = ['Tummy time', 'Reading', 'Outdoor'];
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
   if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
