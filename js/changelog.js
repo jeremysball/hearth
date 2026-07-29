@@ -6,6 +6,7 @@ export const CHANGELOG = [
     version: '2026-07-28',
     features: [],
     fixes: [
+      'Stopped the home and caregiver avatars from slowly using up more memory over time, which could eventually cause the app to reload on some phones.',
       'Fixed haptic feedback and sounds getting stuck (and silently failing over and over) after an interruption to your phone\'s audio, like a phone call or switching Bluetooth devices.',
       'Fixed the app slowly using up more and more memory the longer it stayed open, which could eventually cause it to reload unexpectedly on some phones.',
     ]
