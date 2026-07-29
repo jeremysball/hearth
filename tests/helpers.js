@@ -38,6 +38,12 @@ async function startServer(port = 18787) {
       VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || 'test-private-key',
       VAPID_SUBJECT: process.env.VAPID_SUBJECT || 'mailto:test@example.com',
       PEPPER: process.env.PEPPER || 'test-pepper-must-be-at-least-32-bytes-long',
+      // Force off regardless of this checkout's own .env: the server reads
+      // .env straight from its cwd (ROOT) at startup and only fills in a key
+      // that isn't already present in its process env, so a dev checkout
+      // with DEV_MODE=true in .env would otherwise silently leak into every
+      // test server and break dev-mode-taps.test.js's tap-counter assertions.
+      DEV_MODE: process.env.DEV_MODE || 'false',
     },
     stdio: 'pipe',
   });
