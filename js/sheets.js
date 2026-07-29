@@ -1,7 +1,7 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep, derive } from './store.js';
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
-import { router } from './app.js';
+import { router, setAmbientPaused } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes, SIZE_OPTS } from './home.js';
 
@@ -209,6 +209,7 @@ export function openSpinner(id) {
   function close() {
     overlay._closed = true;
     overlay.classList.remove('show');
+    setAmbientPaused(false);
     setTimeout(() => overlay.remove(), 200);
   }
 
@@ -436,6 +437,7 @@ export function openSpinner(id) {
   }
 
   document.body.appendChild(overlay);
+  setAmbientPaused(true);
   updateDrum(0);
   requestAnimationFrame(() => overlay.classList.add('show'));
   el._closeSpinner = close;

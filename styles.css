@@ -173,6 +173,14 @@ body {
   .seg-thumb { transition: transform 0.12s ease, width 0.12s ease; }
 }
 
+body[data-no-fire],
+body[data-no-fire] .tok,
+body[data-no-fire] .card,
+body[data-no-fire] .info-card,
+body[data-no-fire] .tabbar,
+body[data-no-fire] [data-mode="dark"] .tok,
+body[data-no-fire] [data-mode="dark"] .phone { animation: none !important; }
+
 .screen { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 18px var(--pad) 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; }
 .screen::-webkit-scrollbar { display: none; }
 
