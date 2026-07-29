@@ -58,7 +58,7 @@ await p.waitForTimeout(2000);
 await p.screenshot({ path: '/tmp/hearth-home.png' });
 ```
 
-Faster path: add `DEV_MODE=true` to the launch env vars above. That auto-enables developer mode on every device that boots against this server and adds a "Skip with demo data" button on the onboarding screen (`data-action="onboard:skip-demo"`) that reaches the home screen without filling out the form at all.
+Faster path: add `DEV_MODE=true` to the launch env vars above. That auto-enables developer mode on every device that boots against this server. On a fresh, unprovisioned `DB_PATH`, onboarding gets a "Skip with demo data" button (`data-action="onboard:skip-demo"`) that reaches the home screen without filling out the form. If instead you launched against a `DB_PATH` copied from a DB that already has a family (e.g. a copy of the live dogfood DB for realistic test data), the "This Hearth already has a family" screen gets a "Join as dev caregiver" button (`data-action="dev:join"`) that joins it directly, no invite link needed.
 
 ## Dark mode
 

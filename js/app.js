@@ -299,6 +299,7 @@ document.addEventListener('click', (ev) => {
     'onboard:photo': () => onboardPhoto(),
     'onboard:finish': () => onboardFinish(),
     'onboard:skip-demo': () => onboardSkipDemo(),
+    'dev:join': () => devJoin(),
     'profile:photo': () => profilePhoto(),
     'baby:photo': () => openBabyPhoto(),
     'prediction:info': () => openPredictionInfo(),
@@ -878,6 +879,28 @@ document.addEventListener('click', async (e) => {
     $('#toast').classList.remove('show'); deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null;
   }
 });
+
+// Dev-mode only: joins the instance's existing family as a new caregiver
+// with no invite token and no OAuth round trip (server rejects this outside
+// DEV_MODE=true), for a fresh device on an already-provisioned dev/test
+// instance where typing a real invite flow isn't worth it.
+async function devJoin() {
+  try {
+    const res = await fetch('/api/dev/join', { method: 'POST', credentials: 'include' });
+    if (!res.ok) { toast('Dev join failed (' + res.status + ')'); return; }
+    const syncRes = await fetch('/api/sync', { credentials: 'include' });
+    if (syncRes.ok) applySyncResponse(await syncRes.json());
+    state().setup = true;
+    save();
+    router.boot();
+    router.go('home');
+    syncOnce();
+    connectEvents();
+    toast('Joined as dev caregiver');
+  } catch (e) {
+    toast('Dev join failed (offline?)');
+  }
+}
 
 // ---------- server sync loop ----------
 let pendingViewRefresh = false;
