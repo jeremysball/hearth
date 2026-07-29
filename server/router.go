@@ -76,6 +76,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
 	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
 	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db, hub))
+	mux.HandleFunc("POST /api/dev/join", handleDevJoin(db, hub, cfg))
 	// index.html carries the <meta name="version"> that bump-version.sh
 	// updates on every release, and the service worker's network-first
 	// navigation handler only skips its own Cache Storage — it doesn't stop

@@ -157,7 +157,7 @@ Set both `CERT_FILE` and `KEY_FILE` to enable TLS; leave them empty for plain HT
 
 Normally, developer mode (a hidden "Test push in 15s" button in Profile) unlocks by tapping the version stamp at the bottom of the Profile tab 10 times within 2 seconds of each tap. That's meant for a real device where you don't want a stray tap turning it on by accident.
 
-For a throwaway dev/test deployment, set `DEV_MODE=true` instead: every device that boots against that server gets developer mode automatically, no tapping required, and onboarding gets an extra "Skip with demo data" button that fills in placeholder values and jumps straight to the home screen, so you don't need to fill out the real onboarding form just to get a fresh test instance up. Never set `DEV_MODE=true` on a deployment real caregivers use.
+For a throwaway dev/test deployment, set `DEV_MODE=true` instead: every device that boots against that server gets developer mode automatically, no tapping required. If the instance has no family yet, onboarding gets an extra "Skip with demo data" button that fills in placeholder values and jumps straight to the home screen. If a family already exists (e.g. a dev instance seeded from a copy of real data), the "This Hearth already has a family" screen instead gets a "Join as dev caregiver" button that joins it with no invite link or OAuth sign-in required. Never set `DEV_MODE=true` on a deployment real caregivers use.
 
 ### Recovering a locked-out caregiver
 
