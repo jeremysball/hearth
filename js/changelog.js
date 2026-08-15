@@ -7,7 +7,9 @@ export const CHANGELOG = [
     features: [
       'Timeline now has its own tab, and Trends + Growth are combined into one Insights tab.',
     ],
-    fixes: []
+    fixes: [
+      'Diaper log now says \'Poo\' instead of \'Dirty\'.'
+    ]
   },
   {
     date: '2026-07-29',
