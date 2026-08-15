@@ -524,7 +524,7 @@ func (s *pushScheduler) familyReminders(familyID string) ([]pushReminder, error)
 	json.Unmarshal([]byte(cardsJSON), &cards)
 	var cardsRaw map[string]json.RawMessage
 	json.Unmarshal([]byte(cardsJSON), &cardsRaw)
-	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true}
+	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true, "solid": true}
 	for cardType, intervalH := range cards.Intervals {
 		if excluded[cardType] || cardType == "" {
 			continue

@@ -717,7 +717,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'solid', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];
@@ -833,7 +833,7 @@ export function openCardPicker() {
 export function pickCard(type) {
   // Re-adding a hidden default just unhides it; bath/hygiene are no-interval cards; generic types need an interval.
   if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene') {
-    if (type === 'bath' || type === 'hygiene') {
+    if (type === 'bath' || type === 'hygiene' || type === 'solid') {
       const cards = state().settings.cards;
       cards.order = cards.order || ['bottle', 'medicine'];
       if (!cards.order.includes(type)) cards.order.push(type);

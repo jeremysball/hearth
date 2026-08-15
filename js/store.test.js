@@ -17,10 +17,16 @@ globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
   wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
+const { TYPES } = await import('./ui.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
 }
+
+test('solid is registered as a known type', () => {
+  assert.ok(TYPES.solid, 'TYPES.solid should exist');
+  assert.equal(TYPES.solid.label, 'Solids');
+});
 
 test('addEntry enqueues a PUT to /api/entries/:id', () => {
   const before = outboxOps().length;
