@@ -18,6 +18,7 @@ const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, upd
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
   wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 const { TYPES } = await import('./ui.js');
+const { FOOD_CATALOG, findFoodByKey, groupedCatalog } = await import('./foods.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -1375,4 +1376,20 @@ test('derive.reminders() no longer schedules bottle/meds/hygiene locally (server
   assert.ok(!keys.includes('bottle'), 'bottle should not be locally scheduled: server push already delivers it');
   assert.ok(!keys.some((k) => k.startsWith('med-')), 'medicine reminders should not be locally scheduled: server push already delivers them');
   assert.ok(!keys.some((k) => k.startsWith('hyg-')), 'hygiene reminders should not be locally scheduled: server push already delivers them');
+});
+
+test('food catalog has unique keys', () => {
+  const keys = FOOD_CATALOG.map((f) => f.key);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test('findFoodByKey finds a known food and returns null for an unknown one', () => {
+  assert.equal(findFoodByKey('banana').label, 'Banana');
+  assert.equal(findFoodByKey('not-a-real-food'), null);
+});
+
+test('groupedCatalog groups every catalog entry under its group', () => {
+  const groups = groupedCatalog();
+  const total = groups.reduce((sum, g) => sum + g.items.length, 0);
+  assert.equal(total, FOOD_CATALOG.length);
 });
