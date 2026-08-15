@@ -506,11 +506,11 @@ const FORMS = {
     ${stepperField('Amount (' + state().settings.units.volume + ')', 'f-amt', 0, 9999, 5, defaultBottleAmount())}
     ${timeRow()} ${noteRow()}`,
   diaper: () => `
-    ${field('Type', seg('kind', ['Wet', 'Dirty', 'Mixed'], 'Wet'))}
+    ${field('Type', seg('kind', ['Wet', { val: 'Dirty', label: 'Poo' }, 'Mixed'], 'Wet'))}
     <div id="diaper-size-single">${field('Size', seg('size', SIZE_OPTS, 'Medium'))}</div>
     <div id="diaper-size-mixed" hidden>
       ${field('Wet size', seg('wetSize', SIZE_OPTS, 'Medium'))}
-      ${field('Dirty size', seg('dirtySize', SIZE_OPTS, 'Medium'))}
+      ${field('Poo size', seg('dirtySize', SIZE_OPTS, 'Medium'))}
     </div>
     ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,
