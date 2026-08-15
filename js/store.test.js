@@ -11,7 +11,15 @@ globalThis.localStorage = new MemoryStorage();
 
 // Minimal DOM globals so ui.js imports cleanly under Node
 globalThis.window = globalThis;
-globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
+globalThis.addEventListener = () => {};
+globalThis.removeEventListener = () => {};
+globalThis.document = { querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {}, removeEventListener: () => {} };
+
+// sheets.js transitively imports app.js, which calls setInterval at module
+// load to drive the clock and overdue-label refresh; stub them so the test
+// runner's event loop can drain once assertions are done.
+globalThis.setInterval = () => 0;
+globalThis.setTimeout = () => 0;
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
@@ -19,6 +27,7 @@ const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, upd
   wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 const { TYPES } = await import('./ui.js');
 const { FOOD_CATALOG, findFoodByKey, groupedCatalog } = await import('./foods.js');
+const { iconGrid } = await import('./sheets.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -1392,4 +1401,14 @@ test('groupedCatalog groups every catalog entry under its group', () => {
   const groups = groupedCatalog();
   const total = groups.reduce((sum, g) => sum + g.items.length, 0);
   assert.equal(total, FOOD_CATALOG.length);
+});
+
+test('iconGrid renders an img tag when an option has an img field', () => {
+  const html = iconGrid('food-0', [{ val: 'banana', img: 'assets/foods/banana.webp', label: 'Banana' }], null);
+  assert.ok(html.includes('<img src="assets/foods/banana.webp"'), html);
+});
+
+test('iconGrid still renders a sprite use tag when an option has no img field', () => {
+  const html = iconGrid('method', [{ val: 'On own in bed', icon: 'bed-single', label: 'On own' }], null);
+  assert.ok(html.includes('<use href="#bed-single">'), html);
 });
