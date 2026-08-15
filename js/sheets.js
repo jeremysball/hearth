@@ -4,6 +4,7 @@ import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalD
 import { router, setAmbientPaused } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes, SIZE_OPTS } from './home.js';
+import { renderFoodRow, gatherFoodRows, prefillFoodRows } from './solids-form.js';
 
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
@@ -495,6 +496,10 @@ const FORMS = {
     </div>
     ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,
+  solid: () => `
+    <div id="food-rows">${renderFoodRow(0, null)}</div>
+    <button type="button" class="btn-ghost" data-action="solids:add-row">+ Add another food</button>
+    ${timeRow()} ${noteRow()}`,
   medicine: () => {
     const meds = state().settings.meds;
     if (!meds.length) return `<p class="empty-note">No medicines yet. Add one from the Medicine card on Home.</p>`;
@@ -559,6 +564,8 @@ function gather(type) {
       base.size = segVal('size'); base.wetSize = null; base.dirtySize = null;
     }
     base.rash = $('#f-rash') ? $('#f-rash').classList.contains('on') : false;
+  } else if (type === 'solid') {
+    base.foods = gatherFoodRows();
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
@@ -668,6 +675,8 @@ function prefill(type, e) {
     syncDiaperSizeVisibility(e.kind);
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
+  } else if (type === 'solid') {
+    prefillFoodRows(e.foods);
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
   else if (type === 'play') {
     if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType;
