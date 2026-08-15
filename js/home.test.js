@@ -93,3 +93,21 @@ test('home away hero at a daytime hour does not render a twilight/night sky mode
   assert.match(html, /data-state="away"/);
   assert.match(html, /Away since/);
 });
+
+test('diaper summary label reads Poo, not Dirty', () => {
+  const entry = { type: 'diaper', kind: 'Dirty', start: new Date().toISOString(), size: 'Medium' };
+  const s = summary(entry);
+  assert.equal(s.label, 'Diaper · poo');
+});
+
+test('diaper summary label for Wet is unchanged', () => {
+  const entry = { type: 'diaper', kind: 'Wet', start: new Date().toISOString(), size: 'Medium' };
+  const s = summary(entry);
+  assert.equal(s.label, 'Diaper · wet');
+});
+
+test('diaper summary label for Mixed is unchanged', () => {
+  const entry = { type: 'diaper', kind: 'Mixed', start: new Date().toISOString(), wetSize: 'Medium', dirtySize: 'Small' };
+  const s = summary(entry);
+  assert.equal(s.label, 'Diaper · mixed');
+});
