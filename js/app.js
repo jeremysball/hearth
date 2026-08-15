@@ -317,6 +317,15 @@ document.addEventListener('click', (ev) => {
       const g = el.closest('[data-icongrid]');
       if (!g) return;
       $$('.icongrid-opt', g).forEach((o) => o.classList.toggle('on', o === el));
+      // A food-picker row's "Other" tile reveals the custom-name field below
+      // it; any other pick hides it again. Scoped to food-<rowId> groups
+      // only -- the reaction icon grid has no custom-name counterpart.
+      const group = g.dataset.icongrid || '';
+      if (group.startsWith('food-')) {
+        const rowId = group.slice('food-'.length);
+        const customEl = $(`#food-custom-${rowId}`);
+        if (customEl) customEl.hidden = el.dataset.val !== '__other__';
+      }
     },
     'solids:add-row': () => {
       const container = $('#food-rows');

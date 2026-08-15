@@ -89,16 +89,8 @@ async function openEntryForEdit(page, id) {
     await page.click('[data-icongrid="food-0"] .icongrid-opt[data-val="__other__"]');
     const otherPicked = await page.$eval('[data-icongrid="food-0"] .icongrid-opt.on', (el) => el.dataset.val);
     check('picking the Other tile selects it', otherPicked === '__other__', otherPicked);
-    // KNOWN GAP: nothing unhides #food-custom-0 when Other is picked —
-    // app.js's `icongrid:pick` only toggles the `.on` class and no handler
-    // watches for `__other__`. Unhide it here so the rest of the custom-food
-    // path (typing a name -> gatherFoodRows -> saved row) is still exercised
-    // against the real UI. Delete this block once the reveal is wired.
     const revealedByPick = await page.$eval('#food-custom-0', (el) => !el.hidden);
-    if (!revealedByPick) {
-      console.log('  NOTE: picking "Other" did not reveal #food-custom-0 (reveal not wired); unhiding it to continue');
-      await page.$eval('#food-custom-0', (el) => { el.hidden = false; });
-    }
+    check('picking the Other tile reveals the custom-name field', revealedByPick);
     await page.fill('#f-food-custom-0', 'Grandma congee');
     const customFood = await saveSolid(page, beforeCustomFood);
     check('a custom food saves key: null', customFood && customFood.foods[0].key === null, JSON.stringify(customFood && customFood.foods[0]));
