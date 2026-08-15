@@ -71,11 +71,13 @@ export function insights() {
 }
 ```
 
-(`insights-view` is a plain wrapper div for any future container-level styling; it adds no visual change on its own since `.screen` already handles the scrolling flex column per `styles.css:181`.)
+(`insights-view` is a plain wrapper div for any future container-level styling; the scroll container itself is unaffected since `.screen` already handles the scrolling flex column per `styles.css:181`.)
+
+Note: `trends()` and `growth()` each render their own `.page-hd`/`<h1 class="page-title">` header, so the merged view will show two page headers ("Trends" then "Growth") in one scroll rather than a single "Insights" header — this is a deliberate consequence of the spec's "each section keeps its own internal markup/styling unchanged" requirement (Section 2), not an oversight. Confirm this reads fine visually in Task 2's manual check below before treating it as final; if it looks wrong in practice, that's a design call for a follow-up, not a blocker for this task.
 
 - [ ] **Step 2: Wire `insights` into `app.js`'s imports, `VIEWS`, and `TABS`**
 
-In `js/app.js`, change the import line that currently pulls in `trends`/`growth`:
+In `js/app.js`, `enterTrends()`/`enterGrowth()` (~lines 35-69) are local functions that query `#view` directly by CSS selector — they do NOT reference the imported `trends`/`growth` functions themselves (only `VIEWS` does, and only `showGrowthStat` from `growth.js` is used elsewhere, at the `growth:showstat` action handler). Once `trends`/`growth` are dropped from `VIEWS`, both bare imports become genuinely unused and must be removed, or the app fails its `node --check`/lint step. Change:
 
 ```js
 import { trends } from './trends.js';
@@ -83,13 +85,19 @@ import { trends } from './trends.js';
 import { growth, showGrowthStat } from './growth.js';
 ```
 
-Add the new import alongside them:
+to:
+
+```js
+import { showGrowthStat } from './growth.js';
+```
+
+(Drop the `trends` import line entirely — `insights.js` imports `trends` itself and app.js has no other use for it.)
+
+Add the new import:
 
 ```js
 import { insights } from './insights.js';
 ```
-
-(Keep the existing `trends`/`growth` imports — `enterTrends()`/`enterGrowth()` and `showGrowthStat` still need them; only `VIEWS`/`TABS` change which view keys are exposed to the router.)
 
 Change `VIEWS`:
 
@@ -144,6 +152,10 @@ Replace with:
 
 `enterTrends()`/`enterGrowth()` (defined above `router` in the same file, ~lines 35-69) keep their exact current bodies — both already query `#view` for the relevant elements (`.bar`, `.ringwrap svg circle`, `.growth-svg polyline/polygon/circle`) and animate whatever they find, so calling both unconditionally on `insights` entry animates both sections correctly without any change to either function.
 
+- [ ] **Step 3.5: Sweep for any other `trends`/`growth` reference this task's file list doesn't cover**
+
+Run `rg -n "trends|growth" --glob '!*.md' --glob '!*.test.js'` from the repo root and check every hit outside `js/trends.js`/`js/growth.js`/`js/insights.js` themselves (e.g. `js/ui.js`'s `TYPES`, `js/timeline.js`'s `FILTER_TYPES`) for a stale `'trends'`/`'growth'` view-name string this task missed. Test-file hits are handled separately in Task 5.
+
 - [ ] **Step 4: Remove the now-dead `nav:trends`/`nav:growth` action handlers, add `nav:insights`**
 
 Find the action-handler map (~`app.js:211-226`):
@@ -163,12 +175,16 @@ Replace the `nav:trends`/`nav:growth` lines with a single:
 
 leaving `nav:home`, `nav:sleep`, `nav:timeline` (already present at `app.js:226`), and `nav:profile` untouched.
 
-- [ ] **Step 5: Run the unit tests**
+- [ ] **Step 5: Run a router smoke check before the unit suite**
+
+This task's risk is a broken module graph (a bad import or a `VIEWS`/`TABS` typo throws at parse time, blanking the whole app) that `js/store.test.js` alone won't catch since it never touches `app.js`/`router.go`. First run `node --check js/app.js js/insights.js` to confirm both parse. Then load the app locally (`npx http-server -p 8080 -a 0.0.0.0` or the project's dev-serve command) and manually click through all 5 tabs (`home`/`sleep`/`timeline`/`insights`/`profile`) confirming each renders without a blank screen or console error, and that tapping Insights shows both the Trends charts and the Growth stat grid/chart on one scroll.
+
+- [ ] **Step 6: Run the unit tests**
 
 Run: `node --test js/store.test.js`
 Expected: PASS (this task touches no `store.js` logic, but confirms nothing else broke on import)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add js/insights.js js/app.js
@@ -259,7 +275,9 @@ git commit -m "docs(profile): update stale Growth-tab copy to Insights"
 
 - [ ] **Step 1: Replace every `nav:trends`/`nav:growth` click with `nav:insights`**
 
-In both files, every `await page.click('[data-action="nav:trends"]');` and `await page.click('[data-action="nav:growth"]');` becomes `await page.click('[data-action="nav:insights"]');`. Read each surrounding block first — some of these clicks are followed by assertions scoped to specific elements (e.g. `.bar`, `.growth-svg circle`) that should still resolve correctly since `insights()` renders both sections' markup in the same view; a click on `nav:insights` now triggers both `enterTrends()` and `enterGrowth()` (Task 2, Step 3), so both sets of elements will be present and animating regardless of which one a given test was originally checking.
+In both files, every `await page.click('[data-action="nav:trends"]');` and `await page.click('[data-action="nav:growth"]');` becomes `await page.click('[data-action="nav:insights"]');`.
+
+Read each surrounding block first. A click on `nav:insights` now triggers both `enterTrends()` and `enterGrowth()` unconditionally (Task 2, Step 3), so both the bar-chart family (`.bar`) and the growth-chart family (`.growth-svg polyline`/`polygon`/`circle`) animate together on every Insights entry, including a `router.refresh()`-triggered one. `tests/adr0002-animations.test.js:122-135` specifically asserts that a `refresh()` does NOT replay animations — before this change that assertion only checked the bar family (since `refresh()` on the old `growth` view called `enterGrowth()` alone); after this change it must check that **neither** family replays, so extend that assertion to also read `.growth-svg circle`'s animation-related class/attribute state, not just `.bar`. Don't blindly swap the click target and leave the assertion scoped to whichever family the original test happened to check — that would still pass even if the other family's refresh-guard broke (a green test proving nothing about the code it's meant to cover).
 
 - [ ] **Step 2: Run both specs**
 
