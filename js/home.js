@@ -444,7 +444,7 @@ function bathCard() {
 const CARD_KEYS = ['bottle', 'medicine'];
 const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard, hygiene: hygieneCard };
 // Activity types eligible as timer cards (everything loggable except notes).
-export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene'];
+export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene', 'solid'];
 
 // A generic (non-default) card only renders once it has an interval configured,
 // so legacy saved state never resurrects a card the user didn't add.

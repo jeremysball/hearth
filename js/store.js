@@ -22,7 +22,7 @@ const DEFAULT = () => ({
     playTypes: ['Tummy time', 'Reading', 'Outdoor'],
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, hygiene: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
-    cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
+    cards: { bottle: true, medicine: true, solid: true, order: ['bottle', 'medicine', 'solid'], intervals: {} },
     sound: true,
     celebrateCaregiverLogs: true,
     heroParallax: true,

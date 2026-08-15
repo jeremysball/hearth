@@ -57,6 +57,7 @@ export const TYPES = {
   play:     { icon: 'icon-play',     label: 'Play',     tone: 'play'   },
   bath:     { icon: 'icon-bath',     label: 'Bath',     tone: 'bath'   },
   hygiene:  { icon: 'icon-hygiene',  label: 'Hygiene',  tone: 'hygiene' },
+  solid:    { icon: 'utensils',      label: 'Solids',   tone: 'solid' },
   away:     { icon: 'door-open',     label: 'Away',     tone: 'note'   },
 };
 // Phosphor fallback for icons that may not exist
