@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-08-15',
+    version: '2026-08-15',
+    features: [
+      'Timeline now has its own tab, and Trends + Growth are combined into one Insights tab.',
+    ],
+    fixes: []
+  },
+  {
     date: '2026-07-29',
     version: '2026-07-29',
     features: [],
