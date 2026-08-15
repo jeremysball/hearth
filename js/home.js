@@ -15,6 +15,9 @@ export const SIZE_OPTS = [
 const SIZE_LABELS = Object.fromEntries(SIZE_OPTS.map((o) => [o.val, o.label]));
 function sizeLabel(s) { return SIZE_LABELS[s] || s; }
 
+const KIND_LABELS = { Wet: 'wet', Dirty: 'poo', Mixed: 'mixed' };
+function kindLabel(k) { return KIND_LABELS[k] || (k || '').toLowerCase(); }
+
 export function summary(e) {
   const c = TYPES[e.type] || { label: e.type };
   let label = c.label, detail = '', meta = '';
@@ -27,7 +30,7 @@ export function summary(e) {
   } else if (e.type === 'bottle') {
     label = 'Bottle · ' + (e.contents || '').toLowerCase(); detail = fmt.clock(e.start); meta = fmt.vol(e.amount);
   } else if (e.type === 'diaper') {
-    label = 'Diaper · ' + (e.kind || '').toLowerCase(); detail = fmt.clock(e.start);
+    label = 'Diaper · ' + kindLabel(e.kind); detail = fmt.clock(e.start);
     const rawSize = e.kind === 'Mixed' ? [e.wetSize, e.dirtySize].filter(Boolean) : (e.size ? [e.size] : []);
     const size = rawSize.map(sizeLabel).join('/');
     meta = [size, e.rash ? 'Rash' : ''].filter(Boolean).join(' · ');
