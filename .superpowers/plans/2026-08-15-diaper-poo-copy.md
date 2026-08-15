@@ -118,7 +118,7 @@ test('diaper summary label for Mixed is unchanged', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `node --test js/store.test.js`
+Run: `node --test js/home.test.js`
 Expected: FAIL on the first new test — `s.label` is `'Diaper · dirty'`, not `'Diaper · poo'`.
 
 - [ ] **Step 3: Add a kind-label lookup and use it in `summary()`**
@@ -146,13 +146,13 @@ to:
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `node --test js/store.test.js`
+Run: `node --test js/home.test.js`
 Expected: PASS, all three new tests green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add js/home.js js/store.test.js
+git add js/home.js js/home.test.js
 git commit -m "fix(diaper): relabel Dirty as Poo in Home/Timeline entry summaries"
 ```
 

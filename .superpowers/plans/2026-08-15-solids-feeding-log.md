@@ -79,7 +79,9 @@ Change to:
 export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene', 'solid'];
 ```
 
-This makes Solids addable via the existing card picker (`openCardPicker`/`addableCardTypes()`/`pickCard`) the same way a parent adds a Diaper or Play card today — there is no separate "shown by default" list to update; only `bottle` and `medicine` are pre-enabled for new families (`store.js:25`'s `cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], ... }`), and every other card type, Solids included, is opt-in.
+This makes Solids addable via the existing card picker (`openCardPicker`/`addableCardTypes()`/`pickCard`) the same way a parent adds a Diaper or Play card today.
+
+**Correction from spec review:** an earlier draft of this plan claimed Solids should stay opt-in like every other non-bottle/non-medicine card, with no new-family default-list change needed. That contradicts the spec's own "New-family card-default rollout" section, which explicitly requires `solid` be added to whatever default card set a fresh family gets, so a new user sees the Solids card out of the box. Two places carry this default and both need the addition — see Step 3.5 below.
 
 - [ ] **Step 4: Add `solid` to the log-type chooser**
 
@@ -95,6 +97,36 @@ Add `'solid'` (placed after `'diaper'`, matching its position in `CARD_TYPES`):
 ```js
   const types = ['sleep', 'feed', 'bottle', 'diaper', 'solid', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
 ```
+
+- [ ] **Step 3.5: Add `solid` to the new-family default card set, both client and server**
+
+Two places set the default `cards` a fresh family starts with, and both need `solid` added — check `rg "bottle.*medicine|medicine.*bottle"` across `js/store.js` and `server/` if either has moved before assuming these are the only two.
+
+In `js/store.js`, find:
+
+```js
+    cards: { bottle: true, medicine: true, order: ['bottle', 'medicine'], intervals: {} },
+```
+
+Change to:
+
+```js
+    cards: { bottle: true, medicine: true, solid: true, order: ['bottle', 'medicine', 'solid'], intervals: {} },
+```
+
+In `server/family.go`, find:
+
+```go
+	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
+```
+
+Change to:
+
+```go
+	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"solid":true,"order":["sweetspot","bottle","medicine","solid"]}`
+```
+
+An existing family's `cards` state is untouched by this change — it only affects families created after this ships, matching the spec's "New-family card-default rollout" section. No migration needed for existing families (they'd add the Solids card manually via the card picker, same as any other opt-in card, if they want it).
 
 - [ ] **Step 4.5: Exclude `solid` from the reminder-interval flows it doesn't have**
 
@@ -126,7 +158,7 @@ Change to:
 
 (`bath` is already missing from this map today — a pre-existing gap unrelated to this feature. Leave it alone; fixing it is out of scope for this plan.)
 
-Note: `server/family.go`'s `defaultCardsJSON` (the new-family default `cards` value) does *not* need a `solid` entry — it already only pre-enables `bottle`/`medicine` for new families, and Solids is opt-in like every other non-default card type (`diaper`, `play`, etc.), consistent with Step 3 above. This is the one place in the plan where "no server code changes" no longer holds in full — `push.go` does need the one-line change above, even though `entries.go`/the schema genuinely need none.
+Note: `server/family.go`'s `defaultCardsJSON` **does** need a `solid` entry — see Step 3.5 above, which already covers this edit alongside the matching `js/store.js` change. This section's earlier draft incorrectly claimed the opposite; corrected during spec review (see Task 1 Step 3's note). `push.go`'s reminder-exclusion map above is a separate, unrelated server-side edit — both are real, so "no server code changes" doesn't hold in full even though `entries.go`/the schema genuinely need none.
 
 - [ ] **Step 5: Write a failing test for the type registry**
 
