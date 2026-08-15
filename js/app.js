@@ -52,7 +52,10 @@ function enterSleep() {
 }
 
 function enterGrowth() {
-  const poly = document.querySelector('#view .growth-svg polyline');
+  // The WHO-median overlay is a separate dashed polyline that, when present,
+  // renders before the real measurement line in the SVG markup — a bare
+  // `polyline` selector would grab that overlay instead of the actual data.
+  const poly = document.querySelector('#view .growth-svg polyline:not(.who-median)');
   if (poly) {
     const len = poly.getTotalLength();
     animateGrow(poly, [

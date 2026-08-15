@@ -105,7 +105,10 @@ async function runSuite(base) {
   await page.waitForTimeout(50);
 
   const growthAnims = await page.evaluate(() => {
-    const poly = document.querySelector('.growth-svg polyline');
+    // Skip the WHO-median overlay polyline (rendered first when
+    // percentileSupported() is true) — the draw-in animation targets the
+    // actual measurement line, not the dashed reference overlay.
+    const poly = document.querySelector('.growth-svg polyline:not(.who-median)');
     const circles = [...document.querySelectorAll('.growth-svg circle')];
     const polygon = document.querySelector('.growth-svg polygon');
     return {
