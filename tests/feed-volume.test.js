@@ -37,7 +37,7 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
       }));
     });
     await page.goto(srv.base + '/');
-    await page.click('.tab[data-tab="trends"]');
+    await page.click('.tab[data-tab="insights"]');
     await page.waitForSelector('.chart-card');
     const body = await page.textContent('#view');
     const avgFeedVol = await page.locator('.stat', { hasText: 'Avg feed vol / day' }).textContent();
