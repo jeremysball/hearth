@@ -14,6 +14,7 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
+import { renderFoodRow, nextFoodRowId } from './solids-form.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
 import { initSky } from './sky.js';
@@ -316,6 +317,29 @@ document.addEventListener('click', (ev) => {
       const g = el.closest('[data-icongrid]');
       if (!g) return;
       $$('.icongrid-opt', g).forEach((o) => o.classList.toggle('on', o === el));
+    },
+    'solids:add-row': () => {
+      const container = $('#food-rows');
+      if (!container) return;
+      container.insertAdjacentHTML('beforeend', renderFoodRow(nextFoodRowId(), null));
+      initThumbs(container);
+    },
+    'solids:remove-row': () => {
+      const rowEl = el.closest('[data-food-row]');
+      const container = $('#food-rows');
+      if (!rowEl || !container) return;
+      // Always keep at least one row visible.
+      if ($$('[data-food-row]', container).length > 1) rowEl.remove();
+    },
+    'foodrow:toggle-amount': () => {
+      const rowId = d.row;
+      const segEl = $(`[data-seg="amount-${rowId}"]`);
+      const customEl = $(`#amount-custom-${rowId}`);
+      if (!segEl || !customEl) return;
+      const showingCustom = !customEl.hidden;
+      customEl.hidden = showingCustom;
+      segEl.closest('.fld').hidden = !showingCustom;
+      el.textContent = showingCustom ? 'Use custom amount instead' : 'Use the amount scale instead';
     },
     'cg:photo': () => caregiverPhoto(d.id),
     'cg:remove': () => removeCaregiver(d.id, d.name),

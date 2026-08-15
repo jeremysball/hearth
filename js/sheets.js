@@ -1,31 +1,10 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep, derive } from './store.js';
-import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
+import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb, seg, field, iconGrid } from './ui.js';
 import { router, setAmbientPaused } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes, SIZE_OPTS } from './home.js';
 
-// segmented control
-function seg(group, opts, sel) {
-  return `<div class="segctl" data-seg="${group}">` +
-    `<div class="seg-thumb"></div>` +
-    opts.map((o) => {
-      const val = typeof o === 'string' ? o : o.val;
-      const label = typeof o === 'string' ? o : o.label;
-      return `<button type="button" class="seg-opt ${val === sel ? 'on' : ''}" data-val="${esc(val)}">${esc(label)}</button>`;
-    }).join('') +
-    `</div>`;
-}
-
-export function iconGrid(group, opts, sel) {
-  return `<div class="icongrid" data-icongrid="${group}">` +
-    opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
-      (o.img ? `<img src="${esc(o.img)}" alt="" class="icongrid-img" onerror="this.outerHTML='&lt;svg class=&quot;icon&quot;&gt;&lt;use href=&quot;#utensils&quot;&gt;&lt;/use&gt;&lt;/svg&gt;'">`
-             : `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg>`) +
-      `<span>${esc(o.label)}</span></button>`).join('') +
-    `</div>`;
-}
-function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
     <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><svg class="icon"><use href="#minus"></use></svg></button>
@@ -1021,3 +1000,8 @@ export function saveMeasure(id) {
   addMeasure(m);
   sheet.close(); toast(id ? 'Measurement updated' : 'Measurement added'); router.refresh();
 }
+
+// iconGrid lives in ui.js now; re-export it so existing unit tests that
+// `import { iconGrid } from './sheets.js'` (store.test.js, sheets.test.js)
+// keep working until they're updated to import from ui.js.
+export { iconGrid };
