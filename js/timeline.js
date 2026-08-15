@@ -133,7 +133,6 @@ export function timeline() {
 
   return `
     <div class="page-hd tl-hd">
-      <button class="tl-back" data-action="nav:home" aria-label="Back to Home"><svg class="icon"><use href="#chevron-left"></use></svg></button>
       <h1 class="page-title">Timeline</h1>
     </div>
     <div class="tl-filter-wrap${filterMenuOpen ? ' open' : ''}">
