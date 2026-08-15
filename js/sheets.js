@@ -20,7 +20,9 @@ function seg(group, opts, sel) {
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
-      `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
+      (o.img ? `<img src="${esc(o.img)}" alt="" class="icongrid-img" onerror="this.outerHTML='&lt;svg class=&quot;icon&quot;&gt;&lt;use href=&quot;#utensils&quot;&gt;&lt;/use&gt;&lt;/svg&gt;'">`
+             : `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg>`) +
+      `<span>${esc(o.label)}</span></button>`).join('') +
     `</div>`;
 }
 function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
