@@ -444,6 +444,9 @@ body[data-no-fire] .tabbar { animation: none !important; }
 .page-hd { padding-top: 6px; }
 .page-title { font-family: var(--font-sans); font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
 .page-sub { font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+/* Insights merges Trends + Growth, each with its own page-hd; the tab's own
+   header (above .insights-view) replaces both instead of stacking three. */
+.insights-view .page-hd { display: none; }
 
 /* ---- dark mode ---- */
 [data-mode="dark"][data-theme="girl"] {
@@ -1086,7 +1089,6 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 
 /* ---- timeline ---- */
 .tl-hd { display: flex; align-items: center; gap: 10px; }
-.tl-back { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent-tint); color: var(--accent-ink); }
 .tl-filter-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .tl-chipbar { display: flex; align-items: center; gap: 6px; overflow: hidden; padding: 4px 0 0; }
 .tl-chip { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 7px 9px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--soft); background: color-mix(in oklch, var(--accent-tint) 60%, transparent); }
