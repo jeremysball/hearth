@@ -43,7 +43,7 @@ async function runSuite(base) {
 
   // ---------- Trends: bars animate scaleY on tab switch ----------
   console.log('--- Animations: Trends bars animate on tab switch ---');
-  await page.click('[data-action="nav:trends"]');
+  await page.click('[data-action="nav:insights"]');
   await page.waitForTimeout(50); // check early — animations run for 450ms+stagger
 
   const barAnimCount = await page.evaluate(() => {
@@ -68,7 +68,7 @@ async function runSuite(base) {
   console.log('\n--- Animations: replay on every tab switch ---');
   await page.click('[data-action="nav:home"]');
   await page.waitForTimeout(200);
-  await page.click('[data-action="nav:trends"]');
+  await page.click('[data-action="nav:insights"]');
   await page.waitForTimeout(50);
   const barAnimCount2 = await page.evaluate(() => {
     return [...document.querySelectorAll('.bar')].reduce((n, b) => n + b.getAnimations().length, 0);
@@ -101,7 +101,7 @@ async function runSuite(base) {
 
   // ---------- Growth: polyline and circles animate ----------
   console.log('\n--- Animations: Growth polyline and dots animate ---');
-  await page.click('[data-action="nav:growth"]');
+  await page.click('[data-action="nav:insights"]');
   await page.waitForTimeout(50);
 
   const growthAnims = await page.evaluate(() => {
@@ -121,18 +121,21 @@ async function runSuite(base) {
 
   // ---------- refresh() does NOT trigger animations ----------
   console.log('\n--- Animations: refresh() does NOT replay animations ---');
-  await page.click('[data-action="nav:trends"]');
+  await page.click('[data-action="nav:insights"]');
   await page.waitForTimeout(700); // let initial tab-switch animations finish
   await page.evaluate(async () => {
     const mod = await import('/js/app.js');
     mod.router.refresh();
   });
   await page.waitForTimeout(50);
-  const barAnimAfterRefresh = await page.evaluate(() => {
-    return [...document.querySelectorAll('.bar')].reduce((n, b) => n + b.getAnimations().length, 0);
+  const animsAfterRefresh = await page.evaluate(() => {
+    const bars = [...document.querySelectorAll('.bar')].reduce((n, b) => n + b.getAnimations().length, 0);
+    const growthCircles = [...document.querySelectorAll('.growth-svg circle')].reduce((n, c) => n + c.getAnimations().length, 0);
+    return { bars, growthCircles };
   });
-  console.log('  bar animations after router.refresh():', barAnimAfterRefresh);
-  check('router.refresh() does NOT trigger bar animations', barAnimAfterRefresh === 0, barAnimAfterRefresh);
+  console.log('  animations after router.refresh():', animsAfterRefresh);
+  check('router.refresh() does NOT trigger bar animations', animsAfterRefresh.bars === 0, animsAfterRefresh.bars);
+  check('router.refresh() does NOT trigger growth-svg circle animations', animsAfterRefresh.growthCircles === 0, animsAfterRefresh.growthCircles);
 
   // ---------- Reduced motion: no animations ----------
   console.log('\n--- Animations: prefers-reduced-motion suppresses all animations ---');
@@ -150,7 +153,7 @@ async function runSuite(base) {
   await onboard(page2);
   await page2.waitForTimeout(300);
 
-  await page2.click('[data-action="nav:trends"]');
+  await page2.click('[data-action="nav:insights"]');
   await page2.waitForTimeout(100);
   const reducedBarAnims = await page2.evaluate(() => {
     return [...document.querySelectorAll('.bar')].reduce((n, b) => n + b.getAnimations().length, 0);
