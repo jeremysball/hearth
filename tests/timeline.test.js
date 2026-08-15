@@ -67,24 +67,6 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     check('timeline groups under a Today header', todayInfo && todayInfo.label === 'Today', JSON.stringify(todayInfo));
     check('timeline shows the Today entry count', todayInfo && Number(todayInfo.count) >= 1, JSON.stringify(todayInfo));
 
-    const backIconExists = await page.$eval('.tl-back use', (use) => {
-      const href = use.getAttribute('href');
-      return Boolean(href && document.querySelector(href));
-    });
-    check('timeline back button icon resolves', backIconExists);
-
-    const backUsesAccentTint = await page.$eval('.tl-back', (el) => {
-      const st = getComputedStyle(el);
-      const temp = document.createElement('div');
-      temp.style.display = 'none';
-      temp.style.backgroundColor = 'var(--accent-tint)';
-      document.body.appendChild(temp);
-      const computedAccent = getComputedStyle(temp).backgroundColor;
-      document.body.removeChild(temp);
-      return st.backgroundColor === computedAccent;
-    });
-    check('timeline back button uses accent tint', backUsesAccentTint, 'expected .tl-back background to match var(--accent-tint)');
-
     await page.waitForFunction(() => document.querySelector('.tl-chipbar')?.dataset.ready === 'true');
     const visibleFilters = await page.$$eval('.tl-chipbar .tl-chip:not([hidden])', (els) => els.map((el) => el.textContent.trim()));
     check('timeline keeps bottle sleep medicine visible', visibleFilters.slice(0, 3).join(',') === 'Bottle,Sleep,Medicine', visibleFilters.join(','));
@@ -102,12 +84,12 @@ const { startServer, launchBrowser, check, tally } = require('./helpers');
     await page.click('.tl-filter-menu .tl-chip[data-type="note"]');
     await page.waitForSelector('.tl-empty');
     check('filtering to an absent type shows the filtered-empty state', true);
-    // Back returns to Home.
+    // Timeline is its own bottom tab now (no back button) — switching tabs returns to Home.
     await page.click('.tl-filter-menu .tl-chip[data-type="note"]'); // clear filter
     await page.waitForTimeout(300);
-    await page.click('.tl-back');
+    await page.click('[data-action="nav:home"]');
     await page.waitForSelector('.actions');
-    check('back returns to Home', true);
+    check('home tab returns to Home', true);
   } catch (e) {
     check('timeline test ran without throwing', false, e.message);
   } finally {

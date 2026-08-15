@@ -70,8 +70,8 @@ async function runSuite(base) {
 
   resetCounters();
 
-  // Navigate to trends — any tab works, PTR is global.
-  await page.click('[data-action="nav:trends"]');
+  // Navigate to insights — any tab works, PTR is global.
+  await page.click('[data-action="nav:insights"]');
   await page.waitForTimeout(200);
 
   // ---------- #ptr indicator exists in DOM ----------

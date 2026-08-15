@@ -123,7 +123,7 @@ export function profile() {
         <button type="button" class="theme-opt${b.sex === 'girl' ? ' on' : ''}" data-action="sex:pick" data-sex="girl"><span>Girl</span></button>
         <button type="button" class="theme-opt${b.sex === 'boy' ? ' on' : ''}" data-action="sex:pick" data-sex="boy"><span>Boy</span></button>
       </div>
-      <p class="empty-note">Used to calculate growth percentiles on the Growth tab.</p>
+      <p class="empty-note">Used to calculate growth percentiles on the Insights tab.</p>
     </div>
 
     <div class="sec-label">Appearance</div>

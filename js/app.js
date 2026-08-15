@@ -4,9 +4,9 @@ import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, apply
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
-import { trends } from './trends.js';
 import { sleep, predictionSourceInfo } from './sleep.js';
-import { growth, showGrowthStat } from './growth.js';
+import { showGrowthStat } from './growth.js';
+import { insights } from './insights.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion, enableDevMode } from './profile.js';
 import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, onboardSkipDemo, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
@@ -24,11 +24,11 @@ export function setAmbientPaused(paused) {
 }
 
 let current = 'home';
-const VIEWS = { home, trends, sleep, growth, profile, timeline };
+const VIEWS = { home, sleep, insights, profile, timeline };
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
-  { v: 'trends', icon: 'chart-bar', label: 'Trends' }, { v: 'growth', icon: 'ruler', label: 'Growth' },
+  { v: 'timeline', icon: 'scroll-text', label: 'Timeline' }, { v: 'insights', icon: 'chart-bar', label: 'Insights' },
   { v: 'profile', icon: 'user', label: 'Profile' }
 ];
 
@@ -52,7 +52,10 @@ function enterSleep() {
 }
 
 function enterGrowth() {
-  const poly = document.querySelector('#view .growth-svg polyline');
+  // The WHO-median overlay is a separate dashed polyline that, when present,
+  // renders before the real measurement line in the SVG markup — a bare
+  // `polyline` selector would grab that overlay instead of the actual data.
+  const poly = document.querySelector('#view .growth-svg polyline:not(.who-median)');
   if (poly) {
     const len = poly.getTotalLength();
     animateGrow(poly, [
@@ -113,9 +116,8 @@ export const router = {
     $('#view').scrollTop = 0;
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === view));
     updateProfileTabBadge();
-    if (view === 'trends') enterTrends();
+    if (view === 'insights') { enterTrends(); enterGrowth(); }
     else if (view === 'sleep') enterSleep();
-    else if (view === 'growth') enterGrowth();
   },
   refresh() {
     if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); initSky(); if (current === 'timeline') initTimelineFilters(); }
@@ -209,9 +211,8 @@ document.addEventListener('click', (ev) => {
   const d = el.dataset;
   const map = {
     'nav:home': () => router.go('home'),
-    'nav:trends': () => router.go('trends'),
     'nav:sleep': () => router.go('sleep'),
-    'nav:growth': () => router.go('growth'),
+    'nav:insights': () => router.go('insights'),
     'growth:showstat': () => { showGrowthStat(d.stat); router.refresh(); },
     'nav:profile': () => {
       const scrollAfterOpen = hasUnseenChangelog();
