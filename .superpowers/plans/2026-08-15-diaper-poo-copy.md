@@ -23,7 +23,7 @@
 
 **Files:**
 - Modify: `js/sheets.js:509` (the `diaper` form template in the `FORMS` object)
-- Modify: `js/sheets.js:512` (the "Dirty size" field label inside the Mixed sub-form)
+- Modify: `js/sheets.js:513` (the "Dirty size" field label inside the Mixed sub-form)
 - Test: `tests/diaper-mixed-size.test.js` (existing suite — verify it still passes; it asserts on `data-val="Dirty"`, not display text, so no test code changes are expected, but run it to confirm)
 
 **Interfaces:**
@@ -84,7 +84,7 @@ git commit -m "fix(diaper): relabel Dirty diaper type as Poo in the log form"
 
 **Files:**
 - Modify: `js/home.js` (the `summary()` function, ~line 18-53)
-- Test: `js/store.test.js` if it has a `summary()` unit test today (check for one; if none exists, add one — see Step 1 below)
+- Test: `js/home.test.js` (existing suite — it already imports `summary` from `home.js` via `const { bathDaysSinceLabel, home, summary } = await import('./home.js');` at line 15, with a proven mock DOM harness that other `summary()` tests already run under, e.g. the `play` entry tests at lines 33-38 — add the new diaper tests here, not `js/store.test.js`, whose minimal DOM shim isn't proven against `home.js`'s import chain)
 
 **Interfaces:**
 - Consumes: `summary(e)` export from `js/home.js`, already used by both `js/home.js`'s own Today card and `js/timeline.js`'s day-log rows (`import { summary, hasUnshownNote } from './home.js'` in `timeline.js:4`) — this is the single shared renderer for both surfaces, so one fix covers both.
@@ -92,11 +92,9 @@ git commit -m "fix(diaper): relabel Dirty diaper type as Poo in the log form"
 
 - [ ] **Step 1: Write the failing test**
 
-Check whether `js/store.test.js` already imports/tests `summary()` from `home.js`. If not, add a small new test block at the end of the file (matching the file's existing `test(...)` style — read a couple of existing tests in the file first to match import style and assertion helpers used):
+Add a new test block to `js/home.test.js`, following the file's existing style (see the `play`-entry tests around lines 33-38 for the import/assertion pattern already proven to run under this file's mock harness):
 
 ```js
-import { summary } from './home.js';
-
 test('diaper summary label reads Poo, not Dirty', () => {
   const entry = { type: 'diaper', kind: 'Dirty', start: new Date().toISOString(), size: 'Medium' };
   const s = summary(entry);

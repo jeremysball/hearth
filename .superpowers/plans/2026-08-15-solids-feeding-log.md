@@ -6,7 +6,7 @@
 
 **Architecture:** `solid` slots into every existing type registry (`TYPES`, `FILTER_TYPES`, `CARD_TYPES`, `FORMS`) the same way every other entry type does. The one genuinely new piece of machinery is the multi-food row UI: existing per-type-global helpers (`seg`/`segVal`/`setSeg`, `iconGrid`/`setIconGrid`) already scope by an arbitrary `data-seg`/`data-icongrid` group-name string, so giving each food row a unique, row-id-suffixed group name (`amount-0`, `reaction-1`, etc.) lets those helpers work unmodified — the new code is a small row-aware wrapper (`gatherFoodRows()`/`prefillFoodRows()`) that enumerates rows and calls the existing per-group helpers, plus a small `iconGrid()` extension to render an `<img>` for food icons (which have no Lucide sprite equivalent) alongside its existing sprite-`<use>` rendering. The Home card skips `genericCard()`'s reminder-interval scheduling entirely (Solids has none) via its own `CARD_RENDER` entry, same pattern already used by `bottleCard`/`medicineCard`/`bathCard`/`hygieneCard`. The rollup view follows the exact "non-tab view reached from a card, with a back-to-Home button" pattern `timeline.js` used before this batch's tab-bar restructure promoted it to a tab.
 
-**Tech Stack:** Vanilla JS, no framework, Go+SQLite backend (no schema changes needed — `server/entries.go` is already fully generic over `type`). Tests: `node --test js/store.test.js` (unit), Playwright specs under `tests/`, `go test ./server/...` for the backend confirmation test.
+**Tech Stack:** Vanilla JS, no framework, Go+SQLite backend (no schema changes needed — `server/entries.go` is already fully generic over `type`; the one server-side edit this plan does make is a one-line addition to `server/push.go`'s reminder-exclusion map, Task 1 Step 4.5). Tests: `node --test js/store.test.js` (unit), Playwright specs under `tests/`, `go test ./server/...` for the backend confirmation test.
 
 **Spec:** `.superpowers/specs/2026-08-15-dogfood-solids-nav-design.md`, Section 3 ("Solids feeding log")
 
@@ -28,7 +28,8 @@
 - Modify: `js/ui.js:49-61` (`TYPES` object)
 - Modify: `js/timeline.js` (`FILTER_TYPES`, currently built from `PINNED_FILTERS`/`OPTIONAL_FILTERS` at ~line 38-40)
 - Modify: `js/home.js:444` (`CARD_TYPES` array)
-- Modify: `js/sheets.js:719-720` (`openTypeChooser`'s hardcoded `types` array)
+- Modify: `js/sheets.js:719-720` (`openTypeChooser`'s hardcoded `types` array), `js/sheets.js` `pickCard(type)`'s no-interval-card branch (Step 4.5)
+- Modify: `server/push.go`'s `excluded` map (~line 527, Step 4.5) — excludes `solid` from reminder scheduling, matching the spec
 - Test: `js/store.test.js` (add/extend any test that enumerates known types by name — search the file for existing type-list assertions first)
 
 **Interfaces:**
@@ -95,6 +96,38 @@ Add `'solid'` (placed after `'diaper'`, matching its position in `CARD_TYPES`):
   const types = ['sleep', 'feed', 'bottle', 'diaper', 'solid', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
 ```
 
+- [ ] **Step 4.5: Exclude `solid` from the reminder-interval flows it doesn't have**
+
+Solids has no reminder scheduling (per the spec and the Global Constraints above), but two existing places special-case which types skip the generic "Remind every (hours)" interval machinery, and both currently only cover `bath`/`hygiene` — `solid` needs to join that list in both, or the card-add flow will incorrectly prompt for a reminder interval and the push-scheduler will incorrectly try to schedule one.
+
+In `js/sheets.js`, find `pickCard(type)`:
+
+```js
+    if (type === 'bath' || type === 'hygiene') {
+```
+
+Change to:
+
+```js
+    if (type === 'bath' || type === 'hygiene' || type === 'solid') {
+```
+
+In `server/push.go`, find the `excluded` map (~line 527):
+
+```go
+	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true}
+```
+
+Change to:
+
+```go
+	excluded := map[string]bool{"bottle": true, "medicine": true, "hygiene": true, "solid": true}
+```
+
+(`bath` is already missing from this map today — a pre-existing gap unrelated to this feature. Leave it alone; fixing it is out of scope for this plan.)
+
+Note: `server/family.go`'s `defaultCardsJSON` (the new-family default `cards` value) does *not* need a `solid` entry — it already only pre-enables `bottle`/`medicine` for new families, and Solids is opt-in like every other non-default card type (`diaper`, `play`, etc.), consistent with Step 3 above. This is the one place in the plan where "no server code changes" no longer holds in full — `push.go` does need the one-line change above, even though `entries.go`/the schema genuinely need none.
+
 - [ ] **Step 5: Write a failing test for the type registry**
 
 In `js/store.test.js`, add (near any existing test that already imports `TYPES` from `ui.js`, or add the import if none exists):
@@ -116,7 +149,7 @@ Expected: PASS
 - [ ] **Step 7: Commit**
 
 ```bash
-git add js/ui.js js/timeline.js js/home.js js/sheets.js js/store.test.js
+git add js/ui.js js/timeline.js js/home.js js/sheets.js js/store.test.js server/push.go
 git commit -m "feat(solid): register the solid entry type across TYPES/FILTER_TYPES/CARD_TYPES/type-chooser"
 ```
 
@@ -314,14 +347,14 @@ Change to:
 export function iconGrid(group, opts, sel) {
   return `<div class="icongrid" data-icongrid="${group}">` +
     opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
-      (o.img ? `<img src="${esc(o.img)}" alt="" class="icongrid-img" onerror="this.replaceWith(Object.assign(document.createElement('span'), {innerHTML: '<svg class=\\'icon\\'><use href=\\'#utensils\\'></use></svg>'}).firstChild)">`
+      (o.img ? `<img src="${esc(o.img)}" alt="" class="icongrid-img" onerror="this.outerHTML='&lt;svg class=&quot;icon&quot;&gt;&lt;use href=&quot;#utensils&quot;&gt;&lt;/use&gt;&lt;/svg&gt;'">`
              : `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg>`) +
       `<span>${esc(o.label)}</span></button>`).join('') +
     `</div>`;
 }
 ```
 
-The inline `onerror` handler is the missing-icon-asset fallback described in Task 3 — if a catalog entry's `.webp` file doesn't exist yet (icon generation hasn't shipped for that food), the tile swaps to the utensils sprite icon instead of showing a broken image, so the food picker never looks broken regardless of icon-generation progress.
+The inline `onerror` handler is the missing-icon-asset fallback described in Task 3 — if a catalog entry's `.webp` file doesn't exist yet (icon generation hasn't shipped for that food), the tile swaps to the utensils sprite icon instead of showing a broken image, so the food picker never looks broken regardless of icon-generation progress. The replacement markup is written with HTML entities (`&lt;`/`&quot;`) rather than raw `<`/`"`/nested `'` characters — the browser's attribute parser decodes those entities into the real markup before the JS ever runs, so this sidesteps the quote-nesting bugs that an inline mix of single and double quotes inside an `onerror="..."` attribute is prone to (the original draft mixed both and would have broken the attribute's own delimiters).
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -339,6 +372,8 @@ git commit -m "feat(solid): extend iconGrid to render food images with a sprite 
 
 ### Task 5: Row-scoped multi-food form machinery
 
+Note on scope: this task (module + action handlers + a DOM test whose exact home is decided at implementation time) and Task 6 (form template + gather/prefill wiring + the end-to-end Playwright spec) could each be split further into a pure-logic sub-task and a DOM/event-wiring sub-task. Left combined here because neither task's pieces are independently shippable or reviewable on their own — `renderFoodRow`/`gatherFoodRows` have no caller until the action handlers and form template exist, and a reviewer evaluating "does the row machinery work" needs to see it wired end-to-end to judge it, not just the module in isolation. Splitting would add two more subagent review gates for no corresponding gain in reviewability.
+
 **Files:**
 - Create: `js/solids-form.js`
 - Modify: `js/app.js` (two new action handlers: `solids:add-row`, `solids:remove-row`)
@@ -348,18 +383,25 @@ git commit -m "feat(solid): extend iconGrid to render food images with a sprite 
 - Consumes: `iconGrid`, `seg`, `field` (all exported or made exportable from `js/sheets.js` — `seg`/`field` are currently module-private; this task exports them, see Step 1), `FOOD_CATALOG`/`groupedCatalog` from `js/foods.js`.
 - Produces: `renderFoodRow(rowId, prefillRow)` — returns an HTML string for one food row (`prefillRow` optional, used when editing an existing entry). `gatherFoodRows()` — reads every currently-rendered row from the DOM and returns a `foods` array matching the Data shape in the spec. `prefillFoodRows(foods)` — given an entry's `foods` array, replaces the sheet's row container content with one rendered+prefilled row per array element (used by `sheets.js`'s `prefill()` for editing). Later tasks (Task 6) call all three from `sheets.js`.
 
-- [ ] **Step 1: Export `seg` and `field` from `sheets.js`**
+- [ ] **Step 1: Move `seg`, `field`, and `iconGrid` from `sheets.js` to `ui.js`, exported from there**
 
-In `js/sheets.js`, `seg` (line 9) and `field` (line 26) are currently module-private (`function seg(...)`, `function field(...)`). Add `export` to both:
+`js/solids-form.js` (written in Step 2 below) needs `seg`/`field`/`iconGrid`, and `js/sheets.js` needs to import `renderFoodRow`/`gatherFoodRows`/`prefillFoodRows` back from `solids-form.js` in Task 6. Simply adding `export` to `seg`/`field` in place (leaving them defined in `sheets.js`) would create a circular import: `sheets.js → solids-form.js → sheets.js`. ES modules tolerate some circular imports, but not reliably when the imported bindings are consumed at module-evaluation time (as `FORMS` object literals are) rather than only inside function bodies — don't rely on it working.
+
+Avoid the cycle by relocating `seg`, `field`, and `iconGrid` to `js/ui.js`, which has no dependency on `sheets.js` today (confirm this with `rg "from './sheets.js'" js/ui.js` before proceeding — it should return nothing):
+
+1. Cut the full function bodies of `seg` (`sheets.js:9`), `field` (`sheets.js:26`), and `iconGrid` (`sheets.js:20-24`, already modified by Task 4) out of `js/sheets.js` and paste them into `js/ui.js`, each with `export` added:
 
 ```js
 export function seg(group, opts, sel) { ... }
-```
-```js
 export function field(label, inner) { ... }
+export function iconGrid(group, opts, sel) { ... }
 ```
 
-No other change to either function — this only makes them importable from the new module.
+(Keep their bodies exactly as they are in `sheets.js` today, plus Task 4's `img`-fallback change to `iconGrid` — this step only moves *where* the functions live, it doesn't change their logic.)
+
+2. In `js/sheets.js`, add `seg`, `field`, and `iconGrid` to the existing `import { ... } from './ui.js'` line at the top of the file, and delete the old local definitions.
+
+3. Run `node --test js/store.test.js` and confirm nothing broke — `sheets.js`'s own callers of `seg`/`field`/`iconGrid` are unaffected since the import gives them the same names in the same module scope.
 
 - [ ] **Step 2: Write `js/solids-form.js`**
 
@@ -369,9 +411,8 @@ No other change to either function — this only makes them importable from the 
 // already scope by an arbitrary group-name string, so giving each food row
 // a unique, row-id-suffixed group name lets them work unmodified here --
 // this module is the row-aware wrapper around them, not a replacement.
-import { $, $$, esc } from './ui.js';
-import { seg, field, iconGrid } from './sheets.js';
-import { groupedCatalog } from './foods.js';
+import { $, $$, esc, seg, field, iconGrid } from './ui.js';
+import { groupedCatalog, findFoodByKey } from './foods.js';
 
 const AMOUNT_OPTS = ['None', 'Little', 'Some', 'Most', 'All'];
 const REACTION_OPTS = [
@@ -428,10 +469,16 @@ export function gatherFoodRows() {
     const isCustom = foodVal === '__other__';
     const customInput = $(`#f-food-custom-${rowId}`);
     const key = isCustom ? null : foodVal;
-    const label = isCustom ? (customInput ? customInput.value.trim() : '') : (foodVal || '');
+    // For a catalog pick, store the catalog's display label ('Banana'), not
+    // the raw catalog key ('banana') -- gatherFoodRows previously stored the
+    // key itself here, which meant every non-custom row rendered its saved
+    // label as the lowercase key instead of the proper display text.
+    const catalogFood = !isCustom && foodVal ? findFoodByKey(foodVal) : null;
+    const label = isCustom ? (customInput ? customInput.value.trim() : '') : (catalogFood ? catalogFood.label : (foodVal || ''));
 
     const amountCustomInput = $(`#f-amount-custom-${rowId}`);
-    const amountCustomVisible = !$(`#amount-custom-${rowId}`).hidden;
+    const amountCustomEl = $(`#amount-custom-${rowId}`);
+    const amountCustomVisible = !!amountCustomEl && !amountCustomEl.hidden;
     const amountSel = $(`[data-seg="amount-${rowId}"] .seg-opt.on`);
 
     const reactionSel = $(`[data-icongrid="reaction-${rowId}"] .icongrid-opt.on`);
@@ -934,6 +981,8 @@ git commit -m "feat(solid): generate and precache food icon assets"
 ---
 
 ### Task 11: Backend confirmation test for `type: 'solid'` payloads
+
+Note on ordering: this task is deliberately last rather than moved next to Task 1, even though it's cheap and validates an assumption (`entries.go`'s generic upsert handler round-trips a `foods` array unchanged) that every earlier UI task implicitly relies on. Running it first would catch a wrong assumption sooner, but the assumption itself was independently verified by reading `server/entries.go` before this plan was written (it stores `payload_json` as the raw request body regardless of `type` — there's no field allowlist to trip over), so the risk this task is actually guarding against is low. Left at the end to keep all-Go and all-JS work each contiguous rather than interleaved; move it earlier if the implementer wants the extra confidence before starting Task 5's UI work.
 
 **Files:**
 - Modify: `server/entries_test.go`
