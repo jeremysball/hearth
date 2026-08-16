@@ -22,7 +22,23 @@ export function isDevMode() { return localStorage.getItem(DEV_MODE_KEY) === '1';
 // Server-driven dev mode (DEV_MODE=1 env var) skips the 10-tap secret
 // entirely, for a dev/test deployment where every device should start in
 // dev mode without anyone needing to know the unlock gesture.
-export function enableDevMode() { localStorage.setItem(DEV_MODE_KEY, '1'); }
+export function enableDevMode() {
+  const wasOn = localStorage.getItem(DEV_MODE_KEY) === '1';
+  localStorage.setItem(DEV_MODE_KEY, '1');
+  // The fetch wrapper in app.js caches this flag. When boot enables it,
+  // app.js may have already loaded and cached false. Storage events do
+  // not fire in the tab that wrote the value, so dispatch one for it.
+  if (!wasOn) {
+    try { window.dispatchEvent(new StorageEvent('storage', { key: DEV_MODE_KEY, newValue: '1' })); } catch {}
+  }
+}
+export function disableDevMode() {
+  const wasOn = localStorage.getItem(DEV_MODE_KEY) === '1';
+  localStorage.removeItem(DEV_MODE_KEY);
+  if (wasOn) {
+    try { window.dispatchEvent(new StorageEvent('storage', { key: DEV_MODE_KEY, newValue: null })); } catch {}
+  }
+}
 
 // Android-style hidden unlock: tap the build stamp 10× within 2s of each tap.
 // Returns { enabled, remaining } so callers can toast countdown progress on

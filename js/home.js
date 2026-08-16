@@ -2,7 +2,7 @@
 import { state, derive, ageLabel } from './store.js';
 const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
-import { predictionSourceInfo } from './sleep.js';
+import { predictionSourceInfo } from './prediction-source.js';
 import { heroSky, emberGlow } from './sky.js';
 
 // Diaper size options: stored value stays "Small"/"Medium"/"Large" but the

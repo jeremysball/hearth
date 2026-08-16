@@ -1,33 +1,14 @@
 // sleep.js: 24h ring, naps, SweetSpot schedule, night summary.
 import { state, derive, startOfDay } from './store.js';
 import { fmt } from './ui.js';
+import { predictionSourceInfo } from './prediction-source.js';
+// Re-export for backward compat: sleep.test.js and external callers historically
+// imported predictionSourceInfo from './sleep.js'. New code should import from
+// './prediction-source.js' directly so Home doesn't pull sleep.js.
+export { predictionSourceInfo } from './prediction-source.js';
 
 const MIN = 60000;
 function hoursInto(d, dayStart) { return (new Date(d) - dayStart) / 3600000; }
-
-export function predictionSourceInfo(prediction) {
-  const name = state().baby.name || 'your baby';
-  const n = prediction?.sampleSize || 0;
-  if (prediction?.source === 'personal') {
-    return {
-      cls: 'src-personal',
-      heading: `Personalized to ${name}`,
-      body: `Based on ${name}'s own nap pattern from the last 21 days (${n} naps logged).`,
-    };
-  }
-  if (prediction?.source === 'blend') {
-    return {
-      cls: 'src-learning',
-      heading: `Learning ${name}'s pattern`,
-      body: `Blending ${name}'s own naps with typical ranges for this age (${n} nap${n === 1 ? '' : 's'} logged in the last 21 days). Personalizes further as you log more.`,
-    };
-  }
-  return {
-    cls: 'src-generic',
-    heading: 'Generic estimate',
-    body: `Not enough naps logged yet, so this window uses typical timing for this age. Log a few more naps to personalize it.`,
-  };
-}
 
 export function sleep() {
   const dayStart = startOfDay(Date.now());
