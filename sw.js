@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-08-16T02:29Z'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-08-16T13:32Z'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -18,18 +18,24 @@ const SHELL = [
   './icons/icon-maskable-512.png',
   './icons/og-image.png',
   './icons/apple-touch-icon.png',
+  // Shell JS, only the modules Home actually needs on first paint are
+  // precached eagerly. Sleep/Insights and their deps (growth, trends,
+  // growth-percentiles, growth-percentiles-data) are lazy `import()`ed
+  // from app.js, so they are fetched on demand + prefetched on idle rather
+  // than parsed eagerly on Home. Why this still matters with individual
+  // files (not a bundle): `import { sleep } from './sleep.js'` in app.js
+  // forces the browser to fetch *and parse* sleep.js before Home can paint,
+  // even though Home never calls sleep(). Native ESM has no cross-file
+  // tree-shaking, static imports are eager. Dynamic import() defers that
+  // parse until the user visits the tab. The SHELL list is the SW's own
+  // offline cache; keeping it small keeps that install fast too.
   './js/app.js',
   './js/store.js',
   './js/ui.js',
   './js/sheets.js',
   './js/home.js',
   './js/sky.js',
-  './js/trends.js',
-  './js/sleep.js',
-  './js/growth.js',
-  './js/insights.js',
-  './js/growth-percentiles.js',
-  './js/growth-percentiles-data.js',
+  './js/prediction-source.js',
   './js/profile.js',
   './js/changelog.js',
   './js/reminders.js',
@@ -37,7 +43,17 @@ const SHELL = [
   './js/sync.js',
   './js/join.js',
   './js/fx.js',
-  './js/log.js'
+  './js/log.js',
+  // Lazy tabs, NOT precached. Fetched via native dynamic import() when
+  // the user first visits the tab (and prefetched on idle from app.js).
+  // Kept listed here as documentation of what is intentionally excluded and
+  // why; they are runtime dependencies of the app, not shell assets.
+  //   './js/sleep.js',
+  //   './js/trends.js',
+  //   './js/growth.js',
+  //   './js/insights.js',
+  //   './js/growth-percentiles.js',
+  //   './js/growth-percentiles-data.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -61,7 +77,21 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  // Developer mode bypasses every cache layer: always go to the network.
+  // Activate via `?dev=1` (survives the next reload even before JS runs),
+  // or via localStorage `hearth.devMode` checked after the first load.
+  // Without this, a hot iteration loop (edit → refresh) would still read
+  // stale JS from Cache Storage / HTTP cache. Normal users never send dev=1.
+  const isDevBypass = url.searchParams.has('dev') || req.headers.get('X-Hearth-Dev') === '1';
+  if (isDevBypass) return;
+
   // App navigations: network-first, fall back to cached shell (offline).
+  // No `immutable` here, these are unhashed filenames (index.html). The
+  // update signal is the VERSION string bump + server's Cache-Control:
+  // no-store on index.html/sw.js. `immutable` only makes sense for
+  // content-hashed filenames (app.a1b2c3.js) whose bytes never change;
+  // slapping it on unhashed files would let the browser's HTTP cache pin a
+  // stale copy for a year and ignore the VERSION bump.
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req).catch(() => caches.match('/index.html'))
@@ -88,10 +118,14 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // API requests must always hit the network — never serve from cache.
+  // API requests must always hit the network, never serve from cache.
   if (url.pathname.startsWith('/api/')) return;
 
   // Same-origin assets: cache-first.
+  // Tabs that were lazy-imported (sleep/insights/growth/...) still get
+  // cached after their first fetch via the put() below, offline still
+  // works, we just don't precache them on install. Only the SHELL list
+  // above is precached eagerly.
   e.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
       const copy = res.clone();
