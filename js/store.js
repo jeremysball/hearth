@@ -1,7 +1,7 @@
 // store.js: Hearth state, persistence, derived data, seeding.
 import { enqueue, mergeById, clearSyncState, loadOutbox } from './sync.js';
 import { log } from './log.js';
-import { QUICK_TYPES } from './home.js';
+import { QUICK_TYPES } from './quick-types.js';
 
 let _syncTrigger = null;
 export function setSyncTrigger(fn) { _syncTrigger = fn; }

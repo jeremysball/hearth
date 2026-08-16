@@ -4,6 +4,8 @@ const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './prediction-source.js';
 import { heroSky, emberGlow } from './sky.js';
+import { QUICK_TYPES } from './quick-types.js';
+export { QUICK_TYPES };
 
 // Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
 // "Small" option is rendered as "Little" in the UI.
@@ -490,11 +492,6 @@ function addCardBtn() {
   return `<button class="add-card" data-action="card:add"><svg class="icon"><use href="#plus"></use></svg> Add card</button>`;
 }
 
-// Every type the Home quick-action orbs can show, in the pre-customization
-// order. Doubles as the universe of choices for the quick-actions picker
-// sheet and (imported into store.js) the default/seed for
-// settings.homeQuickOrder.
-export const QUICK_TYPES = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'hygiene'];
 
 export function home() {
   const b = state().baby;
