@@ -13,8 +13,8 @@ import (
 var requestGeoIP *geoIP
 
 // logMiddleware logs every API request with origin, auth, and timing context.
-// Static file requests (no /api/ prefix) are logged at a lower signal — only
-// non-200 responses — to avoid noise from the shell assets.
+// Static file requests (no /api/ prefix) are logged at a lower signal, only
+// non-200 responses, to avoid noise from the shell assets.
 func logMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -58,6 +58,30 @@ func (sw *statusWriter) setSession(session SessionInfo) {
 	sw.session = session
 }
 
+// cacheControl handles the HTTP-cache story in one place.
+// Hearth's assets are unhashed filenames (styles.css, js/app.js, etc.).
+// The release signal is the VERSION string bump, sw.js uses it as its
+// Cache Storage key and index.html carries it as <meta name="version">.
+// Why no `immutable` on JS/CSS: `immutable` is for content-hashed files
+// (app.a1b2c3.js) whose bytes never change under the same URL. Our files
+// do change in place on every deploy, `immutable` would let the browser's
+// HTTP cache pin a stale copy for a year and ignore the VERSION bump until
+// that entry expired. Instead, non-entry-point assets are left cacheable
+// with the server's default headers (revalidated with If-None-Match/ETag),
+// while the two entry points that gate updates are forced to revalidate
+// (no-store, see serveShell/sw.js below). Developer mode (`?dev=1` or
+// X-Hearth-Dev: 1) bypasses all of this, no caching at any layer, so a
+// hot edit→refresh loop always hits the network. See sw.js fetch handler
+// for the Cache Storage counterpart.
+func cacheControl(next http.Handler, cfg Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("dev") == "1" || r.Header.Get("X-Hearth-Dev") == "1" || cfg.DevMode {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushScheduler) http.Handler {
 	var staticFS fs.FS = hearth.StaticFS
 	if staticDir != "" {
@@ -79,7 +103,7 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/dev/join", handleDevJoin(db, hub, cfg))
 	// index.html carries the <meta name="version"> that bump-version.sh
 	// updates on every release, and the service worker's network-first
-	// navigation handler only skips its own Cache Storage — it doesn't stop
+	// navigation handler only skips its own Cache Storage, it doesn't stop
 	// the browser's HTTP cache from silently satisfying that fetch with a
 	// stale copy. Same reasoning as the sw.js route below: force revalidation
 	// so a device can't get pinned to an old shell.
@@ -114,6 +138,6 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/auth/resolve", handleResolve(db, hub))
 	mux.HandleFunc("GET /{$}", serveShell)
 	mux.HandleFunc("GET /index.html", serveShell)
-	mux.Handle("/", http.FileServerFS(staticFS))
+	mux.Handle("/", cacheControl(http.FileServerFS(staticFS), cfg))
 	return logMiddleware(mux)
 }

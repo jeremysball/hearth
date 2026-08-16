@@ -657,6 +657,32 @@ function bindParallax() {
   parallaxBound = true;
   if (tiltGranted) { attachTilt(); return; }
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // If the OS permission is already decided, respect it without adding a
+    // new touchend listener on every cold load. Permissions API is the only
+    // way to query without prompting, without it we re-prompt after every
+    // reload even after Allow (tiltGranted is in-memory only, parallaxBound
+    // is reset by detachTilt/teardownSky).
+    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+      navigator.permissions.query({ name: 'gyroscope' }).then((status) => {
+        if (status.state === 'granted') { tiltGranted = true; attachTilt(); return; }
+        if (status.state === 'denied') return;
+        const ask = () => {
+          DeviceOrientationEvent.requestPermission()
+            .then((r) => { if (r === 'granted') { tiltGranted = true; attachTilt(); } })
+            .catch(() => {});
+        };
+        document.addEventListener('touchend', ask, { once: true });
+        status.onchange = () => { if (status.state === 'granted') { tiltGranted = true; attachTilt(); } };
+      }).catch(() => {
+        const ask = () => {
+          DeviceOrientationEvent.requestPermission()
+            .then((r) => { if (r === 'granted') { tiltGranted = true; attachTilt(); } })
+            .catch(() => {});
+        };
+        document.addEventListener('touchend', ask, { once: true });
+      });
+      return;
+    }
     const ask = () => {
       DeviceOrientationEvent.requestPermission()
         .then((r) => { if (r === 'granted') { tiltGranted = true; attachTilt(); } })
