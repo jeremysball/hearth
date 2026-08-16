@@ -6,6 +6,7 @@ export const CHANGELOG = [
     version: '2026-08-16',
     features: [
       'Foods in the solids picker now show a small illustrated icon instead of a generic symbol.',
+      'You can now choose which quick-action buttons appear on Home and reorder them — long-press the row to customize.',
     ],
     fixes: []
   },

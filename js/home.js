@@ -4,6 +4,8 @@ const MIN = 60000;
 import { fmt, esc, icon, TYPES, diaperIcon } from './ui.js';
 import { predictionSourceInfo } from './prediction-source.js';
 import { heroSky, emberGlow } from './sky.js';
+import { QUICK_TYPES } from './quick-types.js';
+export { QUICK_TYPES };
 
 // Diaper size options: stored value stays "Small"/"Medium"/"Large" but the
 // "Small" option is rendered as "Little" in the UI.
@@ -490,10 +492,6 @@ function addCardBtn() {
   return `<button class="add-card" data-action="card:add"><svg class="icon"><use href="#plus"></use></svg> Add card</button>`;
 }
 
-const QUICK = [
-  { t: 'sleep', primary: true }, { t: 'feed' }, { t: 'bottle' }, { t: 'diaper' },
-  { t: 'medicine' }, { t: 'play' }, { t: 'bath' }, { t: 'hygiene' }
-];
 
 export function home() {
   const b = state().baby;
@@ -503,6 +501,7 @@ export function home() {
   const today = derive.today();
   const isVisible = (k) => cards[k] !== false;
   const order = (cards.order || CARD_KEYS).filter((k) => renderable(k) && isVisible(k));
+  const quickOrder = (state().settings.homeQuickOrder || QUICK_TYPES).filter((t) => QUICK_TYPES.includes(t));
   return `
     <div class="hd">
       <div>
@@ -522,10 +521,10 @@ export function home() {
       ${order.map(cardHTML).join('')}
     </div>
     ${addCardBtn()}
-    <div class="actions">
-      ${QUICK.map((q) => {
-        const c = TYPES[q.t];
-        return `<button class="act ${q.primary ? 'primary' : ''}" data-action="log:open" data-type="${q.t}">
+    <div class="actions" data-longpress="quick">
+      ${quickOrder.map((t, i) => {
+        const c = TYPES[t];
+        return `<button class="act ${i === 0 ? 'primary' : ''}" data-action="log:open" data-type="${t}">
           <span class="tok tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span><span class="act-lbl">${c.label}</span></button>`;
       }).join('')}
       <button class="act" data-action="log:more"><span class="tok"><svg class="icon"><use href="#ellipsis"></use></svg></span><span class="act-lbl">More</span></button>

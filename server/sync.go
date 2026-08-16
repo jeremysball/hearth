@@ -64,10 +64,10 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 
 		var bottleIntervalH float64
 		var bottleAmountDefault float64
-		var medsJSON, hygieneJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON string
+		var medsJSON, hygieneJSON, unitsJSON, remindersJSON, cardsJSON, playTypesJSON, homeQuickOrderJSON string
 		var settingsRev int64
-		err = tx.QueryRow(`SELECT bottle_interval_h, bottle_amount_default, meds_json, hygiene_json, units_json, reminders_json, cards_json, playtypes_json, rev FROM settings WHERE family_id = ?`, session.FamilyID).
-			Scan(&bottleIntervalH, &bottleAmountDefault, &medsJSON, &hygieneJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &settingsRev)
+		err = tx.QueryRow(`SELECT bottle_interval_h, bottle_amount_default, meds_json, hygiene_json, units_json, reminders_json, cards_json, playtypes_json, home_quick_order_json, rev FROM settings WHERE family_id = ?`, session.FamilyID).
+			Scan(&bottleIntervalH, &bottleAmountDefault, &medsJSON, &hygieneJSON, &unitsJSON, &remindersJSON, &cardsJSON, &playTypesJSON, &homeQuickOrderJSON, &settingsRev)
 		if err == nil && settingsRev > since {
 			s, _ := json.Marshal(map[string]any{
 				"bottleIntervalH":     bottleIntervalH,
@@ -78,6 +78,7 @@ func handleSync(db *sql.DB) http.HandlerFunc {
 				"reminders":           json.RawMessage(remindersJSON),
 				"cards":               json.RawMessage(cardsJSON),
 				"playTypes":           json.RawMessage(playTypesJSON),
+				"homeQuickOrder":      json.RawMessage(homeQuickOrderJSON),
 			})
 			resp.Settings = s
 		}
