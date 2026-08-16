@@ -8,7 +8,7 @@ import { predictionSourceInfo } from './prediction-source.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion, enableDevMode } from './profile.js';
 import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, onboardSkipDemo, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
-import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow } from './sheets.js';
+import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow, openQuickPicker, toggleQuickOrb } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
@@ -313,6 +313,7 @@ document.addEventListener('click', (ev) => {
     'card:save-new': () => saveNewCard(d.card),
     'card:save-interval': () => saveCardInterval(d.card),
     'card:remove': () => removeCard(d.card),
+    'quick:toggle': () => toggleQuickOrb(d.type),
     'card:save-bottle': () => saveBottle(),
     'card:save-meds': () => saveMeds(),
     'med:add': () => addMed(),
@@ -516,7 +517,7 @@ document.addEventListener('pointercancel', _cancelStepperRepeat);
 // ---------- long-press to enter edit modes ----------
 let suppressClickUntil = 0;
 let lpTimer = null, lpStartX = 0, lpStartY = 0, lpActive = false;
-const LONGPRESS = { today: enterTodayEditMode, cards: enterCardEditMode };
+const LONGPRESS = { today: enterTodayEditMode, cards: enterCardEditMode, quick: openQuickPicker };
 document.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   const target = e.target.closest('[data-longpress]');
@@ -574,6 +575,39 @@ document.addEventListener('pointermove', (e) => {
   state().settings.cards.order = [...stack.querySelectorAll('.info-card')].map((el) => el.dataset.card);
   save(); enqueueSettingsSync();
   const d = stack.querySelector('.info-card.dragging'); if (d) d.classList.remove('dragging');
+}));
+
+// ---------- drag-to-reorder Home quick-action orbs (inside the picker sheet) ----------
+let dragQuick = null;
+document.addEventListener('pointerdown', (e) => {
+  const handle = e.target.closest('.quick-drag'); if (!handle) return;
+  dragQuick = true;
+  handle.setPointerCapture(e.pointerId);
+  handle.closest('.quick-row').classList.add('dragging');
+});
+document.addEventListener('pointermove', (e) => {
+  if (!dragQuick) return;
+  const list = $('.quick-list'); if (!list) return;
+  const dragging = list.querySelector('.quick-row.dragging'); if (!dragging) return;
+  const rows = [...list.querySelectorAll('.quick-row.visible')];
+  const dragIdx = rows.indexOf(dragging);
+  const over = rows.find((el) => {
+    if (el === dragging) return false;
+    const r = el.getBoundingClientRect();
+    return e.clientY > r.top && e.clientY < r.bottom;
+  });
+  if (!over) return;
+  list.insertBefore(dragging, dragIdx < rows.indexOf(over) ? over.nextSibling : over);
+});
+['pointerup', 'pointercancel'].forEach((evt) => document.addEventListener(evt, () => {
+  if (!dragQuick) return;
+  dragQuick = null;
+  const list = $('.quick-list'); if (!list) return;
+  const d = list.querySelector('.quick-row.dragging'); if (d) d.classList.remove('dragging');
+  const order = [...list.querySelectorAll('.quick-row.visible')].map((el) => el.dataset.quick);
+  state().settings.homeQuickOrder = order;
+  save(); enqueueSettingsSync();
+  router.refresh();
 }));
 
 // ---------- pull-to-refresh ----------

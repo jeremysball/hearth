@@ -151,6 +151,34 @@ func TestHandleSyncReturnsPlayTypes(t *testing.T) {
 	}
 }
 
+func TestHandleSyncReturnsHomeQuickOrder(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+	reqPatch := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(`{"bottleIntervalH":3,"meds":[],"units":{},"reminders":{},"cards":{},"playTypes":[],"homeQuickOrder":["feed","sleep"]}`))
+	reqPatch = withSession(reqPatch, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	handlePatchSettings(db, hub, nil)(httptest.NewRecorder(), reqPatch)
+
+	req := httptest.NewRequest("GET", "/api/sync?since=", nil)
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleSync(db)(rec, req)
+
+	var resp syncResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if resp.Settings == nil {
+		t.Fatal("expected settings to be included")
+	}
+	var settings struct {
+		HomeQuickOrder []string `json:"homeQuickOrder"`
+	}
+	json.Unmarshal(resp.Settings, &settings)
+	if len(settings.HomeQuickOrder) != 2 || settings.HomeQuickOrder[0] != "feed" || settings.HomeQuickOrder[1] != "sleep" {
+		t.Errorf("settings.homeQuickOrder = %v, want [feed sleep]", settings.HomeQuickOrder)
+	}
+}
+
 func TestHandleSyncIncludesCaregiversWhenChanged(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")
