@@ -32,9 +32,9 @@ body {
   --mat-shadow:    oklch(0.28 0.09 40 / 0.32);
   --mat-cast:      oklch(0.32 0.03 300 / 0.22);
   --mat-glow:      oklch(0.80 0.14 52 / 0.50);
-  --tex-plaster:   url('assets/textures/plaster.webp');
-  --tex-clay:      url('assets/textures/clay.webp');
-  --tex-linen:     url('assets/textures/linen.webp');
+  --tex-plaster:   url('/assets/textures/plaster.webp');
+  --tex-clay:      url('/assets/textures/clay.webp');
+  --tex-linen:     url('/assets/textures/linen.webp');
   /* fire ember palette */
   --ember-core: oklch(0.86 0.20 56);
   --ember-mid:  oklch(0.74 0.19 42);

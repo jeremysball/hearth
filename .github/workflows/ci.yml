@@ -59,6 +59,14 @@ jobs:
         if: matrix.leg == 'go'
         run: go test ./server
 
+      - name: Run Go tests with embedded dist
+        if: matrix.leg == 'go' || matrix.leg == 'e2e'
+        # assets_test.go validates the embedded dist/ produced by Vite.
+        # `npm ci && npm run build` populates dist/, then `go test ./...`
+        # exercises the actual embed. Without this, tests asserting on
+        # static asset presence would skip on a freshly-checked-out run.
+        run: npm run build && go test ./...
+
       - name: Run E2E tests
         if: matrix.leg == 'e2e'
         # Parallel Chromium instances oversubscribed the runner's CPU, causing
