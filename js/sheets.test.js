@@ -27,7 +27,7 @@ globalThis.window.removeEventListener = () => {};
 globalThis.setInterval = () => 0;
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
-const { iconGrid } = await import('./sheets.js');
+const { iconGrid } = await import('./ui.js');
 
 test('iconGrid renders one button per option with the right icon and selected state', () => {
   const html = iconGrid('method', [

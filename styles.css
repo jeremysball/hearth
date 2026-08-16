@@ -364,6 +364,8 @@ body[data-no-fire] .tabbar { animation: none !important; }
 .ic-lbl2 { font-size: 11px; color: var(--soft); font-weight: 600; margin-top: 1px; }
 .ic-val { font-family: var(--font-sans); font-size: 18px; font-weight: 700; margin-top: 2px; }
 .ic-rel { font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+.ic-link { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint); border-radius: 999px; padding: 6px 11px; text-decoration: none; }
+.ic-link:active { background: var(--accent-soft); }
 .ic-edit { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; flex: 0 0 auto; }
 .ic-edit:active { background: var(--hair); }
 .ic-edit.drag { cursor: grab; touch-action: none; }
@@ -858,7 +860,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
   background: color-mix(in oklch, var(--accent-tint) 55%, transparent);
   transition: color .15s, background .15s;
 }
-.icongrid-opt .icon { width: 20px; height: 20px; }
+.icongrid-opt .icon, .icongrid-img { width: 20px; height: 20px; object-fit: cover; border-radius: 6px; }
 .icongrid-opt.on { color: var(--accent-ink); background: var(--accent-tint); }
 [data-mode="dark"] .icongrid-opt { background: oklch(0.26 0.022 48 / 0.45); }
 [data-mode="dark"] .icongrid-opt.on { color: var(--accent); background: oklch(0.30 0.030 48); }

@@ -11,7 +11,10 @@ const REACTION_LABELS = { hates: 'Hates it', unsure: 'Unsure', likes: 'Likes it'
 
 function rollupRows() {
   const byIdentity = new Map(); // groups by catalog key, or lowercase custom label
-  for (const e of state().log) {
+  // Sort newest-first so first-encounter is always the latest, matching
+  // store.js's invariant; callers must not rely on storage order.
+  const log = [...state().log].sort((a, b) => (b.start < a.start ? -1 : b.start > a.start ? 1 : 0));
+  for (const e of log) {
     if (e.type !== 'solid' || !e.foods) continue;
     for (const row of e.foods) {
       const identity = row.key || (row.label || '').toLowerCase();
@@ -26,10 +29,6 @@ function rollupRows() {
       } else {
         existing.timesTried += 1;
         existing.everAllergy = existing.everAllergy || tried.allergy;
-        if (new Date(tried.start) > new Date(existing.lastTried)) {
-          existing.lastTried = tried.start;
-          existing.latestReaction = tried.reaction;
-        }
       }
     }
   }
@@ -43,10 +42,10 @@ export function foodsTried() {
       <h1 class="page-title">Foods tried</h1>
     </div>
     <div class="card log">
-      ${rows.length ? rows.map((r) => `<div class="log-row">
-        <span class="tok tone-solid"><svg class="icon"><use href="#utensils"></use></svg></span>
+      ${rows.length ? rows.map((r) => `<div class="row">
+        <span class="row-ic tone-solid"><svg class="icon"><use href="#utensils"></use></svg></span>
         <span class="row-txt"><span class="what">${esc(r.label)}${r.everAllergy ? ' ⚠' : ''}</span>
         <span class="when">${r.timesTried}× · last ${fmt.untilOrAgo(new Date(r.lastTried))} · ${esc(REACTION_LABELS[r.latestReaction] || '')}</span></span>
-      </div>`).join('') : `<div class="empty-log">No foods logged yet.</div>`}
+      </div>`).join('') : `<div class="tl-empty">No foods logged yet.</div>`}
     </div>`;
 }
