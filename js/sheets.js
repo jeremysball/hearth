@@ -3,7 +3,7 @@ import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSet
 import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb, seg, field, iconGrid } from './ui.js';
 import { router, setAmbientPaused } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
-import { addableCardTypes, SIZE_OPTS } from './home.js';
+import { addableCardTypes, SIZE_OPTS, QUICK_TYPES } from './home.js';
 import { renderFoodRow, gatherFoodRows, prefillFoodRows } from './solids-form.js';
 
 function stepperField(label, id, min, max, step, val) {
@@ -869,6 +869,47 @@ export function removeCard(type) {
   if (cards.intervals) delete cards.intervals[type];
   delete cards[type];
   save(); enqueueSettingsSync(); sheet.close(); toast('Card removed'); router.refresh();
+}
+
+// ---------- Home quick-action orbs picker (shown/hidden + order) ----------
+const QUICK_MIN = 2;
+
+function quickPickerBody() {
+  const order = (state().settings.homeQuickOrder || QUICK_TYPES).filter((t) => QUICK_TYPES.includes(t));
+  const hidden = QUICK_TYPES.filter((t) => !order.includes(t));
+  const row = (t, visible) => {
+    const c = TYPES[t];
+    return `<div class="quick-row${visible ? ' visible' : ''}" data-quick="${t}">
+      ${visible ? `<button class="quick-drag" aria-label="Drag to reorder"><svg class="icon"><use href="#menu"></use></svg></button>` : '<span class="quick-drag-spacer"></span>'}
+      <span class="quick-row-ic tone-${c.tone}"><svg class="icon"><use href="#${icon(c.icon)}"></use></svg></span>
+      <span class="quick-row-lbl">${esc(c.label)}</span>
+      <button class="quick-check${visible ? ' on' : ''}" data-action="quick:toggle" data-type="${t}" role="checkbox" aria-checked="${visible}" aria-label="Show ${esc(c.label)} on Home"><svg class="icon"><use href="#check"></use></svg></button>
+    </div>`;
+  };
+  return `<div class="quick-list">${order.map((t) => row(t, true)).join('')}${hidden.map((t) => row(t, false)).join('')}</div>
+    <p class="empty-note">Drag to reorder. The first one shown is the big button. Keep at least ${QUICK_MIN}.</p>`;
+}
+
+export function openQuickPicker() {
+  sheet.open(quickPickerBody(), { title: 'Quick actions' });
+  return true;
+}
+
+export function toggleQuickOrb(type) {
+  const s = state().settings;
+  const order = (s.homeQuickOrder || QUICK_TYPES).filter((t) => QUICK_TYPES.includes(t));
+  const idx = order.indexOf(type);
+  if (idx >= 0) {
+    if (order.length <= QUICK_MIN) { toast(`Keep at least ${QUICK_MIN} quick actions`); return; }
+    order.splice(idx, 1);
+  } else {
+    order.push(type);
+  }
+  s.homeQuickOrder = order;
+  save();
+  const body = $('.sheet-body');
+  if (body) body.innerHTML = quickPickerBody();
+  router.refresh();
 }
 
 function medForm() {

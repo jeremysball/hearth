@@ -953,6 +953,19 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .med-dose { width: 64px; flex: 0 0 auto; } .med-unit { width: 60px; flex: 0 0 auto; } .med-eh { width: 56px; flex: 0 0 auto; text-align: center; }
 .med-every { font-size: 12px; color: var(--muted); font-weight: 700; }
 .med-del { all: unset; cursor: pointer; margin-left: auto; color: oklch(0.6 0.12 25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+/* quick-actions picker (Home orb customization) */
+.quick-list { display: flex; flex-direction: column; gap: 8px; }
+.quick-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 16px; opacity: 0.55; }
+.quick-row.visible { opacity: 1; }
+.quick-row.dragging { opacity: .6; }
+.quick-drag { all: unset; cursor: grab; touch-action: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--muted); flex: 0 0 auto; }
+.quick-drag:active { cursor: grabbing; }
+.quick-drag-spacer { width: 28px; flex: 0 0 auto; }
+.quick-row-ic { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--tc); background-color: var(--tcb); flex: 0 0 auto; }
+.quick-row-lbl { flex: 1; font-weight: 700; font-size: 14px; color: var(--ink); }
+.quick-check { all: unset; cursor: pointer; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: transparent; border: 1.5px solid var(--hair); flex: 0 0 auto; }
+.quick-check.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.quick-check .icon { width: 14px; height: 14px; }
 .playtype-list { display: flex; flex-direction: column; gap: 12px; }
 .playtype-row { display: flex; align-items: center; gap: 6px; padding: 12px; background: var(--surface); border-radius: 16px; }
 .playtype-name { flex: 1; }

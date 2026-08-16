@@ -746,6 +746,18 @@ test('normalizeSettings leaves an existing playTypes list untouched', async () =
   assert.deepEqual(s.playTypes, ['Sensory bin']);
 });
 
+test('normalizeSettings seeds default homeQuickOrder for settings saved before the field existed', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  const s = normalizeSettings({ clock24: '12h' });
+  assert.deepEqual(s.homeQuickOrder, ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'hygiene']);
+});
+
+test('normalizeSettings leaves an existing homeQuickOrder untouched', async () => {
+  const { normalizeSettings } = await import('./store.js');
+  const s = normalizeSettings({ clock24: '12h', homeQuickOrder: ['feed', 'sleep'] });
+  assert.deepEqual(s.homeQuickOrder, ['feed', 'sleep']);
+});
+
 test('derive.regressionAlert returns null when baby age is far from any regression', () => {
   // Current baby age from prior applySyncResponse calls is ~4 months.
   // The 4-month regression fires at 3.5–5 months → may be in range.

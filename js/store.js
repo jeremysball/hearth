@@ -23,6 +23,7 @@ const DEFAULT = () => ({
     units: { volume: 'ml', temp: 'C', weight: 'kg', length: 'cm' },
     reminders: { naps: true, bottle: true, meds: true, hygiene: true, lead: 0, quietStart: '20:00', quietEnd: '07:00' },
     cards: { bottle: true, medicine: true, solid: true, order: ['bottle', 'medicine', 'solid'], intervals: {} },
+    homeQuickOrder: ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'hygiene'],
     sound: true,
     celebrateCaregiverLogs: true,
     heroParallax: true,
@@ -74,6 +75,11 @@ export function normalizeSettings(s) {
   if (!Array.isArray(s.hygiene)) s.hygiene = [];
   if (s.reminders && typeof s.reminders.hygiene !== 'boolean') s.reminders.hygiene = true;
   if (s.reminders && s.reminders.lead == null) s.reminders.lead = 0;
+  // Home's quick-action orbs used to be a hardcoded list (js/home.js QUICK_TYPES);
+  // a saved settings blob from before that setting existed has no homeQuickOrder
+  // at all, so seed it with the old hardcoded order to keep existing installs
+  // looking unchanged. Keep this order in sync with QUICK_TYPES in home.js.
+  if (!Array.isArray(s.homeQuickOrder)) s.homeQuickOrder = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'hygiene'];
   return s;
 }
 
