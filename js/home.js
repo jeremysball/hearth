@@ -492,8 +492,8 @@ function addCardBtn() {
 
 // Every type the Home quick-action orbs can show, in the pre-customization
 // order. Doubles as the universe of choices for the quick-actions picker
-// sheet and the seed for settings.homeQuickOrder on first load (see
-// normalizeSettings in store.js -- keep both orders in sync).
+// sheet and (imported into store.js) the default/seed for
+// settings.homeQuickOrder.
 export const QUICK_TYPES = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'hygiene'];
 
 export function home() {
