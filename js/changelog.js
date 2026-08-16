@@ -6,9 +6,11 @@ export const CHANGELOG = [
     version: '2026-08-15',
     features: [
       'Timeline now has its own tab, and Trends + Growth are combined into one Insights tab.',
+      'You can now log solid foods — what your baby ate, how much, and how they reacted — with a new Solids card on Home and a Foods tried list.',
     ],
     fixes: [
-      'Diaper log now says \'Poo\' instead of \'Dirty\'.'
+      'Diaper log now says \'Poo\' instead of \'Dirty\'.',
+      'Fixed the custom food name field not showing up when you picked \'Other\' while logging solids.',
     ]
   },
   {

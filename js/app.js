@@ -14,6 +14,8 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
+import { foodsTried } from './foods-tried.js';
+import { renderFoodRow, nextFoodRowId } from './solids-form.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
 import { initSky } from './sky.js';
@@ -24,7 +26,7 @@ export function setAmbientPaused(paused) {
 }
 
 let current = 'home';
-const VIEWS = { home, sleep, insights, profile, timeline };
+const VIEWS = { home, sleep, insights, profile, timeline, 'foods-tried': foodsTried };
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
@@ -225,6 +227,7 @@ document.addEventListener('click', (ev) => {
       });
     },
     'nav:timeline': () => router.go('timeline'),
+    'nav:foods-tried': () => router.go('foods-tried'),
     'timeline:more': () => { toggleFilterMenu(); router.refresh(); },
     'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
@@ -316,6 +319,38 @@ document.addEventListener('click', (ev) => {
       const g = el.closest('[data-icongrid]');
       if (!g) return;
       $$('.icongrid-opt', g).forEach((o) => o.classList.toggle('on', o === el));
+      // A food-picker row's "Other" tile reveals the custom-name field below
+      // it; any other pick hides it again. Scoped to food-<rowId> groups
+      // only -- the reaction icon grid has no custom-name counterpart.
+      const group = g.dataset.icongrid || '';
+      if (group.startsWith('food-')) {
+        const rowId = group.slice('food-'.length);
+        const customEl = $(`#food-custom-${rowId}`);
+        if (customEl) customEl.hidden = el.dataset.val !== '__other__';
+      }
+    },
+    'solids:add-row': () => {
+      const container = $('#food-rows');
+      if (!container) return;
+      container.insertAdjacentHTML('beforeend', renderFoodRow(nextFoodRowId(), null));
+      initThumbs(container);
+    },
+    'solids:remove-row': () => {
+      const rowEl = el.closest('[data-food-row]');
+      const container = $('#food-rows');
+      if (!rowEl || !container) return;
+      // Always keep at least one row visible.
+      if ($$('[data-food-row]', container).length > 1) rowEl.remove();
+    },
+    'foodrow:toggle-amount': () => {
+      const rowId = d.row;
+      const segEl = $(`[data-seg="amount-${rowId}"]`);
+      const customEl = $(`#amount-custom-${rowId}`);
+      if (!segEl || !customEl) return;
+      const showingCustom = !customEl.hidden;
+      customEl.hidden = showingCustom;
+      segEl.closest('.fld').hidden = !showingCustom;
+      el.textContent = showingCustom ? 'Use custom amount instead' : 'Use the amount scale instead';
     },
     'cg:photo': () => caregiverPhoto(d.id),
     'cg:remove': () => removeCaregiver(d.id, d.name),
