@@ -33,6 +33,34 @@ func TestHandleUpsertEntryCreates(t *testing.T) {
 	}
 }
 
+func TestHandleUpsertEntryAcceptsSolidType(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	hub := newHub()
+
+	body := `{"type":"solid","start":"2026-08-15T10:00:00Z","foods":[{"key":"banana","label":"Banana","amount":"Some","reaction":"likes","allergy":false}],"note":null}`
+	req := httptest.NewRequest("PUT", "/api/entries/e1", bytes.NewBufferString(body))
+	req.SetPathValue("id", "e1")
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handleUpsertEntry(db, hub, nil)(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var typ, payload string
+	if err := db.QueryRow(`SELECT type, payload_json FROM log_entries WHERE id = 'e1'`).Scan(&typ, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if typ != "solid" {
+		t.Errorf("type = %q, want solid", typ)
+	}
+	if !strings.Contains(payload, `"foods"`) {
+		t.Errorf("payload_json = %q, want it to retain the foods field verbatim", payload)
+	}
+}
+
 func TestHandleUpsertEntryUpdatesExisting(t *testing.T) {
 	db := newParallelTestDB(t)
 	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
