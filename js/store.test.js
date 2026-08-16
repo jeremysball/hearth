@@ -27,7 +27,7 @@ const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, upd
   wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
 const { TYPES } = await import('./ui.js');
 const { FOOD_CATALOG, findFoodByKey, groupedCatalog } = await import('./foods.js');
-const { iconGrid } = await import('./sheets.js');
+const { iconGrid } = await import('./ui.js');
 const { foodsTried } = await import('./foods-tried.js');
 
 function outboxOps() {

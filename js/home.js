@@ -42,6 +42,10 @@ export function summary(e) {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
   } else if (e.type === 'bath') {
     detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'solid') {
+    const foodCount = e.foods ? e.foods.length : 0;
+    detail = fmt.clock(e.start);
+    meta = foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start);
@@ -375,7 +379,7 @@ function solidCard() {
   const foodCount = last && last.foods ? last.foods.length : 0;
   const sub = last && foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
   return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="solid" data-card="solid">
-    <div class="ic-ring tone-solid"><svg class="icon"><use href="#utensils"></use></svg></div>
+    <div class="ic-ring tone-${TYPES.solid.tone}"><svg class="icon"><use href="#${icon(TYPES.solid.icon)}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">${lbl}</div>
       <div class="ic-val">${sub}</div>

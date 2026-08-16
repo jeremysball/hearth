@@ -793,6 +793,11 @@ export function editCard(which) {
       { title: 'Bath card' });
   } else if (which === 'hygiene') {
     sheet.open(hygieneForm(), { title: 'Hygiene items', size: 'sheet-form' });
+  } else if (which === 'solid') {
+    sheet.open(`
+      <p class="empty-note">The Solids card shows when the last meal was. It has no reminder interval to set.</p>
+      <button class="btn-ghost danger" data-action="card:remove" data-card="solid"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
+      { title: 'Solids card' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
@@ -821,8 +826,8 @@ export function openCardPicker() {
 }
 
 export function pickCard(type) {
-  // Re-adding a hidden default just unhides it; bath/hygiene are no-interval cards; generic types need an interval.
-  if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene') {
+  // Re-adding a hidden default just unhides it; bath/hygiene/solid are no-interval cards; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene' || type === 'solid') {
     if (type === 'bath' || type === 'hygiene' || type === 'solid') {
       const cards = state().settings.cards;
       cards.order = cards.order || ['bottle', 'medicine'];
@@ -1009,8 +1014,3 @@ export function saveMeasure(id) {
   addMeasure(m);
   sheet.close(); toast(id ? 'Measurement updated' : 'Measurement added'); router.refresh();
 }
-
-// iconGrid lives in ui.js now; re-export it so existing unit tests that
-// `import { iconGrid } from './sheets.js'` (store.test.js, sheets.test.js)
-// keep working until they're updated to import from ui.js.
-export { iconGrid };

@@ -1022,9 +1022,8 @@ export function pendingSyncState() {
 export function applySyncResponse(resp, pending = pendingSyncState()) {
   if (resp.baby && !pending.baby) Object.assign(_state.baby, resp.baby);
   if (resp.settings && !pending.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
-  const incomingEntries = (resp.entries || [])
-    .filter((e) => !pending.ids.has(e.id))
-    .map((e) => (e.type === 'solid' ? { ...e, foods: normalizeSolidFoods(e.foods) } : e));
+  const pendingFiltered = (resp.entries || []).filter((e) => !pending.ids.has(e.id));
+  const incomingEntries = normalizeLog(pendingFiltered);
   _state.log = mergeById(_state.log, incomingEntries);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   _state.growth = mergeById(_state.growth, (resp.growth || []).filter((g) => !pending.ids.has(g.id)));
