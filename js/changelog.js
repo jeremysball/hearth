@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-08-16',
+    version: '2026-08-16',
+    features: [
+      'Foods in the solids picker now show a small illustrated icon instead of a generic symbol.',
+    ],
+    fixes: []
+  },
+  {
     date: '2026-08-15',
     version: '2026-08-15',
     features: [
