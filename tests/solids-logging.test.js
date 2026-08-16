@@ -19,8 +19,8 @@ async function saveSolid(page, idsBefore) {
 // through the "More" type chooser, the same route a parent takes.
 async function openSolidSheet(page) {
   await page.click('[data-action="log:more"]');
-  await page.waitForSelector('[data-action="log:open"][data-type="solid"]');
-  await page.click('[data-action="log:open"][data-type="solid"]');
+  await page.waitForSelector('.chooser [data-action="log:open"][data-type="solid"]');
+  await page.click('.chooser [data-action="log:open"][data-type="solid"]');
   await page.waitForSelector('#food-rows [data-food-row="0"]');
 }
 
@@ -42,9 +42,9 @@ async function openEntryForEdit(page, id) {
     // ---- the type chooser offers Solids ----
     await page.click('[data-action="log:more"]');
     await page.waitForSelector('.chooser');
-    const solidTileLabel = await page.$eval('[data-action="log:open"][data-type="solid"]', (el) => el.textContent.trim());
+    const solidTileLabel = await page.$eval('.chooser [data-action="log:open"][data-type="solid"]', (el) => el.textContent.trim());
     check('the log-type chooser shows a Solids tile', solidTileLabel.includes('Solids'), solidTileLabel);
-    await page.click('[data-action="log:open"][data-type="solid"]');
+    await page.click('.chooser [data-action="log:open"][data-type="solid"]');
     await page.waitForSelector('#food-rows [data-food-row="0"]');
 
     // ---- one food ----
