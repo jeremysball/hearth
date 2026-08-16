@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jeremysball/hearth"
@@ -58,25 +59,38 @@ func (sw *statusWriter) setSession(session SessionInfo) {
 	sw.session = session
 }
 
-// cacheControl handles the HTTP-cache story in one place.
-// Hearth's assets are unhashed filenames (styles.css, js/app.js, etc.).
-// The release signal is the VERSION string bump, sw.js uses it as its
-// Cache Storage key and index.html carries it as <meta name="version">.
-// Why no `immutable` on JS/CSS: `immutable` is for content-hashed files
-// (app.a1b2c3.js) whose bytes never change under the same URL. Our files
-// do change in place on every deploy, `immutable` would let the browser's
-// HTTP cache pin a stale copy for a year and ignore the VERSION bump until
-// that entry expired. Instead, non-entry-point assets are left cacheable
-// with the server's default headers (revalidated with If-None-Match/ETag),
-// while the two entry points that gate updates are forced to revalidate
-// (no-store, see serveShell/sw.js below). Developer mode (`?dev=1` or
-// X-Hearth-Dev: 1) bypasses all of this, no caching at any layer, so a
-// hot edit→refresh loop always hits the network. See sw.js fetch handler
-// for the Cache Storage counterpart.
+// cacheControl handles the HTTP-cache story in one place. After the Vite
+// migration, frontend JS/CSS bundles are emitted with content-hashed
+// filenames under dist/static/ (see vite.config.js `assetsDir: 'static'`),
+// so dist/index.html's <script> tag points at /static/<name>-<hash>.js and
+// that exact URL's bytes will never change under the same hash. We send
+// `Cache-Control: public, max-age=31536000, immutable` for that subtree so
+// the browser can skip revalidation entirely. The unhashed public assets
+// under /assets/* (sky, textures, foods) and /icons/* are NOT cacheable as
+// immutable — their filenames don't change when their contents do, so an
+// `immutable` header would pin a stale copy for a year on every user after
+// the first edit. Those fall through to the file server's default
+// behaviour (heuristic caching, revalidates with If-None-Match when the
+// upstream sets ETag). The two entry points that gate updates — index.html
+// (carries the <meta name="version">) and sw.js (the SW itself) — are
+// forced to no-store by their own explicit route handlers, see serveShell
+// below. Developer mode (?dev=1 or X-Hearth-Dev: 1) bypasses everything:
+// every request goes through this handler in dev, and the no-store branch
+// outranks the immutable branch, so a hot edit→refresh loop always hits
+// the network. See sw.js's fetch handler for the Cache Storage counterpart.
 func cacheControl(next http.Handler, cfg Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Dev bypass always wins — forced revalidation, ignore the rest.
 		if r.URL.Query().Get("dev") == "1" || r.Header.Get("X-Hearth-Dev") == "1" || cfg.DevMode {
 			w.Header().Set("Cache-Control", "no-store")
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Hashed Vite bundles under /static/* are content-addressed; their
+		// filename changes when their bytes change, so the URL is stable
+		// for forever, which is exactly what `immutable` requires.
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
 		next.ServeHTTP(w, r)
 	})
