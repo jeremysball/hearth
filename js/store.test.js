@@ -1412,3 +1412,29 @@ test('iconGrid still renders a sprite use tag when an option has no img field', 
   const html = iconGrid('method', [{ val: 'On own in bed', icon: 'bed-single', label: 'On own' }], null);
   assert.ok(html.includes('<use href="#bed-single">'), html);
 });
+
+test('normalizeLog defaults foods to [] for a solid entry missing the field', () => {
+  const log = [{ id: '1', type: 'solid', start: '2026-08-15T10:00:00Z' }];
+  const result = normalizeLog(log);
+  assert.deepEqual(result[0].foods, []);
+});
+
+test('normalizeLog drops a malformed food row missing both key and label', () => {
+  const log = [{ id: '1', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+    { key: 'banana', label: 'Banana', amount: 'Some', reaction: 'likes', allergy: false },
+    { amount: 'Some', reaction: 'likes', allergy: false },
+  ] }];
+  const result = normalizeLog(log);
+  assert.equal(result[0].foods.length, 1);
+  assert.equal(result[0].foods[0].key, 'banana');
+});
+
+test('applySyncResponse sanitizes foods on incoming solid entries the same way normalizeLog does', () => {
+  reset();
+  const resp = { entries: [{ id: 'sync-1', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+    { amount: 'Some' },
+  ] }] };
+  applySyncResponse(resp, { ids: new Set(), baby: false, settings: false });
+  const saved = state().log.find((e) => e.id === 'sync-1');
+  assert.deepEqual(saved.foods, []);
+});

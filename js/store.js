@@ -77,6 +77,15 @@ export function normalizeSettings(s) {
   return s;
 }
 
+// Sanitizes an entry's `foods` array on both the localStorage-load path
+// (normalizeLog) and the sync-ingress path (applySyncResponse) -- any
+// future entry field that can arrive from sync needs the same
+// default/sanitize step applied on both paths, not just normalizeLog.
+function normalizeSolidFoods(foods) {
+  if (!Array.isArray(foods)) return [];
+  return foods.filter((row) => row && (row.key || row.label));
+}
+
 export function normalizeLog(log) {
   if (!Array.isArray(log)) return [];
   return log.map((e) => {
@@ -88,6 +97,9 @@ export function normalizeLog(log) {
     // the original split.
     if (e && e.type === 'diaper' && e.kind === 'Mixed' && e.size && e.wetSize == null && e.dirtySize == null) {
       return { ...e, wetSize: e.size, dirtySize: e.size };
+    }
+    if (e && e.type === 'solid') {
+      return { ...e, foods: normalizeSolidFoods(e.foods) };
     }
     return e;
   });
@@ -1010,7 +1022,10 @@ export function pendingSyncState() {
 export function applySyncResponse(resp, pending = pendingSyncState()) {
   if (resp.baby && !pending.baby) Object.assign(_state.baby, resp.baby);
   if (resp.settings && !pending.settings) { Object.assign(_state.settings, resp.settings); normalizeSettings(_state.settings); }
-  _state.log = mergeById(_state.log, (resp.entries || []).filter((e) => !pending.ids.has(e.id)));
+  const incomingEntries = (resp.entries || [])
+    .filter((e) => !pending.ids.has(e.id))
+    .map((e) => (e.type === 'solid' ? { ...e, foods: normalizeSolidFoods(e.foods) } : e));
+  _state.log = mergeById(_state.log, incomingEntries);
   _state.log.sort((a, b) => b.start < a.start ? -1 : b.start > a.start ? 1 : 0);
   _state.growth = mergeById(_state.growth, (resp.growth || []).filter((g) => !pending.ids.has(g.id)));
   if (resp.currentCaregiverId) _state.currentCaregiverId = resp.currentCaregiverId;
