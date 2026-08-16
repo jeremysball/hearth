@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS settings (
   reminders_json TEXT NOT NULL DEFAULT '{}',
   cards_json TEXT NOT NULL DEFAULT '{}',
   playtypes_json TEXT NOT NULL DEFAULT '[]',
+  home_quick_order_json TEXT NOT NULL DEFAULT '[]',
   updated_at TEXT NOT NULL,
   rev INTEGER NOT NULL DEFAULT 0
 );
