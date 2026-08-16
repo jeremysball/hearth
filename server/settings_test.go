@@ -148,6 +148,28 @@ func TestHandlePatchSettingsUpdatesPlayTypes(t *testing.T) {
 	}
 }
 
+func TestHandlePatchSettingsUpdatesHomeQuickOrder(t *testing.T) {
+	db := newParallelTestDB(t)
+	seedFamilyAndBaby(t, db, "fam1")
+	hub := newHub()
+
+	body := `{"bottleIntervalH":3,"meds":[],"units":{},"reminders":{},"cards":{},"playTypes":[],"homeQuickOrder":["feed","sleep"]}`
+	req := httptest.NewRequest("PATCH", "/api/settings", bytes.NewBufferString(body))
+	req = withSession(req, SessionInfo{CaregiverID: "cg1", FamilyID: "fam1"})
+	rec := httptest.NewRecorder()
+
+	handlePatchSettings(db, hub, nil)(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var homeQuickOrderJSON string
+	db.QueryRow(`SELECT home_quick_order_json FROM settings WHERE family_id = 'fam1'`).Scan(&homeQuickOrderJSON)
+	if homeQuickOrderJSON != `["feed","sleep"]` {
+		t.Errorf("home_quick_order_json = %q, want [\"feed\",\"sleep\"]", homeQuickOrderJSON)
+	}
+}
+
 func TestHandlePatchSettingsUpdatesHygiene(t *testing.T) {
 	db := newParallelTestDB(t)
 	seedFamilyAndBaby(t, db, "fam1")

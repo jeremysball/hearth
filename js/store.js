@@ -1068,6 +1068,6 @@ export function enqueueSettingsSync() {
   const s = _state.settings;
   enqueue({
     url: '/api/settings', method: 'PATCH',
-    body: { bottleIntervalH: s.bottleIntervalH, bottleAmountDefault: s.bottleAmountDefault, meds: s.meds, hygiene: s.hygiene, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes }
+    body: { bottleIntervalH: s.bottleIntervalH, bottleAmountDefault: s.bottleAmountDefault, meds: s.meds, hygiene: s.hygiene, units: s.units, reminders: s.reminders, cards: s.cards, playTypes: s.playTypes, homeQuickOrder: s.homeQuickOrder }
   });
 }
