@@ -36,7 +36,7 @@ export function toggleFilter(type) {
 }
 
 const PINNED_FILTERS = ['bottle', 'sleep', 'medicine'];
-const OPTIONAL_FILTERS = ['feed', 'diaper', 'pump', 'note', 'play', 'bath', 'away'];
+const OPTIONAL_FILTERS = ['feed', 'diaper', 'pump', 'note', 'play', 'bath', 'away', 'solid'];
 const FILTER_TYPES = [...PINNED_FILTERS, ...OPTIONAL_FILTERS];
 let filterMenuOpen = false;
 let filterResizeBound = false;

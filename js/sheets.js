@@ -1,29 +1,11 @@
 // sheets.js: logging bottom sheet (detailed) + card config sheets.
 import { state, save, addEntry, removeEntry, updateEntry, addMeasure, enqueueSettingsSync, maybeInterruptSleep, undoInterruptSleep, autoCloseOngoingSleep, undoAutoCloseSleep, derive } from './store.js';
-import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb } from './ui.js';
+import { $, $$, esc, icon, TYPES, sheet, toast, nowLocalDT, dtToISO, isoToLocalDT, bindDragSeg, positionThumb, seg, field, iconGrid } from './ui.js';
 import { router, setAmbientPaused } from './app.js';
 import { chime, tick, buzz, confetti } from './fx.js';
 import { addableCardTypes, SIZE_OPTS } from './home.js';
+import { renderFoodRow, gatherFoodRows, prefillFoodRows } from './solids-form.js';
 
-// segmented control
-function seg(group, opts, sel) {
-  return `<div class="segctl" data-seg="${group}">` +
-    `<div class="seg-thumb"></div>` +
-    opts.map((o) => {
-      const val = typeof o === 'string' ? o : o.val;
-      const label = typeof o === 'string' ? o : o.label;
-      return `<button type="button" class="seg-opt ${val === sel ? 'on' : ''}" data-val="${esc(val)}">${esc(label)}</button>`;
-    }).join('') +
-    `</div>`;
-}
-
-export function iconGrid(group, opts, sel) {
-  return `<div class="icongrid" data-icongrid="${group}">` +
-    opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
-      `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg><span>${esc(o.label)}</span></button>`).join('') +
-    `</div>`;
-}
-function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 function stepperField(label, id, min, max, step, val) {
   return field(label, `<div class="stepper">
     <button type="button" class="stepper-btn" data-action="stepper:down" data-target="${id}" aria-label="Decrease"><svg class="icon"><use href="#minus"></use></svg></button>
@@ -514,6 +496,10 @@ const FORMS = {
     </div>
     ${field('Rash', `<button type="button" class="switch" id="f-rash" role="switch" aria-checked="false" data-action="form:toggle"><span class="knob"></span></button>`)}
     ${timeRow()} ${noteRow()}`,
+  solid: () => `
+    <div id="food-rows">${renderFoodRow(0, null)}</div>
+    <button type="button" class="btn-ghost" data-action="solids:add-row">+ Add another food</button>
+    ${timeRow()} ${noteRow()}`,
   medicine: () => {
     const meds = state().settings.meds;
     if (!meds.length) return `<p class="empty-note">No medicines yet. Add one from the Medicine card on Home.</p>`;
@@ -578,6 +564,8 @@ function gather(type) {
       base.size = segVal('size'); base.wetSize = null; base.dirtySize = null;
     }
     base.rash = $('#f-rash') ? $('#f-rash').classList.contains('on') : false;
+  } else if (type === 'solid') {
+    base.foods = gatherFoodRows();
   } else if (type === 'medicine') {
     const id = $('#f-med').value;
     const m = state().settings.meds.find((x) => x.id === id);
@@ -687,6 +675,8 @@ function prefill(type, e) {
     syncDiaperSizeVisibility(e.kind);
     const rashEl = $('#f-rash');
     if (rashEl) { rashEl.classList.toggle('on', !!e.rash); rashEl.setAttribute('aria-checked', !!e.rash); }
+  } else if (type === 'solid') {
+    prefillFoodRows(e.foods);
   } else if (type === 'medicine') { if ($('#f-med')) $('#f-med').value = e.medId; }
   else if (type === 'play') {
     if ($('#f-playtype') && e.playType != null) $('#f-playtype').value = e.playType;
@@ -717,7 +707,7 @@ export function saveLog(type, id) {
 }
 
 export function openTypeChooser() {
-  const types = ['sleep', 'feed', 'bottle', 'diaper', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
+  const types = ['sleep', 'feed', 'bottle', 'diaper', 'solid', 'medicine', 'pump', 'note', 'play', 'bath', 'hygiene', 'away'];
   sheet.open(
     `<div class="chooser">` + types.map((t) => {
       const c = TYPES[t];
@@ -803,6 +793,11 @@ export function editCard(which) {
       { title: 'Bath card' });
   } else if (which === 'hygiene') {
     sheet.open(hygieneForm(), { title: 'Hygiene items', size: 'sheet-form' });
+  } else if (which === 'solid') {
+    sheet.open(`
+      <p class="empty-note">The Solids card shows when the last meal was. It has no reminder interval to set.</p>
+      <button class="btn-ghost danger" data-action="card:remove" data-card="solid"><svg class="icon"><use href="#trash-2"></use></svg> Remove card</button>`,
+      { title: 'Solids card' });
   } else {
     const c = TYPES[which] || { label: which };
     const cur = (s.cards.intervals || {})[which] ?? 3;
@@ -831,9 +826,9 @@ export function openCardPicker() {
 }
 
 export function pickCard(type) {
-  // Re-adding a hidden default just unhides it; bath/hygiene are no-interval cards; generic types need an interval.
-  if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene') {
-    if (type === 'bath' || type === 'hygiene') {
+  // Re-adding a hidden default just unhides it; bath/hygiene/solid are no-interval cards; generic types need an interval.
+  if (type === 'bottle' || type === 'medicine' || type === 'bath' || type === 'hygiene' || type === 'solid') {
+    if (type === 'bath' || type === 'hygiene' || type === 'solid') {
       const cards = state().settings.cards;
       cards.order = cards.order || ['bottle', 'medicine'];
       if (!cards.order.includes(type)) cards.order.push(type);

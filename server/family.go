@@ -10,7 +10,7 @@ import (
 const (
 	defaultUnitsJSON     = `{"volume":"ml","temp":"C","weight":"kg","length":"cm"}`
 	defaultRemindersJSON = `{"naps":true,"bottle":true,"meds":true,"hygiene":true,"quietStart":"20:00","quietEnd":"07:00"}`
-	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"order":["sweetspot","bottle","medicine"]}`
+	defaultCardsJSON     = `{"sweetspot":true,"bottle":true,"medicine":true,"solid":true,"order":["sweetspot","bottle","medicine","solid"]}`
 )
 
 type createFamilyRequest struct {

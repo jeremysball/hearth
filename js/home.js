@@ -42,6 +42,10 @@ export function summary(e) {
     label = 'Note'; detail = e.note || ''; meta = fmt.clock(e.start);
   } else if (e.type === 'bath') {
     detail = fmt.clock(e.start); meta = e.note || '';
+  } else if (e.type === 'solid') {
+    const foodCount = e.foods ? e.foods.length : 0;
+    detail = fmt.clock(e.start);
+    meta = foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start);
@@ -365,6 +369,26 @@ function hygieneCard() {
   </div>`;
 }
 
+// Solids has no reminder-interval scheduling (unlike bottle/medicine), so
+// it gets its own render function instead of going through genericCard(),
+// which assumes every card type has an interval to count down to.
+function solidCard() {
+  const items = state().log.filter((e) => e.type === 'solid');
+  const last = items.length ? items[0] : null; // log is sorted newest-first by start
+  const lbl = last ? `Last meal · ${fmt.untilOrAgo(new Date(last.start))}` : 'No solids logged yet';
+  const foodCount = last && last.foods ? last.foods.length : 0;
+  const sub = last && foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
+  return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="solid" data-card="solid">
+    <div class="ic-ring tone-${TYPES.solid.tone}"><svg class="icon"><use href="#${icon(TYPES.solid.icon)}"></use></svg></div>
+    <div class="ic-txt">
+      <div class="ic-lbl">${lbl}</div>
+      <div class="ic-val">${sub}</div>
+    </div>
+    <a class="ic-link" data-action="nav:foods-tried">Foods tried</a>
+    ${icEdit('solid')}
+  </div>`;
+}
+
 // Generic timer card for any activity type configured with an interval.
 function genericCard(type) {
   const c = TYPES[type] || { label: type, tone: 'note', icon: 'note-pencil' };
@@ -442,9 +466,9 @@ function bathCard() {
 }
 
 const CARD_KEYS = ['bottle', 'medicine'];
-const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard, hygiene: hygieneCard };
+const CARD_RENDER = { bottle: bottleCard, medicine: medicineCard, bath: bathCard, hygiene: hygieneCard, solid: solidCard };
 // Activity types eligible as timer cards (everything loggable except notes).
-export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene'];
+export const CARD_TYPES = ['feed', 'bottle', 'diaper', 'medicine', 'play', 'bath', 'pump', 'hygiene', 'solid'];
 
 // A generic (non-default) card only renders once it has an interval configured,
 // so legacy saved state never resurrects a card the user didn't add.

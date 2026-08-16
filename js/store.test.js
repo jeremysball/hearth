@@ -11,16 +11,33 @@ globalThis.localStorage = new MemoryStorage();
 
 // Minimal DOM globals so ui.js imports cleanly under Node
 globalThis.window = globalThis;
-globalThis.document = { querySelector: () => null, querySelectorAll: () => [] };
+globalThis.addEventListener = () => {};
+globalThis.removeEventListener = () => {};
+globalThis.document = { querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {}, removeEventListener: () => {} };
+
+// sheets.js transitively imports app.js, which calls setInterval at module
+// load to drive the clock and overdue-label refresh; stub them so the test
+// runner's event loop can drain once assertions are done.
+globalThis.setInterval = () => 0;
+globalThis.setTimeout = () => 0;
 globalThis.window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
 
 const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, updateEntry, reset,
   maybeInterruptSleep, undoInterruptSleep, normalizeLog, enqueueFullResync,
   wakePosition, wakeWindowRange, clearFamilyScopedEntries, hasNewEntryFromOtherCaregiver, _testHelpers } = await import('./store.js');
+const { TYPES } = await import('./ui.js');
+const { FOOD_CATALOG, findFoodByKey, groupedCatalog } = await import('./foods.js');
+const { iconGrid } = await import('./ui.js');
+const { foodsTried } = await import('./foods-tried.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
 }
+
+test('solid is registered as a known type', () => {
+  assert.ok(TYPES.solid, 'TYPES.solid should exist');
+  assert.equal(TYPES.solid.label, 'Solids');
+});
 
 test('addEntry enqueues a PUT to /api/entries/:id', () => {
   const before = outboxOps().length;
@@ -1369,4 +1386,77 @@ test('derive.reminders() no longer schedules bottle/meds/hygiene locally (server
   assert.ok(!keys.includes('bottle'), 'bottle should not be locally scheduled: server push already delivers it');
   assert.ok(!keys.some((k) => k.startsWith('med-')), 'medicine reminders should not be locally scheduled: server push already delivers them');
   assert.ok(!keys.some((k) => k.startsWith('hyg-')), 'hygiene reminders should not be locally scheduled: server push already delivers them');
+});
+
+test('food catalog has unique keys', () => {
+  const keys = FOOD_CATALOG.map((f) => f.key);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test('findFoodByKey finds a known food and returns null for an unknown one', () => {
+  assert.equal(findFoodByKey('banana').label, 'Banana');
+  assert.equal(findFoodByKey('not-a-real-food'), null);
+});
+
+test('groupedCatalog groups every catalog entry under its group', () => {
+  const groups = groupedCatalog();
+  const total = groups.reduce((sum, g) => sum + g.items.length, 0);
+  assert.equal(total, FOOD_CATALOG.length);
+});
+
+test('iconGrid renders an img tag when an option has an img field', () => {
+  const html = iconGrid('food-0', [{ val: 'banana', img: 'assets/foods/banana.webp', label: 'Banana' }], null);
+  assert.ok(html.includes('<img src="assets/foods/banana.webp"'), html);
+});
+
+test('iconGrid still renders a sprite use tag when an option has no img field', () => {
+  const html = iconGrid('method', [{ val: 'On own in bed', icon: 'bed-single', label: 'On own' }], null);
+  assert.ok(html.includes('<use href="#bed-single">'), html);
+});
+
+test('normalizeLog defaults foods to [] for a solid entry missing the field', () => {
+  const log = [{ id: '1', type: 'solid', start: '2026-08-15T10:00:00Z' }];
+  const result = normalizeLog(log);
+  assert.deepEqual(result[0].foods, []);
+});
+
+test('normalizeLog drops a malformed food row missing both key and label', () => {
+  const log = [{ id: '1', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+    { key: 'banana', label: 'Banana', amount: 'Some', reaction: 'likes', allergy: false },
+    { amount: 'Some', reaction: 'likes', allergy: false },
+  ] }];
+  const result = normalizeLog(log);
+  assert.equal(result[0].foods.length, 1);
+  assert.equal(result[0].foods[0].key, 'banana');
+});
+
+test('applySyncResponse sanitizes foods on incoming solid entries the same way normalizeLog does', () => {
+  reset();
+  const resp = { entries: [{ id: 'sync-1', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+    { amount: 'Some' },
+  ] }] };
+  applySyncResponse(resp, { ids: new Set(), baby: false, settings: false });
+  const saved = state().log.find((e) => e.id === 'sync-1');
+  assert.deepEqual(saved.foods, []);
+});
+
+test('foods-tried rollup groups repeated foods and keeps the latest reaction', () => {
+  // Seed two solid entries with the same catalog food ('banana') at
+  // different times with different reactions -- follow this file's existing
+  // pattern of resetting state() and assigning state().log directly.
+  reset();
+  state().log = [
+    { id: 'b1', type: 'solid', start: '2026-08-14T10:00:00Z', foods: [
+      { key: 'banana', label: 'Banana', reaction: 'likes', allergy: false },
+    ] },
+    { id: 'b2', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+      { key: 'banana', label: 'Banana', reaction: 'loves', allergy: false },
+    ] },
+  ];
+
+  const html = foodsTried();
+
+  assert.ok(html.includes('2×'), 'should aggregate the count to 2×');
+  assert.ok(html.includes('Loves it'), 'should show the latest reaction "Loves it"');
+  assert.ok(!html.includes('Likes it'), 'should not show the earlier reaction "Likes it"');
 });

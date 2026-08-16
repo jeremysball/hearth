@@ -57,6 +57,7 @@ export const TYPES = {
   play:     { icon: 'icon-play',     label: 'Play',     tone: 'play'   },
   bath:     { icon: 'icon-bath',     label: 'Bath',     tone: 'bath'   },
   hygiene:  { icon: 'icon-hygiene',  label: 'Hygiene',  tone: 'hygiene' },
+  solid:    { icon: 'utensils',      label: 'Solids',   tone: 'solid' },
   away:     { icon: 'door-open',     label: 'Away',     tone: 'note'   },
 };
 // Phosphor fallback for icons that may not exist
@@ -87,6 +88,28 @@ export function positionThumb(group) {
   const idx = opts.indexOf(active);
   thumb.style.setProperty('--glare', opts.length > 1 ? idx / (opts.length - 1) : 0.5);
 }
+
+// ---------- form helpers ----------
+export function seg(group, opts, sel) {
+  return `<div class="segctl" data-seg="${group}">` +
+    `<div class="seg-thumb"></div>` +
+    opts.map((o) => {
+      const val = typeof o === 'string' ? o : o.val;
+      const label = typeof o === 'string' ? o : o.label;
+      return `<button type="button" class="seg-opt ${val === sel ? 'on' : ''}" data-val="${esc(val)}">${esc(label)}</button>`;
+    }).join('') +
+    `</div>`;
+}
+
+export function iconGrid(group, opts, sel) {
+  return `<div class="icongrid" data-icongrid="${group}">` +
+    opts.map((o) => `<button type="button" class="icongrid-opt ${o.val === sel ? 'on' : ''}" data-val="${esc(o.val)}" data-action="icongrid:pick">` +
+      (o.img ? `<img src="${esc(o.img)}" alt="" class="icongrid-img" onerror="this.outerHTML='&lt;svg class=&quot;icon&quot;&gt;&lt;use href=&quot;#utensils&quot;&gt;&lt;/use&gt;&lt;/svg&gt;'">`
+             : `<svg class="icon"><use href="#${esc(o.icon)}"></use></svg>`) +
+      `<span>${esc(o.label)}</span></button>`).join('') +
+    `</div>`;
+}
+export function field(label, inner) { return `<label class="fld"><span class="fld-l">${label}</span>${inner}</label>`; }
 
 export function bindDragSeg(el) {
   if (el._dragBound) return;
