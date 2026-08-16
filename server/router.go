@@ -75,7 +75,7 @@ func (sw *statusWriter) setSession(session SessionInfo) {
 // for the Cache Storage counterpart.
 func cacheControl(next http.Handler, cfg Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Has("dev") || r.Header.Get("X-Hearth-Dev") == "1" || cfg.DevMode {
+		if r.URL.Query().Get("dev") == "1" || r.Header.Get("X-Hearth-Dev") == "1" || cfg.DevMode {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		next.ServeHTTP(w, r)
