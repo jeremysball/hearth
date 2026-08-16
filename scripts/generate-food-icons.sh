@@ -52,7 +52,11 @@ while IFS=$'\t' read -r icon label; do
 
   url=$(echo "$resp" | jq -r '.data.image_urls[0]')
   tmp=$(mktemp --suffix=.jpg)
-  curl -sS "$url" -o "$tmp"
+  if ! curl -sS -f "$url" -o "$tmp"; then
+    echo "  FAILED: download of $url did not succeed, skipping $icon" >&2
+    rm -f "$tmp"
+    continue
+  fi
 
   # Center-crop to 75% before downscaling: the model leaves generous
   # background margin even when asked to fill the frame, and at 20x20 icon
