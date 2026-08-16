@@ -75,6 +75,7 @@ body {
 .awake,.tone-awake { --tc: oklch(0.52 0.14 50); --tcb: oklch(0.93 0.09 58); }
 .feed,.tone-feed { --tc: var(--accent-ink); --tcb: var(--accent-soft); }
 .diaper,.tone-diaper { --tc: oklch(0.55 0.08 70); --tcb: oklch(0.93 0.05 78); }
+.solid,.tone-solid { --tc: oklch(0.55 0.09 100); --tcb: oklch(0.93 0.05 100); }
 .med,.tone-med { --tc: oklch(0.5 0.09 35); --tcb: oklch(0.92 0.045 40); }
 .note,.tone-note { --tc: var(--muted); --tcb: var(--hair); }
 .play,.tone-play { --tc: oklch(0.50 0.09 280); --tcb: oklch(0.90 0.04 285); }
@@ -542,6 +543,7 @@ body[data-mode="dark"] {
 [data-mode="dark"] .sleep,  [data-mode="dark"] .tone-sleep  { --tc: oklch(0.80 0.12 145); --tcb: oklch(0.22 0.06 143); }
 [data-mode="dark"] .feed,   [data-mode="dark"] .tone-feed   { --tc: oklch(0.82 0.10 52);  --tcb: oklch(0.24 0.06 48);  }
 [data-mode="dark"] .diaper, [data-mode="dark"] .tone-diaper { --tc: oklch(0.80 0.12 70);  --tcb: oklch(0.22 0.06 68);  }
+[data-mode="dark"] .solid,  [data-mode="dark"] .tone-solid  { --tc: oklch(0.80 0.13 100); --tcb: oklch(0.22 0.06 98);   }
 [data-mode="dark"] .med,    [data-mode="dark"] .tone-med    { --tc: oklch(0.78 0.12 35);  --tcb: oklch(0.22 0.06 33);  }
 [data-mode="dark"] .note,   [data-mode="dark"] .tone-note   { --tc: oklch(0.75 0.02 55);  --tcb: oklch(0.24 0.02 52);  }
 [data-mode="dark"] .awake,  [data-mode="dark"] .tone-awake  { --tc: oklch(0.80 0.13 52);  --tcb: oklch(0.24 0.09 50);  }
@@ -619,6 +621,7 @@ body[data-mode="dark"] {
 /* dayjob category tone overrides */
 [data-theme^="dayjob"] .diaper,
 [data-theme^="dayjob"] .tone-diaper { --tc: oklch(0.55 0.09 70); --tcb: oklch(0.92 0.05 75); }
+[data-theme^="dayjob"] .tone-solid  { --tc: oklch(0.55 0.10 100); --tcb: oklch(0.92 0.05 100); }
 [data-theme^="dayjob"] .med,
 [data-theme^="dayjob"] .tone-med { --tc: oklch(0.48 0.09 35); --tcb: oklch(0.91 0.04 40); }
 
