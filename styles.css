@@ -893,6 +893,7 @@ input.shake { animation: shake .4s; border-color: oklch(0.6 0.15 25); }
 .sheet-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; touch-action: none; }
 .sheet-hd h3 { font-family: var(--font-sans); font-size: 19px; font-weight: 700; margin: 0; }
 .sheet-hd .x { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--hair); display: flex; align-items: center; justify-content: center; color: var(--soft); }
+.page-back { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--hair); display: flex; align-items: center; justify-content: center; color: var(--soft); flex: 0 0 auto; }
 .sheet-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
 .sheet-form .sheet-body { gap: 13px; }
 .btn-primary {
