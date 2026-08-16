@@ -28,6 +28,7 @@ const { state, derive, addEntry, removeEntry, addMeasure, applySyncResponse, upd
 const { TYPES } = await import('./ui.js');
 const { FOOD_CATALOG, findFoodByKey, groupedCatalog } = await import('./foods.js');
 const { iconGrid } = await import('./sheets.js');
+const { foodsTried } = await import('./foods-tried.js');
 
 function outboxOps() {
   return JSON.parse(localStorage.getItem('hearth.outbox.v1') || '[]');
@@ -1437,4 +1438,25 @@ test('applySyncResponse sanitizes foods on incoming solid entries the same way n
   applySyncResponse(resp, { ids: new Set(), baby: false, settings: false });
   const saved = state().log.find((e) => e.id === 'sync-1');
   assert.deepEqual(saved.foods, []);
+});
+
+test('foods-tried rollup groups repeated foods and keeps the latest reaction', () => {
+  // Seed two solid entries with the same catalog food ('banana') at
+  // different times with different reactions -- follow this file's existing
+  // pattern of resetting state() and assigning state().log directly.
+  reset();
+  state().log = [
+    { id: 'b1', type: 'solid', start: '2026-08-14T10:00:00Z', foods: [
+      { key: 'banana', label: 'Banana', reaction: 'likes', allergy: false },
+    ] },
+    { id: 'b2', type: 'solid', start: '2026-08-15T10:00:00Z', foods: [
+      { key: 'banana', label: 'Banana', reaction: 'loves', allergy: false },
+    ] },
+  ];
+
+  const html = foodsTried();
+
+  assert.ok(html.includes('2×'), 'should aggregate the count to 2×');
+  assert.ok(html.includes('Loves it'), 'should show the latest reaction "Loves it"');
+  assert.ok(!html.includes('Likes it'), 'should not show the earlier reaction "Likes it"');
 });

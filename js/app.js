@@ -14,6 +14,7 @@ import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hide
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
 import { timeline, toggleFilter, toggleFilterMenu, initTimelineFilters } from './timeline.js';
+import { foodsTried } from './foods-tried.js';
 import { renderFoodRow, nextFoodRowId } from './solids-form.js';
 import { currentVersion, toggleChangelogExpanded } from './changelog.js';
 import { beginSignIn, signOut, resolveConflict, handleAuthRedirect, loadMe, mismatchSwitch } from './account.js';
@@ -25,7 +26,7 @@ export function setAmbientPaused(paused) {
 }
 
 let current = 'home';
-const VIEWS = { home, sleep, insights, profile, timeline };
+const VIEWS = { home, sleep, insights, profile, timeline, 'foods-tried': foodsTried };
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
@@ -226,6 +227,7 @@ document.addEventListener('click', (ev) => {
       });
     },
     'nav:timeline': () => router.go('timeline'),
+    'nav:foods-tried': () => router.go('foods-tried'),
     'timeline:more': () => { toggleFilterMenu(); router.refresh(); },
     'timeline:toggle': () => { toggleFilter(d.type); router.refresh(); },
     'log:open': () => openLog(d.type),
