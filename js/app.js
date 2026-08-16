@@ -4,9 +4,7 @@ import { drainOutbox, getLastSyncRev, setLastSyncRev, getLastSyncFamilyId, apply
 import { $, $$, esc, applyTheme, toast, runUndo, dismissToast, sheet, positionThumb, initThumbs } from './ui.js';
 import { log } from './log.js';
 import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode, exitCardEditMode, refreshOverdueLabels } from './home.js';
-import { sleep, predictionSourceInfo } from './sleep.js';
-import { showGrowthStat } from './growth.js';
-import { insights } from './insights.js';
+import { predictionSourceInfo } from './prediction-source.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion, enableDevMode } from './profile.js';
 import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, onboardSkipDemo, provisionedView } from './onboarding.js';
 import { joinView, joinFinish } from './join.js';
@@ -26,7 +24,26 @@ export function setAmbientPaused(paused) {
 }
 
 let current = 'home';
-const VIEWS = { home, sleep, insights, profile, timeline, 'foods-tried': foodsTried };
+// Eager views: Home, Profile, Timeline, Foods-tried render on first paint
+// without extra work. Sleep + Insights are lazy, they pull ~35 KiB of
+// JS (sleep ring + SweetSpot, trends bars, growth chart + WHO percentiles)
+// that Home never needs. Code-splitting still wins even though these are
+// individual files. `import { sleep } from './sleep.js'` forces the engine
+// to fetch and parse sleep.js on Home's first paint. Native ESM has no
+// tree-shaking across files, the browser parses what you statically import.
+// Dynamic `import()` defers that parse until the user actually visits the
+// tab. Second visit is instant (module cache), idle prefetch warms it.
+const VIEWS = { home, profile, timeline, 'foods-tried': foodsTried };
+let _sleepMod = null;
+let _insightsMod = null;
+let _growthMod = null;
+const loadSleep = () => (_sleepMod ??= import('./sleep.js'));
+const loadInsights = () => (_insightsMod ??= import('./insights.js'));
+const loadGrowth = () => (_growthMod ??= import('./growth.js'));
+function prefetchLazy() {
+  const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1200));
+  idle(() => { loadSleep().catch(() => {}); loadInsights().catch(() => {}); loadGrowth().catch(() => {}); });
+}
 
 const TABS = [
   { v: 'home', icon: 'house', label: 'Home' }, { v: 'sleep', icon: 'moon', label: 'Sleep' },
@@ -105,13 +122,27 @@ function updateProfileTabBadge() {
 export const router = {
   boot() {
     $('#app').innerHTML = shell();
+    // Fire after first paint is free: if the user taps Sleep/Insights
+    // after idle, the module is already cached. If they never visit it,
+    // we only downloaded it on idle, no first-paint cost.
+    prefetchLazy();
   },
-  go(view) {
+  async go(view) {
     exitTodayEditMode();
     exitCardEditMode();
     current = view;
     if (!$('#view')) { router.boot(); }
-    $('#view').innerHTML = VIEWS[view]();
+    let html;
+    if (view === 'sleep') {
+      const m = await loadSleep();
+      html = m.sleep();
+    } else if (view === 'insights') {
+      const m = await loadInsights();
+      html = m.insights();
+    } else {
+      html = VIEWS[view]();
+    }
+    $('#view').innerHTML = html;
     initThumbs($('#view'));
     initSky();
     if (view === 'timeline') initTimelineFilters();
@@ -121,8 +152,22 @@ export const router = {
     if (view === 'insights') { enterTrends(); enterGrowth(); }
     else if (view === 'sleep') enterSleep();
   },
-  refresh() {
-    if ($('#view')) { $('#view').innerHTML = VIEWS[current]({}); initThumbs($('#view')); initSky(); if (current === 'timeline') initTimelineFilters(); }
+  async refresh() {
+    if (!$('#view')) return;
+    let html;
+    if (current === 'sleep') {
+      const m = _sleepMod ? await _sleepMod : await loadSleep();
+      html = m.sleep({});
+    } else if (current === 'insights') {
+      const m = _insightsMod ? await _insightsMod : await loadInsights();
+      html = m.insights({});
+    } else {
+      html = VIEWS[current]({});
+    }
+    $('#view').innerHTML = html;
+    initThumbs($('#view'));
+    initSky();
+    if (current === 'timeline') initTimelineFilters();
     $$('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === current));
     updateProfileTabBadge();
   }
@@ -215,7 +260,7 @@ document.addEventListener('click', (ev) => {
     'nav:home': () => router.go('home'),
     'nav:sleep': () => router.go('sleep'),
     'nav:insights': () => router.go('insights'),
-    'growth:showstat': () => { showGrowthStat(d.stat); router.refresh(); },
+    'growth:showstat': async () => { const m = await loadGrowth(); m.showGrowthStat(d.stat); router.refresh(); },
     'nav:profile': () => {
       const scrollAfterOpen = hasUnseenChangelog();
       router.go('profile');
@@ -860,6 +905,27 @@ async function init() {
 }
 
 // ---------- PWA ----------
+// Developer-mode fetch helper: when the user has unlocked dev mode
+// (10-tap stamp or server DEV_MODE=1), every same-origin GET carries
+// X-Hearth-Dev: 1 so both the SW fetch handler and the Go server can
+// bypass their caches on that request without needing a query string
+// on every URL. Normal users never have hearth.devMode set, so this
+// is a no-op for them. The SW query-string fallback (`?dev=1`) is
+// kept as a second signal for the very first load before JS runs.
+const _devFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+  try {
+    const url = typeof input === 'string' ? input : input.url;
+    // Only tag same-origin GETs, no need to touch API pushes or CDN.
+    const sameOrigin = !url || url.startsWith('/') || url.startsWith(location.origin);
+    const method = (init.method || (typeof input !== 'object' ? 'GET' : input.method) || 'GET').toUpperCase();
+    if (sameOrigin && method === 'GET' && localStorage.getItem('hearth.devMode') === '1') {
+      init = { ...init, headers: { ...(init.headers || {}), 'X-Hearth-Dev': '1' } };
+    }
+  } catch {}
+  return _devFetch(input, init);
+};
+
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   let refreshing = false;
