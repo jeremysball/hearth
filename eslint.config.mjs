@@ -7,7 +7,7 @@ import globals from 'globals';
 export default [
   // Non-source trees: deps, agent/tooling state (incl. nested worktree copies),
   // and untracked local scratch scripts. None of these are project source.
-  { ignores: ['node_modules/**', '.claude/**', '.worktrees/**', '_screenshot.js'] },
+  { ignores: ['node_modules/**', '.claude/**', '.worktrees/**', '_screenshot.js', 'dist/**'] },
 
   js.configs.recommended,
 
@@ -53,15 +53,29 @@ export default [
     },
   },
 
-  // Node-run CommonJS dev scripts (e.g. scripts/sky-phases.js): same shape as
-  // tests/ — Node globals for the script itself, browser globals for the
-  // in-page callbacks passed to page.evaluate().
+  // Node-run dev scripts (e.g. scripts/sky-phases.js, scripts/patch-sw.mjs):
+  // same shape as tests/ — Node globals for the script itself, browser
+  // globals for the in-page callbacks passed to page.evaluate(). Uses ESM
+  // (`sourceType: 'module'`) so .mjs files like patch-sw.mjs pick up the
+  // same env, and `top-level await` (which patch-sw.mjs does not need but
+  // sibling scripts may).
   {
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.{js,mjs}'],
     languageOptions: {
       ecmaVersion: 'latest',
-      sourceType: 'commonjs',
+      sourceType: 'module',
       globals: { ...globals.node, ...globals.browser },
+    },
+  },
+
+  // Vite config: pure Node ESM. Lives at repo root, not under js/scripts/
+  // — give it node globals only (no DOM).
+  {
+    files: ['vite.config.{js,mjs,ts}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: { ...globals.node },
     },
   },
 

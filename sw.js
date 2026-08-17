@@ -1,5 +1,5 @@
 // Hearth PWA service worker
-const VERSION = 'hearth-2026-08-16T19:07Z'; // Must match <meta name="version"> in index.html
+const VERSION = 'hearth-2026-08-17T01:19Z'; // Must match <meta name="version"> in index.html
 const SHELL = [
   './',
   './index.html',
@@ -22,13 +22,16 @@ const SHELL = [
   // precached eagerly. Sleep/Insights and their deps (growth, trends,
   // growth-percentiles, growth-percentiles-data) are lazy `import()`ed
   // from app.js, so they are fetched on demand + prefetched on idle rather
-  // than parsed eagerly on Home. Why this still matters with individual
-  // files (not a bundle): `import { sleep } from './sleep.js'` in app.js
-  // forces the browser to fetch *and parse* sleep.js before Home can paint,
-  // even though Home never calls sleep(). Native ESM has no cross-file
-  // tree-shaking, static imports are eager. Dynamic import() defers that
-  // parse until the user visits the tab. The SHELL list is the SW's own
-  // offline cache; keeping it small keeps that install fast too.
+  // than parsed eagerly on Home. Why this still matters after Vite:
+  // Rollup absorbs every statically-imported shell module (app.js +
+  // store.js + ui.js + ...) into one entry chunk at build time, so all
+  // of those source paths below resolve to the same hashed entry URL.
+  // Native ESM has no cross-file tree-shaking, dynamic import() is the
+  // only way to keep the per-tab code out of the first-paint parse. The
+  // SHELL list is the SW's own offline cache; keeping it small keeps
+  // that install fast. Files in this section are rewritten to their
+  // hashed output paths by scripts/patch-sw.mjs after `vite build` —
+  // do not hand-edit the resolved './static/<hash>.js' URLs.
   './js/app.js',
   './js/store.js',
   './js/ui.js',
@@ -46,8 +49,12 @@ const SHELL = [
   './js/log.js',
   // Lazy tabs, NOT precached. Fetched via native dynamic import() when
   // the user first visits the tab (and prefetched on idle from app.js).
-  // Kept listed here as documentation of what is intentionally excluded and
-  // why; they are runtime dependencies of the app, not shell assets.
+  // They live in their own hashed chunks under dist/static/ at runtime
+  // (./static/sleep-<hash>.js, ./static/insights-<hash>.js,
+  // ./static/growth-<hash>.js) — emitted by Vite's dynamic-import code
+  // splitting. Kept listed here as documentation of what is intentionally
+  // excluded and why; they are runtime dependencies of the app, not
+  // shell assets.
   //   './js/sleep.js',
   //   './js/trends.js',
   //   './js/growth.js',

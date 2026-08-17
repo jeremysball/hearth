@@ -84,9 +84,14 @@ source and rebuilding: the old image already exists in GHCR.
 
 ### Without Docker
 
-Requires Go (version in `go.mod`). The frontend embeds into the binary at build time, so the resulting binary is self-contained.
+Requires Go (version in `go.mod`) and Node 22+. The frontend is bundled by Vite into `dist/`, then embedded into the binary at build time, so the resulting binary is self-contained.
 
 ```bash
+# one-time
+npm install
+
+# rebuild the frontend bundle and embed it into the Go binary
+npm run build            # vite build + scripts/patch-sw.mjs
 go build -o hearth-server ./cmd/hearth
 ./hearth-server
 ```
@@ -178,28 +183,47 @@ hearth/
 │   ├── hearth/        # Server entrypoint (thin main, imports server/)
 │   └── vapidgen/      # One-off VAPID keypair generator
 ├── server/            # Go backend package: API, auth, SQLite, SSE sync
-├── js/                # Vanilla JS frontend, no framework
-├── index.html         # PWA shell
-├── sw.js              # Service worker
-├── styles.css         # All styles
-├── icons/             # PWA icons
-├── Dockerfile         # Multi-stage Go build
+├── js/                # Vanilla JS frontend source (no framework)
+├── public/            # Vite publicDir: pass-through (icons/, assets/, manifest.webmanifest)
+├── index.html         # Vite entry — references ./styles.css + ./js/app.js
+├── sw.js              # Hand-written service worker (post-build patched)
+├── styles.css         # All styles (Vite processes → dist/static/*.css)
+├── vite.config.js     # Vite config: `root: '.'`, `outDir: 'dist'`, `assetsDir: 'static'`
+├── scripts/
+│   ├── bump-version.sh    # Cache-buster bump (sw.js VERSION + index.html <meta>)
+│   └── patch-sw.mjs       # Post-build: rewrites sw.js SHELL against Vite manifest
+├── dist/              # Vite build output (gitignored except .gitkeep placeholder)
+├── assets.go          # `package hearth` — //go:embed all:dist + fs.Sub
+├── Dockerfile         # Multi-stage: npm build → go build
 └── docker-compose.yml # App + Tailscale sidecar
 ```
 
-The Go server owns the API, family-scoped data isolation, and real-time sync over SSE. One family means one baby, any number of caregivers, and shared entries and settings, all keyed by `family_id`. The frontend is a vanilla JS PWA: data lives in localStorage and syncs to the server when connected. SQLite holds the shared state.
+The Go server owns the API, family-scoped data isolation, and real-time sync over SSE. One family means one baby, any number of caregivers, and shared entries and settings, all keyed by `family_id`. The frontend is a vanilla JS PWA bundled by Vite: data lives in localStorage and syncs to the server when connected. SQLite holds the shared state.
+
+Vite emits content-hashed JS/CSS at `dist/static/<chunk>-<hash>.{js,css}`. The server sends `Cache-Control: public, max-age=31536000, immutable` for those URLs (and only those — unhashed `assets/`, `icons/`, `manifest.webmanifest`, `sw.js`, `index.html` keep their existing no-store / heuristic behaviour). See `docs/codebase-quickref.md` for the full layout and `server/router.go`'s `cacheControl` for the exact policy.
 
 Tailscale is the auth layer for the default Docker Compose setup: no login page, no passwords, anyone on your tailnet is trusted. If you expose Hearth to the public internet instead (for example, to reach Google OAuth), every session cookie, invite link, and launch token is a bearer credential that a leaked database backup would otherwise expose in the clear. All four token tables store an HMAC-SHA256 hash of the token, keyed by a server-side pepper, instead of the raw value — see `PEPPER` below.
 
 ## Development
 
-Run the server with `STATIC_DIR` set so frontend edits show up on refresh without rebuilding:
+Two processes run side by side: the Go backend (port 8443 by default) and the Vite dev server (port 5173, HMR). Vite serves the rebuilt frontend at http://localhost:5173/ and proxies `/api/*`, `/join/*`, `/auth/*`, and `/sw.js` to Go.
 
 ```bash
+# terminal 1 — Go server, sources `STATIC_DIR` (see `static/` flag below)
+# so sw.js changes show up on reload without rebuilding Go.
 STATIC_DIR=. go run ./cmd/hearth
+
+# terminal 2 — Vite dev server. Edit js/* and reload, no rebuild needed.
+npm run dev
+# (set HMR_BACKEND=http://localhost:9000 to talk to a different Go port)
+
+# For a production-like local server (the embedded binary serves the
+# built dist/), build then run without STATIC_DIR:
+npm run build
+go run ./cmd/hearth
 ```
 
-Without `STATIC_DIR`, the server serves the frontend baked in at the last Go build.
+`STATIC_DIR=.` makes Go serve files live from the source tree (`index.html`, `sw.js`, `icons/`, etc.) instead of the embedded `dist/`. Hearth's pre-Vite workflow relied on this — it still works, but only for files Vite doesn't transform (everything in `public/`, `sw.js` itself, the source `index.html`). To exercise the actual Vite-bundled app, run `npm run build` then drop `STATIC_DIR`.
 
 ### Server logs
 
