@@ -45,9 +45,9 @@ export function summary(e) {
   } else if (e.type === 'bath') {
     detail = fmt.clock(e.start); meta = e.note || '';
   } else if (e.type === 'solid') {
-    const foodCount = e.foods ? e.foods.length : 0;
+    const foodNames = (e.foods || []).map((f) => f.label).filter(Boolean);
+    label = foodNames.length ? `${c.label} · ${foodNames.join(', ')}` : c.label;
     detail = fmt.clock(e.start);
-    meta = foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start);

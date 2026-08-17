@@ -142,6 +142,10 @@ async function openEntryForEdit(page, id) {
     const customValue = await page.$eval('#f-food-custom-0', (el) => el.value);
     check('editing a custom-food entry reveals the food-name field', customVisible);
     check('editing a custom-food entry prefills the typed name', customValue === 'Grandma congee', customValue);
+
+    // ---- Today's log row lists the foods inline, same "· " divider other cards use ----
+    const twoFoodRowLabel = await page.$eval(`.row[data-id="${twoFoodId}"] .what`, (el) => el.textContent.trim());
+    check('a two-food entry\'s row shows "Solids · food, food"', twoFoodRowLabel === 'Solids · Banana, Carrot', twoFoodRowLabel);
   } catch (e) {
     check('solids logging test ran without throwing', false, e.message);
   } finally {

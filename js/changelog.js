@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-08-17',
+    version: '2026-08-17',
+    features: [
+      'A logged solid now lists the foods right in the log row, like "Solids · banana, oatmeal".',
+    ],
+    fixes: []
+  },
+  {
     date: '2026-08-16',
     version: '2026-08-16',
     features: [
