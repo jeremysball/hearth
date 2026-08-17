@@ -82,7 +82,13 @@ async function runE2E() {
       process.exit(1);
     }
     legs.push(runBuffered('unit', 'node', ['--test', ...UNIT_SUITES.map(f => path.join('js', f))]));
-    legs.push(runBuffered('go', 'go', ['test', './server']));
+    // assets_test.go and router_test.go validate the embedded dist/
+    // produced by Vite. Build first so this leg is correct regardless of
+    // whether dist/ already happens to hold a prior manual `npm run
+    // build` — without it, a fresh checkout's tracked dist/.gitkeep
+    // placeholder makes the embedded-index assertions 404 (matches the
+    // same fix applied to .github/workflows/ci.yml's go leg).
+    legs.push(runBuffered('go', 'sh', ['-c', 'npm run build && go test ./...']));
     legs.push(await runE2E());
   }
 

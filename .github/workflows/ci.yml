@@ -20,7 +20,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node
-        if: matrix.leg != 'go'
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -40,7 +39,6 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
 
       - name: Install npm dependencies
-        if: matrix.leg != 'go'
         run: npm ci
 
       - name: Install Playwright browsers
@@ -56,8 +54,13 @@ jobs:
         run: npm run test:unit
 
       - name: Run Go tests
-        if: matrix.leg == 'go'
-        run: go test ./server
+        if: matrix.leg == 'go' || matrix.leg == 'e2e'
+        # assets_test.go and router_test.go validate the embedded dist/
+        # produced by Vite. `npm run build` populates dist/, then
+        # `go test ./...` exercises the actual embed. Without the build
+        # first, tests asserting on served static assets 404 against the
+        # tracked dist/.gitkeep placeholder.
+        run: npm run build && go test ./...
 
       - name: Run E2E tests
         if: matrix.leg == 'e2e'
