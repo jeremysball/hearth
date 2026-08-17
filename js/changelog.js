@@ -6,6 +6,7 @@ export const CHANGELOG = [
     version: '2026-08-17',
     features: [
       'A logged solid now lists the foods right in the log row, like "Solids · banana, oatmeal".',
+      'The Solids card on Home now shows what was in the last meal instead of just how many foods.',
     ],
     fixes: []
   },
