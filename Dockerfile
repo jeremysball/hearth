@@ -18,6 +18,7 @@ COPY index.html styles.css sw.js assets.go assets_test.go ./
 COPY scripts/ ./scripts/
 COPY server/ ./server/
 COPY cmd/hearth/ ./cmd/hearth/
+COPY go.mod go.sum ./
 
 # Vite turns public/ + index.html into dist/static/<hash>.{js,css},
 # dist/{index.html,sw.js,manifest.webmanifest,icons/,assets/}. The
