@@ -62,6 +62,10 @@ async function openEntryForEdit(page, id) {
     check('the saved row leaves amountCustom null when the scale is used', oneFood && oneFood.foods[0].amountCustom === null, JSON.stringify(oneFood && oneFood.foods[0]));
     check('a solid entry stores its timestamp as `start`, not `time`', !!(oneFood && oneFood.start) && oneFood.time === undefined, JSON.stringify(oneFood && { start: oneFood.start, time: oneFood.time }));
 
+    // ---- Home's Solids card sub-label lists the last meal's foods, not just a count ----
+    const solidCardVal = await page.$eval('[data-card="solid"] .ic-val', (el) => el.textContent.trim());
+    check('the Solids card shows the last entry\'s foods, not just a count', solidCardVal === 'Banana', solidCardVal);
+
     // ---- two foods, independent per-row values ----
     await openSolidSheet(page);
     const beforeTwo = await solidIds(page);
