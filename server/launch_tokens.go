@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -97,8 +98,39 @@ func handlePreviewLaunchToken(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// isCrossOriginPost reports whether r's Origin (falling back to Referer)
+// names a host other than r.Host. It only ever returns true when a
+// same-origin browser fetch/form POST would carry a header that
+// contradicts r.Host — an attacker-controlled page's auto-submitting
+// <form method=POST> triggers exactly this, since the browser stamps the
+// real Origin regardless of what the form's action URL claims. A request
+// with neither header (curl, a non-browser client, or a browser old
+// enough to omit both) is allowed through: this endpoint's only other
+// guard is the single-use, time-limited token itself, so a same-origin
+// check here is defense in depth against the login-CSRF class, not the
+// sole line of defense.
+func isCrossOriginPost(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = r.Header.Get("Referer")
+	}
+	if origin == "" {
+		return false
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return true
+	}
+	return u.Host != r.Host
+}
+
 func handleRedeemLaunchToken(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if isCrossOriginPost(r) {
+			http.Error(w, "cross-origin request rejected", http.StatusForbidden)
+			return
+		}
+
 		token := r.PathValue("token")
 
 		var caregiverID, familyID, expiresAt string
