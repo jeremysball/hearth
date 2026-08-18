@@ -2,6 +2,14 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-08-18',
+    version: '2026-08-18',
+    features: [],
+    fixes: [
+      'Install links now ask before adding you to a family, instead of joining automatically when the link is opened.',
+    ]
+  },
+  {
     date: '2026-08-16',
     version: '2026-08-16',
     features: [
