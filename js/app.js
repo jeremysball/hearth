@@ -7,7 +7,7 @@ import { home, summary, enterTodayEditMode, exitTodayEditMode, enterCardEditMode
 import { predictionSourceInfo } from './prediction-source.js';
 import { profile, loadCaregivers, caregiversSnapshot, tapVersion, enableDevMode } from './profile.js';
 import { onboarding, onboardTheme, onboardSex, onboardPhoto, onboardFinish, onboardSkipDemo, provisionedView } from './onboarding.js';
-import { joinView, joinFinish } from './join.js';
+import { joinView, joinFinish, launchAcceptView, launchExpiredView, acceptLaunch } from './join.js';
 import { openLog, saveLog, openTypeChooser, editCard, saveBottle, saveMeds, hideCard, showCard, openMeasure, saveMeasure, medRow, openSpinner, openCardPicker, pickCard, saveNewCard, saveCardInterval, removeCard, openMedCard, logMedDose, openPlayTypes, savePlayTypes, playTypeRow, syncDiaperSizeVisibility, saveHygiene, logHygieneItem, openHygieneCard, hygieneRow, openQuickPicker, toggleQuickOrb } from './sheets.js';
 import { enableNotifs, notify, sendTestPush } from './reminders.js';
 import { animateGrow, buzz, confetti, warmAudio } from './fx.js';
@@ -431,6 +431,8 @@ document.addEventListener('click', (ev) => {
     'cg:invite-share': () => shareInviteLink(d.url),
     'join:finish': () => joinFinish(d.token),
     'join:google': () => beginSignIn('google', d.token),
+    'launch:accept': () => acceptLaunch(d.token),
+    'launch:decline': () => { history.replaceState(null, '', '/'); init(); },
     'today:edit-done': () => { exitTodayEditMode(); router.refresh(); },
     'cards:edit-done': () => { exitCardEditMode(); router.refresh(); },
     'theme:pick': () => {
@@ -911,20 +913,28 @@ async function init() {
   if (launch) {
     history.replaceState(null, '', '/');
     if (!state().setup) {
-      const res = await fetch('/api/launch/' + launch, { credentials: 'include' });
-      if (!res.ok) {
-        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Install link expired</h1><p class="onb-sub">This install link has expired. Ask to be invited again.</p></div></div>`;
+      // CSRF fix (issue #372): the redeem endpoint used to be a side-
+      // effecting GET that this code fired automatically on any
+      // /?launch=... navigation. That let a third-party page silently
+      // bind a fresh-install victim to the attacker's family. We now
+      // preview the token first (read-only, no side effects) and only
+      // POST-redeem after the user taps a button — see join.js's
+      // launchAcceptView/acceptLaunch and server/launch_tokens.go's
+      // split between preview and POST redeem.
+      let pre;
+      try {
+        pre = await fetch('/api/launch/' + launch + '/preview');
+      } catch (_) {
+        pre = { ok: false };
+      }
+      if (!pre.ok) {
+        $('#app').innerHTML = launchExpiredView();
         return;
       }
-      const syncRes = await fetch('/api/sync', { credentials: 'include' });
-      if (!syncRes.ok) {
-        $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Something went wrong</h1><p class="onb-sub">Could not load your data. Please try again.</p></div></div>`;
-        return;
-      }
-      const data = await syncRes.json();
-      applySyncResponse(data);
-      state().setup = true;
-      save();
+      let info = {};
+      try { info = await pre.json(); } catch (_) {}
+      $('#app').innerHTML = launchAcceptView(launch, info);
+      return;
     }
   }
 

@@ -1,6 +1,6 @@
 // join.js: accepting an invite link to join an existing family as a caregiver.
 import { state, save, applySyncResponse } from './store.js';
-import { $, applyTheme, toast } from './ui.js';
+import { $, applyTheme, esc, toast } from './ui.js';
 import { router } from './app.js';
 
 export function joinView(token) {
@@ -89,4 +89,68 @@ export async function joinFinish(token) {
   router.boot();
   router.go('home');
   toast('Welcome to the family, ' + name + ' 🤍');
+}
+
+// launchAcceptView renders the join-by-launch-token confirmation screen.
+// This is the CSRF fix for issue #372: the previous flow auto-redeemed
+// the token the instant it saw ?launch=... in the URL, so an attacker
+// who tricked a victim into visiting a crafted URL could silently bind
+// them to the attacker's family. We split read (preview) from write
+// (redeem, now POST) and gate the redeem behind a button the victim has
+// to consciously tap. See server/launch_tokens.go and server/router.go
+// for the matching server-side split.
+export function launchAcceptView(token, info) {
+  const inviter = (info && info.caregiverName) || 'Someone';
+  const babyName = info && info.babyName;
+  const whoLine = babyName
+    ? `${esc(inviter)} invited you to follow ${esc(babyName)} together.`
+    : `${esc(inviter)} invited you to join their Hearth.`;
+  return `<div class="onboard">
+    <div class="onb-top">
+      <div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div>
+      <h1 class="onb-title">Join this family?</h1>
+      <p class="onb-sub">${whoLine}</p>
+    </div>
+    <button class="btn-primary onb-go" data-action="launch:accept" data-token="${esc(token)}"><svg class="icon"><use href="#heart"></use></svg> Join family</button>
+    <button class="btn-ghost" data-action="launch:decline">Not now</button>
+    <div class="onb-foot">Only tap "Join family" if you trust this link.</div>
+  </div>`;
+}
+
+// launchExpiredView is the failure surface for a /?launch=... visit whose
+// token is gone (410) or never existed (404). Kept identical to the
+// pre-fix "Install link expired" copy so existing screenshots stay stable.
+export function launchExpiredView() {
+  return `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Install link expired</h1><p class="onb-sub">This install link has expired. Ask to be invited again.</p></div></div>`;
+}
+
+// acceptLaunch runs the explicit redeem POST the user triggered by tapping
+// the "Join family" button on launchAcceptView. On success, mirrors the
+// auto-redeem path's sync + boot sequence so the user lands on Home the
+// same way they would have before; on failure, swaps the screen for the
+// expired/used error view.
+export async function acceptLaunch(token) {
+  const btn = document.querySelector('[data-action="launch:accept"][data-token="' + token + '"]');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+  try {
+    const res = await fetch('/api/launch/' + token, { method: 'POST', credentials: 'include' });
+    if (!res.ok) {
+      $('#app').innerHTML = launchExpiredView();
+      return;
+    }
+    const syncRes = await fetch('/api/sync', { credentials: 'include' });
+    if (!syncRes.ok) {
+      $('#app').innerHTML = `<div class="onboard"><div class="onb-top"><div class="onb-mark"><svg class="icon"><use href="#heart"></use></svg></div><h1 class="onb-title">Something went wrong</h1><p class="onb-sub">Could not load your data. Please try again.</p></div></div>`;
+      return;
+    }
+    const data = await syncRes.json();
+    applySyncResponse(data);
+    state().setup = true;
+    save();
+    router.boot();
+    router.go('home');
+    toast('Welcome to the family 🤍');
+  } catch (e) {
+    $('#app').innerHTML = launchExpiredView();
+  }
 }
