@@ -254,3 +254,68 @@ func TestLaunchRouteDoesNotRedeemOnGet(t *testing.T) {
 		t.Fatalf("GET on /api/launch/{token} must not consume the token, got used_at=%q", usedAt.String)
 	}
 }
+
+// TestHandleRedeemLaunchTokenRejectsForgedOrigin pins the fix for #421: a
+// POST whose Origin (or Referer) names a different host than r.Host — what
+// an attacker-controlled page's auto-submitting <form method=POST
+// action="https://victim/api/launch/TOKEN"> would send — must not consume
+// the token or set a session cookie, even though the request method is a
+// legitimate POST to the right path.
+func TestHandleRedeemLaunchTokenRejectsForgedOrigin(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
+	db.Exec(`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at) VALUES (?, 'cg1', 'fam1', ?)`,
+		hashForTest(t, "lt1"), "2099-01-01T00:00:00Z")
+
+	req := httptest.NewRequest("POST", "/api/launch/lt1", nil)
+	req.SetPathValue("token", "lt1")
+	req.Host = "hearth.example"
+	req.Header.Set("Origin", "https://attacker.example")
+	rec := httptest.NewRecorder()
+
+	handleRedeemLaunchToken(db)(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403, body = %s", rec.Code, rec.Body.String())
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == sessionCookieName {
+			t.Fatalf("forged-Origin POST must not set a session cookie, got %v", c)
+		}
+	}
+	var usedAt sql.NullString
+	if err := db.QueryRow(`SELECT used_at FROM launch_tokens WHERE token_hash = ?`, hashForTest(t, "lt1")).Scan(&usedAt); err != nil {
+		t.Fatal(err)
+	}
+	if usedAt.Valid && usedAt.String != "" {
+		t.Fatalf("forged-Origin POST must not consume the token, got used_at=%q", usedAt.String)
+	}
+}
+
+// TestHandleRedeemLaunchTokenAllowsMatchingOrigin is the sibling positive
+// case: a same-origin Origin header (what a real browser sends for the
+// legitimate confirm-tap flow in js/join.js) must still redeem normally.
+func TestHandleRedeemLaunchTokenAllowsMatchingOrigin(t *testing.T) {
+	db := newParallelTestDB(t)
+	db.Exec(`INSERT INTO families (id, created_at) VALUES ('fam1', ?)`, nowISO())
+	db.Exec(`INSERT INTO caregivers (id, family_id, display_name, role, created_at) VALUES ('cg1', 'fam1', 'Test', 'Partner', ?)`, nowISO())
+	db.Exec(`INSERT INTO launch_tokens (token_hash, caregiver_id, family_id, expires_at) VALUES (?, 'cg1', 'fam1', ?)`,
+		hashForTest(t, "lt1"), "2099-01-01T00:00:00Z")
+
+	req := httptest.NewRequest("POST", "/api/launch/lt1", nil)
+	req.SetPathValue("token", "lt1")
+	req.Host = "hearth.example"
+	req.Header.Set("Origin", "https://hearth.example")
+	rec := httptest.NewRecorder()
+
+	handleRedeemLaunchToken(db)(rec, req)
+
+	if rec.Code != 200 {
+		t.Fatalf("status = %d, want 200, body = %s", rec.Code, rec.Body.String())
+	}
+	cookies := rec.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != sessionCookieName {
+		t.Fatalf("expected a %s cookie, got %v", sessionCookieName, cookies)
+	}
+}
