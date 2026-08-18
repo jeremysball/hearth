@@ -1,6 +1,6 @@
 // sleep.js: 24h ring, naps, SweetSpot schedule, night summary.
 import { state, derive, startOfDay } from './store.js';
-import { fmt } from './ui.js';
+import { fmt, esc } from './ui.js';
 import { predictionSourceInfo } from './prediction-source.js';
 // Re-export for backward compat: sleep.test.js and external callers historically
 // imported predictionSourceInfo from './sleep.js'. New code should import from
@@ -9,6 +9,23 @@ export { predictionSourceInfo } from './prediction-source.js';
 
 const MIN = 60000;
 function hoursInto(d, dayStart) { return (new Date(d) - dayStart) / 3600000; }
+
+// Sort comparator for sleep-row objects by their `start` Date. Invalid
+// (NaN-time) starts are pushed to a deterministic position at the end so
+// the nap list never flips order across renders/devices when a
+// sync-supplied entry has a garbage timestamp: `Invalid - anything` is
+// NaN, which Array.prototype.sort treats as 0 and falls back to the
+// underlying log order — implementation-defined and unstable across
+// sessions. Exported via `_testHelpers` so unit tests can pin the
+// contract without depending on the private inner closure.
+function compareByStart(a, b) {
+  const aBad = isNaN(a.s.getTime());
+  const bBad = isNaN(b.s.getTime());
+  if (aBad !== bBad) return aBad ? 1 : -1;
+  if (aBad) return 0;
+  return a.s - b.s;
+}
+export const _testHelpers = { compareByStart };
 
 export function sleep() {
   const dayStart = startOfDay(Date.now());
@@ -32,7 +49,7 @@ export function sleep() {
   // awake arcs: complement of sleep within [dayStart, now], drawn under sleep arcs
   const nowMs = now.getTime();
   const dayStartMs = dayStart.getTime();
-  const sortedSleeps = [...todaySleeps].sort((a, b) => a.s - b.s);
+  const sortedSleeps = [...todaySleeps].sort(compareByStart);
   let ptr = dayStartMs;
   const awakeSegs = [];
   for (const e of sortedSleeps) {
@@ -56,8 +73,11 @@ export function sleep() {
   const totalMin = derive.todayStats().sleepMin;
   const tb = fmt.durBig(totalMin);
 
-  // naps list: ascending order with interleaved awake gaps
-  const napsAsc = [...todaySleeps].sort((a, b) => a.s - b.s);
+  // naps list: ascending order with interleaved awake gaps.
+  // Invalid `start` values sort to a deterministic position at the end so the
+  // nap list never flips order across renders/devices when a sync-supplied
+  // entry has a garbage timestamp — see compareByStart for the rationale.
+  const napsAsc = [...todaySleeps].sort(compareByStart);
   let napsHTML;
   if (!napsAsc.length) {
     napsHTML = `<div class="empty-log">No sleep logged today yet.</div>`;
@@ -79,7 +99,7 @@ export function sleep() {
       }
       const label = e.ongoing ? (pending ? 'Resuming soon' : 'Asleep now') : (dur > 240 ? 'Night sleep' : 'Nap');
       const endLabel = e.ongoing ? (pending ? 'soon' : 'now') : fmt.clock(e.en);
-      rows.push(`<div class="row" data-action="entry:open" data-id="${e.raw.id}">
+      rows.push(`<div class="row" data-action="entry:open" data-id="${esc(e.raw.id)}">
         <span class="row-ic tone-sleep"><svg class="icon"><use href="#moon"></use></svg></span>
         <span class="row-txt"><span class="what">${label}</span>
         <span class="when">${fmt.clock(e.s)} – ${endLabel}</span></span>
@@ -131,7 +151,7 @@ export function sleep() {
     <div class="sched-card card">
       <div class="chart-hd"><h2>SweetSpot schedule</h2><span class="chart-note">${(() => {
         const pred = derive.sweetSpot().prediction;
-        return `${pred?.label || 'sleep clock active'}${pred ? `<button class="src-info-btn ${predictionSourceInfo(pred).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button>` : ''}`;
+        return `${pred ? esc(pred.label) : 'sleep clock active'}${pred ? `<button class="src-info-btn ${predictionSourceInfo(pred).cls}" data-action="prediction:info" aria-label="About this prediction"><svg class="icon"><use href="#info"></use></svg></button>` : ''}`;
       })()}</span></div>
       ${schedHTML || `<div class="empty-log">Past today's nap windows.</div>`}
     </div>
