@@ -1,0 +1,44 @@
+#!/bin/sh
+# Hearth pre-commit hook: syntax-check + lint staged JavaScript.
+#
+# 1. `node --check` parses every staged .js (catches errors like the malformed
+#    `const VERSION` that replaced `caches.open(...)` in sw.js and made the
+#    service worker fail to register, silently, behind a .catch).
+# 2. ESLint catches what parsing can't — undefined vars (no-undef), redeclares,
+#    unreachable code, etc. Warnings inform; only errors block the commit.
+#
+# Bypass in a pinch with `git commit --no-verify`.
+
+# Staged, non-deleted .js files (newline-safe enough for this repo's paths).
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.js')
+[ -z "$files" ] && exit 0
+
+fail=0
+
+# --- 1. parse check (validates the STAGED content) ---
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+for f in $files; do
+  blob="$tmp/$(printf '%s' "$f" | tr '/' '_')"
+  git show ":$f" > "$blob" 2>/dev/null || continue
+  if ! err="$(node --check "$blob" 2>&1)"; then
+    echo "✗ $f — JavaScript parse error:"
+    printf '%s\n' "$err" | sed "s#$blob#$f#g"
+    fail=1
+  fi
+done
+
+# --- 2. eslint (working-tree copy of the staged files, so config globs match) ---
+if [ -x node_modules/.bin/eslint ]; then
+  # shellcheck disable=SC2086
+  node_modules/.bin/eslint $files || fail=1
+else
+  echo "⚠ eslint not installed — run 'npm install' to enable lint checks."
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo
+  echo "Commit blocked by pre-commit: fix the error(s) above."
+  echo "(Run \`npm run check\` for the full repo; \`git commit --no-verify\` to bypass.)"
+  exit 1
+fi
