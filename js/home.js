@@ -45,9 +45,9 @@ export function summary(e) {
   } else if (e.type === 'bath') {
     detail = fmt.clock(e.start); meta = e.note || '';
   } else if (e.type === 'solid') {
-    const foodCount = e.foods ? e.foods.length : 0;
+    const foodNames = (e.foods || []).map((f) => f.label).filter(Boolean);
+    label = foodNames.length ? `${c.label} · ${foodNames.join(', ')}` : c.label;
     detail = fmt.clock(e.start);
-    meta = foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
   } else if (e.type === 'play') {
     label = e.playType ? 'Play · ' + e.playType.toLowerCase() : 'Play';
     detail = fmt.clock(e.start);
@@ -378,13 +378,13 @@ function solidCard() {
   const items = state().log.filter((e) => e.type === 'solid');
   const last = items.length ? items[0] : null; // log is sorted newest-first by start
   const lbl = last ? `Last meal · ${fmt.untilOrAgo(new Date(last.start))}` : 'No solids logged yet';
-  const foodCount = last && last.foods ? last.foods.length : 0;
-  const sub = last && foodCount ? `${foodCount} food${foodCount === 1 ? '' : 's'}` : '';
+  const foodNames = last && last.foods ? last.foods.map((f) => f.label).filter(Boolean) : [];
+  const sub = foodNames.join(', ');
   return `<div class="info-card" ${cardEditMode ? '' : 'data-action="log:open"'} data-type="solid" data-card="solid">
     <div class="ic-ring tone-${TYPES.solid.tone}"><svg class="icon"><use href="#${icon(TYPES.solid.icon)}"></use></svg></div>
     <div class="ic-txt">
       <div class="ic-lbl">${lbl}</div>
-      <div class="ic-val">${sub}</div>
+      <div class="ic-val">${esc(sub)}</div>
     </div>
     <a class="ic-link" data-action="nav:foods-tried">Foods tried</a>
     ${icEdit('solid')}
