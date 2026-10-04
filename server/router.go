@@ -112,7 +112,13 @@ func newRouter(db *sql.DB, hub *Hub, staticDir string, cfg Config, pushes *pushS
 	mux.HandleFunc("POST /api/push/test", requireAuth(db, handlePushTest(pushes)))
 	mux.HandleFunc("POST /api/invites", requireAuth(db, handleCreateInvite(db)))
 	mux.HandleFunc("POST /api/launch-tokens", requireAuth(db, handleCreateLaunchToken(db)))
-	mux.HandleFunc("GET /api/launch/{token}", handleRedeemLaunchToken(db))
+	// Preview is a read-only GET that lets the frontend render a join
+	// confirmation screen; redeem is POST so a top-level cross-origin
+	// navigation to /?launch=... can never silently bind a victim to the
+	// attacker's family — the victim has to tap a button, which fires the
+	// POST explicitly. See js/app.js init() for the matching confirm UI.
+	mux.HandleFunc("GET /api/launch/{token}/preview", handlePreviewLaunchToken(db))
+	mux.HandleFunc("POST /api/launch/{token}", handleRedeemLaunchToken(db))
 	mux.HandleFunc("POST /api/join/{token}", handleJoinInvite(db, hub))
 	mux.HandleFunc("POST /api/dev/join", handleDevJoin(db, hub, cfg))
 	// index.html carries the <meta name="version"> that bump-version.sh
