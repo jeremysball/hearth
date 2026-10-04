@@ -1,14 +1,34 @@
 package server
 
 import (
+	"io/fs"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jeremysball/hearth"
 )
 
+// requireEmbeddedDist skips t when the embedded dist/ doesn't carry
+// index.html — i.e. `npm run build` hasn't run on this checkout and
+// dist/ is the bare .gitkeep placeholder. The Vite migration switched
+// assets.go to //go:embed all:dist (from the pre-Vite //go:embed of
+// specific source files), so a fresh checkout no longer carries an
+// embedded index.html at all. CI, Docker, and tests/run.js all run
+// `npm run build` before `go test`, so this skip is only triggered
+// when a developer runs bare `go test ./server/...` against a pristine
+// tree. Mirrors assets_test.go's requireDist for the same reason.
+func requireEmbeddedDist(t *testing.T) {
+	t.Helper()
+	if _, err := fs.Stat(hearth.StaticFS, "index.html"); err != nil {
+		t.Skipf("dist/ not built yet (%v); run `npm run build` first", err)
+	}
+}
+
 func TestRouterServesEmbeddedIndexByDefault(t *testing.T) {
+	requireEmbeddedDist(t)
 	db := newParallelTestDB(t)
 	mux := newRouter(db, newHub(), "", Config{}, newPushScheduler(db))
 
@@ -25,6 +45,7 @@ func TestRouterServesEmbeddedIndexByDefault(t *testing.T) {
 }
 
 func TestRouterIndexHTMLIsNotCached(t *testing.T) {
+	requireEmbeddedDist(t)
 	db := newParallelTestDB(t)
 	mux := newRouter(db, newHub(), "", Config{}, newPushScheduler(db))
 
