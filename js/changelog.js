@@ -2,6 +2,16 @@ import { esc } from './ui.js';
 
 export const CHANGELOG = [
   {
+    date: '2026-08-18',
+    version: '2026-08-18',
+    features: [],
+    fixes: [
+      'Fixed a security issue where a shared sleep entry with an unusual id could run unexpected code when opened from the Sleep tab.',
+      'Fixed a security issue where an unusual baby name could run unexpected code in the SweetSpot schedule on the Sleep tab.',
+      "Fixed a sleep log occasionally appearing in a different order each time you opened the Sleep tab, when entries had missing or unreadable timestamps.",
+    ]
+  },
+  {
     date: '2026-08-16',
     version: '2026-08-16',
     features: [
